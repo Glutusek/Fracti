@@ -9,8 +9,11 @@ Projekt realizowany w architekturze mikroserwisowej (Monorepo):
 * **Backend:** Python 3.12, Django 5.1, Django REST Framework.
 * **Baza Danych & GIS:** PostgreSQL 16 + PostGIS 3.4 (Geometria).
 * **Asynchroniczność:** Celery 5.4 + Redis 7.4 (Kolejkowanie zadań OCR).
-* **Frontend:** Vue.js 3.5 (Composition API) + Vite + Pinia.
-* **Mapy:** OpenStreetMap + Leaflet.
+* **Przetwarzanie Obrazu (OCR):**
+    * **Silnik:** Tesseract OCR (z pakietem języka polskiego).
+    * **Biblioteki:** OpenCV + Pillow (preprocessing), pytesseract (wrapper).
+* **Frontend:** Vue.js 3.5 (Composition API) + Vite + Pinia + TypeScript.
+* **Mapy:** Leaflet + OpenStreetMap (Tiles) + Nominatim (Geocoding).
 * **Infrastruktura:** Docker Compose V2.
 
 ## 🚀 Quick Start (Jak uruchomić)
