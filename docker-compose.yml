@@ -58,5 +58,17 @@ services:
       - backend
       - redis
 
+  frontend:
+    build:
+      context: ./frontend
+    container_name: fracti_frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:
