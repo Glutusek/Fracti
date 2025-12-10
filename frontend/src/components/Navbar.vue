@@ -16,7 +16,7 @@
       </div>
 
       <div class="nav-right">
-        <template v-if="!isLoggedIn">
+        <template v-if="!authStore.isLoggedIn">
           <router-link to="/#about" class="nav-link">O nas</router-link>
           <router-link to="/#contact" class="nav-link">Kontakt</router-link>
           <router-link to="/auth" class="nav-link login-btn">Zaloguj się</router-link>
@@ -33,15 +33,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import logoSrc from '@/assets/fracti_logo.svg'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 
-// TODO: Replace with actual auth state management
-const isLoggedIn = ref(true)
+const router = useRouter()
+const authStore = useAuthStore()
 
 const logout = () => {
-  // TODO: Implement logout logic
-  isLoggedIn.value = false
+  authStore.logout()
+  router.push('/')
 }
 </script>
 
