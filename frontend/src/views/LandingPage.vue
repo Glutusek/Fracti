@@ -1,6 +1,5 @@
 <template>
   <div class="landing-page">
-    <Navbar />
 
     <!-- Hero Section -->
     <section class="hero">
@@ -20,7 +19,7 @@
         </router-link>
       </div>
       <div class="hero-background">
-        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-1"></div>s
         <div class="gradient-orb orb-2"></div>
         <div class="gradient-orb orb-3"></div>
       </div>

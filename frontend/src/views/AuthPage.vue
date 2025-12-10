@@ -1,6 +1,5 @@
 <template>
   <div class="auth-page">
-    <Navbar />
 
     <div class="auth-container">
       <div class="auth-card">
@@ -78,8 +77,10 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import Navbar from '../components/Navbar.vue'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const isLogin = ref(true)
 
 const formData = reactive({
@@ -104,12 +105,17 @@ const handleSubmit = () => {
     return
   }
 
-  // TODO: Implement actual authentication logic
-  console.log('Form submitted:', formData)
+  // TODO: Implement actual authentication logic with backend
+  // For now, we just save the user data to store
+  const userData = {
+    name: isLogin.value ? formData.email.split('@')[0] : formData.name,
+    email: formData.email
+  }
 
-  // Temporary: redirect to home
+  authStore.login(userData)
+
   alert(isLogin.value ? 'Zalogowano pomyślnie!' : 'Konto utworzone pomyślnie!')
-  router.push('/')
+  router.push('/map')
 }
 </script>
 
