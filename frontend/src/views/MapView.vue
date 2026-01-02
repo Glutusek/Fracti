@@ -1,5 +1,4 @@
 <template>
-
   <div class="map-layout">
     <div class="map-container">
       <l-map
@@ -16,7 +15,7 @@
 
         <l-marker
           v-for="item in filteredItems"
-          :key="item.id"
+          :key="item.uniqueId"
           :lat-lng="item.coords"
         >
           <l-icon
@@ -31,25 +30,25 @@
             <div class="popup-content">
               <strong>{{ item.name }}</strong>
               <div class="popup-meta">
-                <span>{{ item.date }}</span> •
-                <span :class="['tag', item.category]">{{ item.category }}</span>
+                <span>{{ formatDate(item.date) }}</span> •
+                <span class="cat-label">{{ getCategoryLabel(item.category) }}</span>
               </div>
 
               <hr class="popup-divider" />
 
               <div v-if="item.type === 'receipt'" class="products-preview">
-                <small>Pozycje na paragonie:</small>
+                <small>Pozycje ({{ item.products?.length || 0 }}):</small>
                 <ul>
                   <li v-for="(prod, index) in item.products" :key="index">
-                    {{ prod.name }} - {{ prod.price }} zł
+                    {{ prod.name }} - {{ formatMoney(prod.price) }} zł
                   </li>
                 </ul>
-                <div class="total">Suma: {{ item.amount }} zł</div>
+                <div class="total">Suma: {{ formatMoney(item.amount) }} zł</div>
               </div>
 
               <div v-else class="single-preview">
-                Opis: {{ item.description || 'Brak opisu' }}
-                <div class="total">Kwota: {{ item.amount }} zł</div>
+                Kategoria: {{getCategoryLabel(item.category)}}
+                <div class="total">Kwota: {{ formatMoney(item.amount) }} zł</div>
               </div>
             </div>
           </l-popup>
@@ -59,11 +58,17 @@
 
     <div class="sidebar">
       <div class="sidebar-header">
-        <h2>Aktualne Rozliczenie</h2>
-        <div class="actions-row">
-          <router-link to="/ocr" class="btn-scan">📷 Skanuj Paragon</router-link>
-          <button class="btn-add" @click="addManualItem">📍 Dodaj Pozycję</button>
+        <button @click="goBack" class="back-btn">← Wróć do listy</button>
+
+        <h2 v-if="currentSettlement">{{ currentSettlement.name }}</h2>
+
+        <div v-else-if="loading" class="loading-text">
+          <span class="spinner">⏳</span> Ładowanie danych...
         </div>
+        <div v-else-if="errorMessage" class="error-text">
+          ❌ {{ errorMessage }}
+        </div>
+        <div v-else class="loading-text">Brak danych.</div>
 
         <div class="filters">
           <button
@@ -80,35 +85,32 @@
       <div class="items-list">
         <div
           v-for="item in filteredItems"
-          :key="item.id"
+          :key="item.uniqueId"
           class="item-card"
           @click="flyToMarker(item.coords)"
         >
-          <template v-if="item.type === 'receipt'">
-            <div class="card-header">
-              <span class="store-name">🧾 {{ item.name }}</span>
-              <span class="amount">{{ item.amount }} zł</span>
-            </div>
-            <div class="card-products">
-              <div v-for="(prod, i) in item.products" :key="i" class="product-row">
-                <span>{{ prod.name }}</span>
-                <span>{{ prod.price }} zł</span>
+          <div class="card-top">
+            <span class="item-icon">{{ getCategoryIconEmoji(item.category) }}</span>
+            <div class="item-info">
+              <div class="item-title">{{ item.name }}</div>
+              <div class="item-meta">
+                {{ item.type === 'receipt' ? 'Paragon' : 'Produkt' }} • {{ formatDate(item.date) }}
               </div>
             </div>
-          </template>
-
-          <template v-else>
-            <div class="card-header">
-              <span class="item-name">📍 {{ item.name }}</span>
-              <span class="amount">{{ item.amount }} zł</span>
-            </div>
-            <div class="card-desc">{{ item.description }}</div>
-          </template>
-
-          <div class="card-footer">
-            <span class="date">{{ item.date }}</span>
-            <span :class="['category-badge', item.category]">{{ item.category }}</span>
+            <div class="item-amount">{{ formatMoney(item.amount) }} zł</div>
           </div>
+
+          <div v-if="item.type === 'receipt' && item.products && item.products.length > 0" class="card-products">
+            <div v-for="(prod, i) in item.products" :key="i" class="product-row">
+              <span class="prod-name">{{ prod.name }}</span>
+              <span class="prod-price">{{ formatMoney(prod.price) }} zł</span>
+            </div>
+          </div>
+
+        </div>
+
+        <div v-if="filteredItems.length === 0" class="empty-msg">
+          Brak elementów na mapie dla wybranych filtrów.
         </div>
       </div>
     </div>
@@ -116,154 +118,255 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { LMap, LTileLayer, LMarker, LPopup, LIcon } from '@vue-leaflet/vue-leaflet'
-import 'leaflet/dist/leaflet.css'
+import { ref, computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { LMap, LTileLayer, LMarker, LPopup, LIcon } from '@vue-leaflet/vue-leaflet';
+import 'leaflet/dist/leaflet.css';
 
-// --- TYPY DANYCH (TypeScript) ---
-interface Product {
-  name: string;
-  price: number;
-}
+// Import serwisu
+import fractiService, {
+  type Settlement,
+  type CategoryType,
+  CATEGORY_LABELS,
+  Category
+} from '@/services/receipts.service';
 
-interface ExpenseItem {
-  id: number;
-  type: 'receipt' | 'single'; // KLUCZOWE: Rozróżnienie typów
-  name: string; // Nazwa sklepu (paragon) lub nazwa wydatku (pojedynczy)
-  amount: number;
-  date: string;
-  category: 'food' | 'transport' | 'entertainment' | 'other';
-  coords: [number, number];
-  products?: Product[]; // Tylko dla paragonów
-  description?: string; // Tylko dla pojedynczych
-}
+const route = useRoute();
+const router = useRouter();
 
-// --- KONFIGURACJA MAPY ---
-const zoom = ref(13)
-const center = ref([54.352, 18.646]) // Gdańsk
-const activeFilter = ref('all')
+// Pobieramy ID bezpiecznie
+const settlementId = (route.params.id || route.params.uuid) as string;
+
+// --- CONFIG MAPY ---
+const zoom = ref(6);
+const center = ref<[number, number]>([52.0, 19.0]);
+const shadowUrl = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png';
+
+// --- STATE ---
+const currentSettlement = ref<Settlement | null>(null);
+const items = ref<any[]>([]);
+const activeFilter = ref<string>('ALL');
+const loading = ref(true);
+const errorMessage = ref('');
+
+// --- FILTROWANIE ---
+const filterOptions = computed(() => [
+  { label: 'Wszystkie', value: 'ALL' },
+  ...Object.values(Category).map(cat => ({
+    label: CATEGORY_LABELS[cat],
+    value: cat
+  }))
+]);
+
+const filteredItems = computed(() => {
+  if (activeFilter.value === 'ALL') return items.value;
+  return items.value.filter(i => i.category === activeFilter.value);
+});
 
 // --- IKONY ---
-const shadowUrl = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png'
-const markerIcons: any = {
-  food: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-  transport: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-  entertainment: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+const markerIcons: Record<string, string> = {
+  [Category.FOOD]: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+  [Category.TRANSPORT]: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  [Category.ACCOMMODATION]: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+  [Category.ENTERTAINMENT]: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png',
+  [Category.SHOPPING]: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
+  [Category.SERVICES]: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-yellow.png',
   default: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png'
-}
-const getIconUrl = (cat: string) => markerIcons[cat] || markerIcons.default
+};
 
-// --- DANE (MOCKUP) ---
-const items = ref<ExpenseItem[]>([
-  // 1. To jest CAŁY PARAGON (Jeden marker, wiele produktów)
-  {
-    id: 1,
-    type: 'receipt',
-    name: 'Biedronka',
-    amount: 45.50,
-    date: '2024-12-08',
-    category: 'food',
-    coords: [54.35, 18.64],
-    products: [
-      { name: 'Mleko', price: 3.50 },
-      { name: 'Chleb', price: 4.00 },
-      { name: 'Ser żółty', price: 12.00 },
-      { name: 'Warzywa', price: 26.00 }
-    ]
-  },
-  // 2. To jest POJEDYNCZY WYDATEK (Jeden marker, brak pod-produktów)
-  {
-    id: 2,
-    type: 'single',
-    name: 'Uber do pracy',
-    amount: 25.00,
-    date: '2024-12-08',
-    category: 'transport',
-    coords: [54.36, 18.65],
-    description: 'Spóźniłem się na autobus'
-  },
-  // 3. Kolejny PARAGON
-  {
-    id: 3,
-    type: 'receipt',
-    name: 'Multikino',
-    amount: 90.00,
-    date: '2024-12-07',
-    category: 'entertainment',
-    coords: [54.34, 18.63],
-    products: [
-      { name: 'Bilety x2', price: 60.00 },
-      { name: 'Popcorn duży', price: 30.00 }
-    ]
+const getIconUrl = (cat: string) => markerIcons[cat] || markerIcons.default;
+
+// --- PRZETWARZANIE ---
+const processBackendData = (data: Settlement) => {
+  const mappedItems: any[] = [];
+
+  if (data.receipts) {
+    data.receipts.forEach(r => {
+      if (r.latitude && r.longitude) {
+        mappedItems.push({
+          uniqueId: `r-${r.id}`,
+          type: 'receipt',
+          name: r.merchant_name,
+          amount: parseFloat(r.total_amount),
+          date: r.purchase_date,
+          category: r.category,
+          coords: [Number(r.latitude), Number(r.longitude)],
+          products: r.products ? r.products.map(p => ({ name: p.name, price: p.price })) : []
+        });
+      }
+    });
   }
-])
 
-const filterOptions = [
-  { label: 'Wszystkie', value: 'all' },
-  { label: 'Spożywcze', value: 'food' },
-  { label: 'Transport', value: 'transport' },
-]
+  if (data.loose_products) {
+    data.loose_products.forEach(p => {
+      if (p.latitude && p.longitude) {
+        mappedItems.push({
+          uniqueId: `p-${p.id}`,
+          type: 'single',
+          name: p.name,
+          amount: parseFloat(p.price),
+          date: p.created_at,
+          category: p.category,
+          coords: [Number(p.latitude), Number(p.longitude)]
+        });
+      }
+    });
+  }
+  return mappedItems;
+};
 
-// --- LOGIKA ---
-const filteredItems = computed(() => {
-  if (activeFilter.value === 'all') return items.value
-  return items.value.filter(i => i.category === activeFilter.value)
-})
-
+// --- AKCJE ---
+const goBack = () => router.push(`/settlements/`);
 const flyToMarker = (coords: [number, number]) => {
-  center.value = coords
-  zoom.value = 15
-}
+  center.value = coords;
+  zoom.value = 16;
+};
 
-const addManualItem = () => {
-  alert('Otworzyć modal dodawania pojedynczego wydatku?')
-}
+// --- FORMATOWANIE ---
+const formatMoney = (val: number | string) => Number(val).toFixed(2);
+const formatDate = (date: string) => date ? new Date(date).toLocaleDateString('pl-PL') : '-';
+const getCategoryLabel = (cat: CategoryType) => CATEGORY_LABELS[cat] || cat;
+const getCategoryIconEmoji = (cat: CategoryType) => {
+  const map: Record<string, string> = { FOOD: '🍔', TRANSPORT: '🚕', ACCOMMODATION: '🏠', ENTERTAINMENT: '🎬', SHOPPING: '🛍️' };
+  return map[cat] || '📍';
+};
+
+// --- ON MOUNTED ---
+onMounted(async () => {
+  if (!settlementId || settlementId === 'undefined') {
+    loading.value = false;
+    errorMessage.value = "Błąd: Brak ID rozliczenia w URL.";
+    return;
+  }
+
+  try {
+    loading.value = true;
+    errorMessage.value = '';
+    const data = await fractiService.getSettlementDetails(settlementId);
+    currentSettlement.value = data;
+    items.value = processBackendData(data);
+
+    if (items.value.length > 0) {
+      center.value = items.value[0].coords;
+      zoom.value = 12;
+    }
+  } catch (error: any) {
+    console.error("API Error:", error);
+    errorMessage.value = error.response?.data?.detail || "Nie udało się pobrać danych.";
+  } finally {
+    loading.value = false;
+  }
+});
 </script>
 
 <style scoped>
-/* UKŁAD */
-.map-layout { display: flex; height: calc(100vh - 73px); overflow: hidden; }
-.map-container { flex: 2; position: relative; z-index: 1; }
-.sidebar { flex: 1; background: #111827; border-left: 1px solid rgba(139, 92, 246, 0.2); display: flex; flex-direction: column; min-width: 350px; }
+.map-layout { display: flex; height: calc(100vh - 80px); overflow: hidden; }
+.map-container { flex: 1; position: relative; z-index: 1; }
 
-/* HEADER SIDEBARA */
-.sidebar-header { padding: 1.5rem; background: rgba(17, 24, 39, 0.95); box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 2; }
-.sidebar-header h2 { color: white; margin: 0 0 1rem 0; font-size: 1.25rem; }
+.sidebar {
+  width: 380px;
+  background: #1f2937;
+  color: white;
+  border-left: 1px solid #374151;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -2px 0 10px rgba(0,0,0,0.3);
+  z-index: 2;
+}
 
-.actions-row { display: flex; gap: 0.75rem; margin-bottom: 1rem; }
-.btn-scan, .btn-add { flex: 1; padding: 0.6rem; border-radius: 8px; text-align: center; font-weight: 600; border: none; cursor: pointer; color: white; text-decoration: none; font-size: 0.9rem; transition: 0.2s; }
-.btn-scan { background: #8b5cf6; }
-.btn-scan:hover { background: #7c3aed; }
-.btn-add { background: rgba(255,255,255,0.1); }
-.btn-add:hover { background: rgba(255,255,255,0.15); }
+.sidebar-header {
+  padding: 1.5rem;
+  background: #111827;
+  border-bottom: 1px solid #374151;
+}
 
-/* FILTRY */
-.filters { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.5rem; }
-.filter-chip { background: transparent; border: 1px solid #374151; color: #9ca3af; padding: 0.25rem 0.75rem; border-radius: 99px; cursor: pointer; white-space: nowrap; }
-.filter-chip.active { border-color: #8b5cf6; color: #a78bfa; background: rgba(139, 92, 246, 0.1); }
+.back-btn {
+  background: transparent;
+  border: 1px solid #4b5563;
+  color: #d1d5db;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  margin-bottom: 1rem;
+  transition: all 0.2s;
+}
+.back-btn:hover { background: #374151; color: white; }
 
-/* LISTA */
+.sidebar-header h2 { margin: 0 0 1rem 0; font-size: 1.25rem; }
+
+/* --- ZMIANA DLA CIEBIE: FILTRY ZAWIJANE --- */
+.filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap; /* To sprawia, że przyciski spadają do nowej linii */
+  padding-bottom: 4px;
+}
+
+.filter-chip {
+  background: transparent;
+  border: 1px solid #4b5563;
+  color: #9ca3af;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.filter-chip.active {
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+  color: white;
+}
+
 .items-list { flex: 1; overflow-y: auto; padding: 1rem; }
-.item-card { background: rgba(31, 41, 55, 0.5); border: 1px solid rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; margin-bottom: 0.75rem; cursor: pointer; transition: 0.2s; }
-.item-card:hover { border-color: #8b5cf6; transform: translateX(2px); }
 
-.card-header { display: flex; justify-content: space-between; font-weight: bold; color: white; margin-bottom: 0.5rem; }
-.card-desc { color: #9ca3af; font-size: 0.9rem; margin-bottom: 0.5rem; font-style: italic; }
+.item-card {
+  background: #374151;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+  border: 1px solid transparent;
+}
+.item-card:hover {
+  background: #4b5563;
+  transform: translateX(4px);
+  border-color: #8b5cf6;
+}
 
-/* STYL DLA PRODUKTÓW W PARAGONIE */
-.card-products { background: rgba(0,0,0,0.2); padding: 0.5rem; border-radius: 6px; margin-bottom: 0.5rem; font-size: 0.85rem; }
-.product-row { display: flex; justify-content: space-between; color: #d1d5db; margin-bottom: 0.25rem; }
+.card-top { display: flex; align-items: center; gap: 12px; }
+.item-icon { font-size: 1.5rem; }
+.item-info { flex: 1; overflow: hidden; }
+.item-title { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item-meta { font-size: 0.75rem; color: #9ca3af; margin-top: 2px; }
+.item-amount { font-weight: 700; color: #a78bfa; }
 
-.card-footer { display: flex; justify-content: space-between; font-size: 0.8rem; color: #6b7280; margin-top: 0.5rem; }
-.category-badge { text-transform: capitalize; }
-.category-badge.food { color: #34d399; }
-.category-badge.transport { color: #f87171; }
-.category-badge.entertainment { color: #60a5fa; }
+/* --- ZMIANA DLA CIEBIE: STYL PRODUKTÓW W SIDEBARZE --- */
+.card-products {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #4b5563;
+}
 
-/* POPUP MAPY */
-.popup-content { color: #1f2937; min-width: 150px; }
-.popup-meta { font-size: 0.8rem; color: #6b7280; margin-bottom: 0.5rem; }
-.popup-divider { border: 0; border-top: 1px solid #e5e7eb; margin: 0.5rem 0; }
-.products-preview ul { padding-left: 1.2rem; margin: 0; font-size: 0.85rem; }
-.total { font-weight: bold; margin-top: 0.5rem; text-align: right; }
+.product-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #d1d5db;
+  margin-bottom: 4px;
+}
+.prod-name { color: #9ca3af; }
+.prod-price { font-weight: 500; }
+
+.empty-msg { text-align: center; color: #6b7280; margin-top: 2rem; font-style: italic; }
+.error-text { color: #ef4444; padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 8px; margin-bottom: 1rem; }
+
+/* POPUP STYLE */
+.popup-content { min-width: 180px; color: #1f2937; }
+.popup-meta { font-size: 0.8rem; color: #6b7280; margin-bottom: 5px; }
+.popup-divider { border: 0; border-top: 1px solid #e5e7eb; margin: 8px 0; }
+.products-preview ul { padding-left: 15px; margin: 5px 0; font-size: 0.85rem; }
+.total { text-align: right; font-weight: bold; margin-top: 8px; }
 </style>

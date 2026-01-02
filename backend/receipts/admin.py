@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.gis.admin import GISModelAdmin
 from django import forms
 from django.contrib.gis.geos import Point
-from .models import Receipt, Product
+from .models import Receipt, Product, Settlement
 
 
 class MapItemAdminForm(forms.ModelForm):
@@ -77,3 +77,16 @@ class ProductAdmin(GISModelAdmin):
     default_lon = 21.0122
     default_lat = 52.2297
     default_zoom = 6
+
+
+# --- KONFIGURACJA DLA ROZLICZENIA ---
+@admin.register(Settlement)
+class SettlementAdmin(admin.ModelAdmin):
+    list_display = ('name', 'members_count', 'total_expenses', 'created_at', 'updated_at')
+    search_fields = ('name', 'description')
+    readonly_fields = ('id', 'join_code', 'created_at', 'updated_at')
+    filter_horizontal = ('members',)
+
+    def members_count(self, obj):
+        return obj.members.count()
+    members_count.short_description = 'Liczba członków'

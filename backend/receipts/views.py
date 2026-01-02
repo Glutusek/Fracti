@@ -16,8 +16,8 @@ class SettlementViewSet(viewsets.ModelViewSet):
     Tylko zalogowani członkowie widzą swoje grupy.
     """
     serializer_class = SettlementSerializer
-    # Wymagamy zalogowania ORAZ bycia członkiem grupy
-    permission_classes = [IsAuthenticated, IsSettlementMember]
+    # Wymagamy zalogowania (get_queryset() filtruje rozliczenia po członkostwie)
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         # ZABEZPIECZENIE DANYCH:
