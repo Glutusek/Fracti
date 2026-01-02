@@ -59,6 +59,7 @@
     <div class="sidebar">
       <div class="sidebar-header">
         <button @click="goBack" class="back-btn">← Wróć do listy</button>
+        <button @click="goDetails" class="back-btn">Szczegóły</button>
 
         <h2 v-if="currentSettlement">{{ currentSettlement.name }}</h2>
 
@@ -217,6 +218,7 @@ const processBackendData = (data: Settlement) => {
 
 // --- AKCJE ---
 const goBack = () => router.push(`/settlements/`);
+const goDetails = () => router.push(`/settlements/{${settlementId}}`);
 const flyToMarker = (coords: [number, number]) => {
   center.value = coords;
   zoom.value = 16;
@@ -290,6 +292,7 @@ onMounted(async () => {
   font-size: 0.8rem;
   margin-bottom: 1rem;
   transition: all 0.2s;
+  margin-left: 4px;
 }
 .back-btn:hover { background: #374151; color: white; }
 
