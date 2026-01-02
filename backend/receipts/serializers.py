@@ -1,4 +1,5 @@
 from rest_framework import serializers
+import uuid
 from .models import Receipt, Product, Settlement
 from django.contrib.auth import get_user_model
 User = get_user_model()
@@ -16,7 +17,7 @@ class ProductSerializer(serializers.ModelSerializer):
     consumers = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.all(), required=False)
     class Meta:
         model = Product
-        fields = ['id', 'name', 'price', 'receipt', 'settlement', 'consumers', 'latitude', 'longitude', 'created_at']
+        fields = ['id', 'name', 'price', 'receipt', 'settlement', 'consumers', 'latitude', 'longitude', 'created_at', 'category']
 
     def get_latitude(self, obj):
         # Wyciągamy Y (Szerokość) z obiektu Point, jeśli istnieje
@@ -37,7 +38,7 @@ class ReceiptSerializer(serializers.ModelSerializer):
     class Meta:
         model = Receipt
         fields = ['id', 'merchant_name', 'total_amount', 'purchase_date', 'image', 'latitude', 'longitude', 'products',
-                  'created_at', 'settlement', 'purchaser']
+                  'created_at', 'settlement', 'purchaser', 'category']
 
     def get_latitude(self, obj):
         return obj.location.y if obj.location else None
@@ -58,6 +59,11 @@ class SettlementSerializer(serializers.ModelSerializer):
     class Meta:
         model = Settlement
         fields = ['id', 'name', 'description', 'join_code', 'members','receipts', 'loose_products', 'total_expenses', 'created_at']
+
+    def create(self, validated_data):
+        # Generujemy unikalny kod dołączania (np. 8 znaków z UUID)
+        validated_data['join_code'] = str(uuid.uuid4())[:8].upper()
+        return super().create(validated_data)
 
     def get_loose_products(self, obj):
         products = obj.products.filter(receipt__isnull=True)

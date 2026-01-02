@@ -9,25 +9,25 @@
         </div>
 
         <form @submit.prevent="handleSubmit" class="auth-form">
-          <div v-if="!isLogin" class="form-group">
-            <label for="name">Imię i nazwisko</label>
+          <div class="form-group">
+            <label for="username">Login</label>
             <input
-              id="name"
-              v-model="formData.name"
+              id="username"
+              v-model="formData.username"
               type="text"
-              placeholder="Jan Kowalski"
+              placeholder="Login"
               required
             />
           </div>
 
-          <div class="form-group">
+          <div v-if="!isLogin" class="form-group">
             <label for="email">Email</label>
             <input
-              id="email"
+              id=""
               v-model="formData.email"
-              type="email"
-              placeholder="jan@example.com"
-              required
+              type="text"
+              placeholder="Email"
+              :required="!isLogin"
             />
           </div>
 
@@ -49,12 +49,17 @@
               v-model="formData.confirmPassword"
               type="password"
               placeholder="••••••••"
-              required
+              :required="!isLogin"
             />
           </div>
 
-          <button type="submit" class="submit-button">
-            {{ isLogin ? 'Zaloguj się' : 'Utwórz konto' }}
+          <div v-if="errorMsg" class="error-message">
+            {{ errorMsg }}
+          </div>
+
+          <button type="submit" class="submit-button" :disabled="isLoading">
+            <span v-if="isLoading">Przetwarzanie...</span>
+            <span v-else>{{ isLogin ? 'Zaloguj się' : 'Utwórz konto' }}</span>
           </button>
         </form>
 
@@ -76,15 +81,19 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import Navbar from '../components/Navbar.vue'
 import { useAuthStore } from '../stores/auth'
+import api from '../services/auth.service' // Importujemy API do rejestracji (jeśli store tego nie ma)
 
 const router = useRouter()
 const authStore = useAuthStore()
-const isLogin = ref(true)
 
+const isLogin = ref(true)
+const isLoading = ref(false) // Blokada przycisku
+const errorMsg = ref('')     // Wyświetlanie błędów
+
+// Dane formularza
 const formData = reactive({
-  name: '',
+  username: '',   // Wymagane przez Django
   email: '',
   password: '',
   confirmPassword: ''
@@ -92,39 +101,95 @@ const formData = reactive({
 
 const toggleMode = () => {
   isLogin.value = !isLogin.value
-  // Reset form
-  formData.name = ''
-  formData.email = ''
+  errorMsg.value = '' // Czyścimy błędy przy przełączaniu
+  // Reset hasła dla bezpieczeństwa
   formData.password = ''
   formData.confirmPassword = ''
 }
 
-const handleSubmit = () => {
-  if (!isLogin.value && formData.password !== formData.confirmPassword) {
-    alert('Hasła nie są identyczne')
-    return
+const handleSubmit = async () => {
+  errorMsg.value = ''
+  isLoading.value = true
+
+  try {
+    if (isLogin.value) {
+      // --- LOGIKA LOGOWANIA ---
+      // Używamy naszego Store'a, który gada z API i zapisuje token
+      await authStore.login({
+        username: formData.username,
+        password: formData.password
+      })
+
+      // Jak nie wywaliło błędu, to znaczy że sukces -> idziemy na mapę
+      router.push('/')
+
+    } else {
+      // --- LOGIKA REJESTRACJI ---
+      if (formData.password !== formData.confirmPassword) {
+        throw new Error('Hasła nie są identyczne!')
+      }
+
+      // Tu zakładamy, że w api.ts dodamy metodę register,
+      // albo użyjemy generycznego post.
+      // Django wymaga zazwyczaj: username i password.
+      await api.register({
+         username: formData.username,
+         email: formData.email,
+         password: formData.password,
+      })
+
+      // Po udanej rejestracji od razu logujemy użytkownika
+      await authStore.login({
+        username: formData.username,
+        password: formData.password
+      })
+
+      router.push('/')
+    }
+
+  } catch (err: any) {
+    console.error("Błąd auth:", err)
+    // Obsługa błędów z backendu (np. "Brak konta" lub "Złe hasło")
+    if (err.response && err.response.status === 401) {
+      errorMsg.value = "Nieprawidłowy login lub hasło."
+    } else if (err.message) {
+      errorMsg.value = err.message
+    } else {
+      errorMsg.value = "Wystąpił błąd połączenia. Spróbuj ponownie."
+    }
+  } finally {
+    isLoading.value = false
   }
-
-  // TODO: Implement actual authentication logic with backend
-  // For now, we just save the user data to store
-  const userData = {
-    name: isLogin.value ? formData.email.split('@')[0] : formData.name,
-    email: formData.email
-  }
-
-  authStore.login(userData)
-
-  alert(isLogin.value ? 'Zalogowano pomyślnie!' : 'Konto utworzone pomyślnie!')
-  router.push('/map')
 }
 </script>
 
 <style scoped>
+/* --- TWOJE STYLE POZOSTAJĄ BEZ ZMIAN --- */
+/* Wklej tutaj cały swój CSS, który mi pokazałeś. */
+/* Jedyne co dodajemy to klasa dla komunikatu błędu: */
+
+.error-message {
+  color: #ff6b6b;
+  font-size: 0.9rem;
+  text-align: center;
+  background: rgba(255, 107, 107, 0.1);
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 107, 107, 0.3);
+}
+
+.submit-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+
+/* ... Reszta Twojego CSS (auth-page, gradienty itd.) ... */
 .auth-page {
   min-height: 100vh;
   background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
 }
-
+/* ... (wklej resztę stylów z Twojego pliku) ... */
 .auth-container {
   min-height: calc(100vh - 80px);
   display: flex;

@@ -1,45 +1,42 @@
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { defineStore } from 'pinia';
+import { ref, computed } from 'vue';
+import authService from '@/services/auth.service';
 
 export const useAuthStore = defineStore('auth', () => {
-  // State
-  const isLoggedIn = ref(false)
-  const user = ref<{ name: string; email: string } | null>(null)
+  const accessToken = ref<string | null>(localStorage.getItem('accessToken'));
+  const username = ref<string | null>(localStorage.getItem('username'));
 
-  // Actions
-  const login = (userData: { name: string; email: string }) => {
-    isLoggedIn.value = true
-    user.value = userData
-    // Store in localStorage for persistence
-    localStorage.setItem('isLoggedIn', 'true')
-    localStorage.setItem('user', JSON.stringify(userData))
-  }
+  const isLoggedIn = computed(() => !!accessToken.value);
+
+  const login = async (credentials: { username: string; password: string }) => {
+    try {
+      // ZMIANA: używamy authService zamiast api
+      const response = await authService.login(credentials);
+
+      // Zakładam, że backend zwraca { access: "...", refresh: "..." }
+      const { access, refresh } = response.data;
+
+      accessToken.value = access;
+      username.value = credentials.username;
+
+      localStorage.setItem('accessToken', access);
+      localStorage.setItem('refreshToken', refresh);
+      localStorage.setItem('username', credentials.username);
+
+      return true;
+    } catch (error) {
+      console.error("Błąd logowania w Store:", error);
+      throw error;
+    }
+  };
 
   const logout = () => {
-    isLoggedIn.value = false
-    user.value = null
-    localStorage.removeItem('isLoggedIn')
-    localStorage.removeItem('user')
-  }
+    accessToken.value = null;
+    username.value = null;
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('username');
+  };
 
-  const checkAuth = () => {
-    const savedAuth = localStorage.getItem('isLoggedIn')
-    const savedUser = localStorage.getItem('user')
-
-    if (savedAuth === 'true' && savedUser) {
-      isLoggedIn.value = true
-      user.value = JSON.parse(savedUser)
-    }
-  }
-
-  // Initialize auth state on store creation
-  checkAuth()
-
-  return {
-    isLoggedIn,
-    user,
-    login,
-    logout,
-    checkAuth
-  }
-})
+  return { accessToken, username, isLoggedIn, login, logout };
+});

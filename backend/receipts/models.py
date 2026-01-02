@@ -6,7 +6,17 @@ from decimal import Decimal
 from django.core.validators import MinValueValidator
 
 
-# --- ABSTRAKCYJNA KLASA GEO (Bez zmian) ---
+class CategoryChoices(models.TextChoices):
+    FOOD = 'FOOD', _('Jedzenie')
+    TRANSPORT = 'TRANSPORT', _('Transport')
+    ACCOMMODATION = 'ACCOMMODATION', _('Nocleg')
+    ENTERTAINMENT = 'ENTERTAINMENT', _('Rozrywka')
+    SHOPPING = 'SHOPPING', _('Zakupy')
+    SERVICES = 'SERVICES', _('Usługi')
+    OTHER = 'OTHER', _('Inne')
+
+
+# --- ABSTRAKCYJNA KLASA GEO ---
 class MapItem(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     location = models.PointField(_("Lokalizacja"), geography=True, srid=4326, null=True, blank=True)
@@ -19,10 +29,8 @@ class MapItem(models.Model):
 
 # --- NOWOŚĆ: MODEL ROZLICZENIA (GRUPY) ---
 class Settlement(models.Model):
-    """
-    Reprezentuje grupę rozliczeniową (np. 'Wyjazd w Tatry').
-    To jest kontener dla paragonów i użytkowników.
-    """
+
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(_("Nazwa rozliczenia"), max_length=255)
     description = models.TextField(_("Opis"), blank=True)
@@ -43,10 +51,9 @@ class Settlement(models.Model):
     def __str__(self):
         return f"{self.name} ({self.members.count()} os.)"
 
-    # Logika biznesowa: Suma wydatków w grupie
+    # Suma wydatków w grupie
     @property
     def total_expenses(self):
-        # 1. Suma z paragonów
         receipts_total = sum(r.total_amount for r in self.receipts.all() if r.total_amount)
         products_total = sum(p.price for p in self.products.filter(receipt__isnull=True))
 
@@ -60,7 +67,6 @@ class Receipt(MapItem):
     total_amount = models.DecimalField(_("Kwota całkowita"), max_digits=10, decimal_places=2, null=True, blank=True)
     image = models.ImageField(upload_to='receipts/%Y/%m/', null=True, blank=True)
 
-    # Kto zapłacił? (Płatnik)
     purchaser = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -76,6 +82,7 @@ class Receipt(MapItem):
         null=True,  # Paragon może być prywatny (bez grupy)
         blank=True
     )
+    category = models.CharField(_("Kategoria"), max_length=20, choices=CategoryChoices.choices, default=CategoryChoices.OTHER)
 
     class Meta:
         verbose_name = _("Paragon")
@@ -94,6 +101,7 @@ class Product(MapItem):
     receipt = models.ForeignKey(Receipt, on_delete=models.SET_NULL, related_name='products', null=True, blank=True)
     settlement = models.ForeignKey(Settlement, on_delete=models.CASCADE, related_name='products', null=True, blank=True, verbose_name=_("Przypisane rozliczenie"))
     consumers = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='consumed_products', blank=True, verbose_name=_("Konsumenci"))
+    category = models.CharField(_("Kategoria"), max_length=20, choices=CategoryChoices.choices, default=CategoryChoices.OTHER)
 
     def __str__(self):
         return f"{self.name} ({self.price})"

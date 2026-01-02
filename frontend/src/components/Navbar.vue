@@ -22,9 +22,8 @@
           <router-link to="/auth" class="nav-link login-btn">Zaloguj się</router-link>
         </template>
         <template v-else>
-          <router-link to="/expenses" class="nav-link">Rozliczenia</router-link>
-          <router-link to="/ocr" class="nav-link">Paragony</router-link>
-          <router-link to="/map" class="nav-link">Mapa</router-link>
+          <router-link to="/settlements" class="nav-link">Rozliczenia</router-link>
+          <router-link to="/ocr" class="nav-link">OCR Paragony</router-link>
           <button @click="logout" class="nav-link logout-btn">Wyloguj</button>
         </template>
       </div>
