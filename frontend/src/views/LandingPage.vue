@@ -11,15 +11,23 @@
         <p class="hero-subtitle">
           Zarządzaj kosztami wspólnymi, skanuj paragony i śledź swoje wydatki w jednym miejscu
         </p>
-        <router-link to="/auth" class="cta-button">
+
+        <router-link v-if="!isLoggedIn" to="/auth" class="cta-button">
           Utwórz konto
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M10 3L9 4L15 10L9 16L10 17L17 10L10 3Z" />
+          </svg>
+        </router-link>
+
+        <router-link v-else to="/settlements" class="cta-button">
+          Przejdź do rozliczeń
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
             <path d="M10 3L9 4L15 10L9 16L10 17L17 10L10 3Z" />
           </svg>
         </router-link>
       </div>
       <div class="hero-background">
-        <div class="gradient-orb orb-1"></div>s
+        <div class="gradient-orb orb-1"></div>
         <div class="gradient-orb orb-2"></div>
         <div class="gradient-orb orb-3"></div>
       </div>
@@ -112,7 +120,7 @@
     </section>
 
     <!-- CTA Section -->
-    <section class="cta-section" id="about">
+    <section v-if="!isLoggedIn" class="cta-section" id="about">
       <div class="container">
         <h2 class="section-title">Rozpocznij już dziś</h2>
         <p class="cta-description">
@@ -153,7 +161,11 @@
 </template>
 
 <script setup lang="ts">
-import Navbar from '../components/Navbar.vue'
+import { useAuthStore } from '@/stores/auth';
+import { computed } from 'vue';
+
+const authStore = useAuthStore();
+const isLoggedIn = computed(() => authStore.isLoggedIn);
 </script>
 
 <style scoped>

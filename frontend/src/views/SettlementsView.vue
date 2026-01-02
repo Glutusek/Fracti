@@ -2,9 +2,17 @@
   <div class="settlements-container">
     <div class="header">
       <h1>Moje Grupy Rozliczeniowe</h1>
-      <button @click="showCreateModal = true" class="create-btn">
-        + Nowe rozliczenie
-      </button>
+      <div class="header-actions">
+        <button @click="showJoinModal = true" class="join-btn">
+          🔗 Dołącz do rozliczenia
+        </button>
+        <button @click="goToOCR" class="ocr-btn">
+          📸 Skanuj paragon
+        </button>
+        <button @click="showCreateModal = true" class="create-btn">
+          + Nowe rozliczenie
+        </button>
+      </div>
     </div>
 
     <div v-if="loading" class="state-msg">
@@ -40,6 +48,10 @@
           </div>
 
           <div class="actions-section">
+            <button @click.stop="goToDetails(settlement.id)" class="btn-details" title="Zobacz szczegóły">
+              📋 Szczegóły
+            </button>
+
             <button @click.stop="goToMap(settlement.id)" class="btn-map" title="Zobacz na mapie">
               🗺️ Mapa
             </button>
@@ -63,6 +75,7 @@
                 <li v-for="receipt in settlement.receipts" :key="receipt.id">
                   <span class="item-name">{{ receipt.merchant_name }}</span>
                   <span class="item-date">{{ formatDate(receipt.purchase_date) }}</span>
+
                   <span class="item-price">{{ formatMoney(receipt.total_amount) }} zł</span>
                 </li>
               </ul>
@@ -74,6 +87,7 @@
                 <li v-for="product in settlement.loose_products" :key="product.id">
                   <span class="item-name">{{ product.name }}</span>
                   <span class="item-cat">{{ CATEGORY_LABELS[product.category] }}</span>
+                  <span class="item-date">{{ formatDate(product.created_at) }}</span>
                   <span class="item-price">{{ formatMoney(product.price) }} zł</span>
                 </li>
               </ul>
@@ -101,6 +115,19 @@
       </div>
     </div>
 
+    <div v-if="showJoinModal" class="modal-overlay" @click="showJoinModal = false">
+      <div class="modal-content" @click.stop>
+        <h2>Dołącz do rozliczenia</h2>
+        <form @submit.prevent="joinSettlement">
+          <input v-model="joinCode" placeholder="Wpisz kod zaproszenia" required />
+          <div class="modal-actions">
+            <button type="button" @click="showJoinModal = false">Anuluj</button>
+            <button type="submit" class="primary">Dołącz</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -117,7 +144,9 @@ const settlements = ref<Settlement[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const showCreateModal = ref(false);
+const showJoinModal = ref(false);
 const newSettlementName = ref('');
+const joinCode = ref('');
 
 // Przechowujemy ID rozwiniętych kafelków (Set jest szybszy niż Array)
 const expandedSet = ref<Set<string>>(new Set());
@@ -141,6 +170,14 @@ const goToMap = (id: string) => {
   router.push(`/map/${id}`);
 };
 
+const goToDetails = (id: string) => {
+  router.push(`/settlements/${id}`);
+};
+
+const goToOCR = () => {
+  router.push('/ocr-upload');
+};
+
 const toggleExpand = (id: string) => {
   if (expandedSet.value.has(id)) {
     expandedSet.value.delete(id);
@@ -157,6 +194,17 @@ const createSettlement = async () => {
     newSettlementName.value = '';
   } catch (e) {
     alert('Błąd tworzenia rozliczenia');
+  }
+};
+
+const joinSettlement = async () => {
+  try {
+    await fractiService.joinSettlement(joinCode.value);
+    await loadSettlements();
+    showJoinModal.value = false;
+    joinCode.value = '';
+  } catch (e) {
+    alert('Błąd dołączania do rozliczenia');
   }
 };
 
@@ -182,104 +230,254 @@ onMounted(() => {
 <style scoped>
 /* KONTENER GŁÓWNY */
 .settlements-container {
-  max-width: 900px;
-  margin: 0 auto;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
   padding: 2rem;
   font-family: 'Inter', sans-serif;
-  color: #1f2937;
+  color: #e5e7eb;
 }
 
 .header {
+  max-width: 900px;
+  margin: 0 auto 2rem auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+}
+
+.list-wrapper {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.header h1 {
+  background: linear-gradient(135deg, #ffffff 0%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+.header-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.join-btn {
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  padding: 12px 24px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+  box-shadow: 0 3px 15px rgba(99, 102, 241, 0.2);
+}
+
+.join-btn:hover {
+  transform: translateY(-2px);
+  background: rgba(99, 102, 241, 0.25);
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 5px 25px rgba(99, 102, 241, 0.4);
+}
+
+.ocr-btn {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c4b5fd;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  padding: 12px 24px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+  box-shadow: 0 3px 15px rgba(168, 85, 247, 0.2);
+}
+
+.ocr-btn:hover {
+  transform: translateY(-2px);
+  background: rgba(168, 85, 247, 0.25);
+  border-color: rgba(168, 85, 247, 0.5);
+  box-shadow: 0 5px 25px rgba(168, 85, 247, 0.4);
 }
 
 .create-btn {
-  background: #8b5cf6;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
   color: white;
   border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
+  padding: 12px 24px;
+  border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
-  transition: background 0.2s;
+  transition: all 0.3s;
+  box-shadow: 0 5px 20px rgba(139, 92, 246, 0.3);
 }
-.create-btn:hover { background: #7c3aed; }
+.create-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(139, 92, 246, 0.5);
+}
 
 /* LOADING / ERROR STATE */
-.state-msg { text-align: center; padding: 3rem; color: #6b7280; }
-.state-msg.error { color: #ef4444; }
+.state-msg {
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+  padding: 3rem;
+  color: #9ca3af;
+  font-size: 1.1rem;
+}
+.state-msg.error { color: #f87171; }
+.state-msg.empty { color: #9ca3af; }
+.state-msg .hint { color: #6b7280; margin-top: 0.5rem; }
+
+/* SPINNER */
+.spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(139, 92, 246, 0.3);
+  border-top-color: #8b5cf6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 
 /* KARTA ROZLICZENIA */
 .settlement-card {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  margin-bottom: 1rem;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-  transition: box-shadow 0.2s, border-color 0.2s;
-  overflow: hidden; /* Ważne dla animacji rozwijania */
+  background: rgba(139, 92, 246, 0.05);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 16px;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s;
+  overflow: hidden;
 }
 
 .settlement-card:hover {
-  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-  border-color: #d1d5db;
+  box-shadow: 0 8px 30px rgba(139, 92, 246, 0.4);
+  border-color: rgba(139, 92, 246, 0.4);
+  transform: translateY(-3px);
 }
 
 .settlement-card.is-expanded {
-  border-color: #8b5cf6;
+  border-color: rgba(139, 92, 246, 0.6);
+  background: rgba(139, 92, 246, 0.08);
 }
 
 /* GŁÓWNY WIERSZ KARTY */
 .card-main {
   display: flex;
   align-items: center;
-  padding: 1.25rem;
-  background: white;
+  padding: 1.5rem;
+  background: transparent;
 }
 
 .info-section { flex: 1; }
-.info-section h2 { margin: 0 0 0.25rem 0; font-size: 1.1rem; }
-.meta { font-size: 0.85rem; color: #6b7280; display: flex; gap: 10px; margin-bottom: 4px; }
-.desc { font-size: 0.9rem; color: #4b5563; margin: 0; font-style: italic; }
+.info-section h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.3rem;
+  color: #f3f4f6;
+  font-weight: 600;
+}
+.meta {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  display: flex;
+  gap: 12px;
+  margin-bottom: 6px;
+  align-items: center;
+}
+.members-pill {
+  background: rgba(139, 92, 246, 0.2);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+.desc {
+  font-size: 0.9rem;
+  color: #9ca3af;
+  margin: 0;
+  font-style: italic;
+}
 
 .amount-section {
   text-align: right;
   padding: 0 1.5rem;
-  min-width: 100px;
+  min-width: 120px;
 }
-.amount-section .label { display: block; font-size: 0.75rem; color: #9ca3af; text-transform: uppercase; }
-.amount-section .value { font-size: 1.2rem; font-weight: 700; color: #111827; }
+.amount-section .label {
+  display: block;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.amount-section .value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
 
 .actions-section {
   display: flex;
   gap: 0.75rem;
   align-items: center;
-  border-left: 1px solid #f3f4f6;
+  border-left: 1px solid rgba(139, 92, 246, 0.2);
   padding-left: 1rem;
 }
 
 /* PRZYCISKI */
-.btn-map {
-  background: #e0f2fe;
-  color: #0284c7;
-  border: none;
+.btn-details {
+  background: rgba(139, 92, 246, 0.15);
+  color: #c4b5fd;
+  border: 1px solid rgba(139, 92, 246, 0.3);
   padding: 8px 16px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 5px;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
-.btn-map:hover { background: #bae6fd; }
+.btn-details:hover {
+  background: rgba(139, 92, 246, 0.25);
+  border-color: rgba(139, 92, 246, 0.5);
+  transform: translateY(-2px);
+}
+
+.btn-map {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s;
+}
+.btn-map:hover {
+  background: rgba(99, 102, 241, 0.3);
+  border-color: rgba(99, 102, 241, 0.5);
+  transform: translateY(-2px);
+}
 
 .btn-expand {
   background: transparent;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(139, 92, 246, 0.3);
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -288,39 +486,78 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   font-size: 0.8rem;
-  color: #6b7280;
+  color: #9ca3af;
   transition: all 0.3s ease;
 }
-.btn-expand:hover { background: #f9fafb; border-color: #d1d5db; }
-.btn-expand.rotated { transform: rotate(180deg); background: #f3f4f6; color: #111827; }
+.btn-expand:hover {
+  background: rgba(139, 92, 246, 0.1);
+  border-color: rgba(139, 92, 246, 0.5);
+  color: #e5e7eb;
+}
+.btn-expand.rotated {
+  transform: rotate(180deg);
+  background: rgba(139, 92, 246, 0.2);
+  color: #f3f4f6;
+}
 
 /* ROZWIJANE SZCZEGÓŁY */
 .card-details {
-  background: #f9fafb;
-  border-top: 1px solid #e5e7eb;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(139, 92, 246, 0.2);
   animation: slideDown 0.3s ease-out;
 }
 
-.details-inner { padding: 1.25rem; }
+.details-inner { padding: 1.5rem; }
 
 .sub-section { margin-bottom: 1.5rem; }
-.sub-section h4 { margin: 0 0 0.5rem 0; font-size: 0.9rem; text-transform: uppercase; color: #6b7280; letter-spacing: 0.5px; }
+.sub-section h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  color: #a78bfa;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
 
 .sub-section ul { list-style: none; padding: 0; margin: 0; }
 .sub-section li {
   display: flex;
   justify-content: space-between;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.1);
   font-size: 0.95rem;
+  align-items: center;
 }
 .sub-section li:last-child { border-bottom: none; }
 
-.item-name { font-weight: 500; }
-.item-date, .item-cat { font-size: 0.85rem; color: #9ca3af; margin-right: auto; margin-left: 10px; }
-.item-price { font-weight: 600; color: #374151; }
+.item-name { font-weight: 500; color: #e5e7eb; }
+.item-cat {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  margin-left: 10px;
+  background: rgba(139, 92, 246, 0.1);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.item-date {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  margin-left: 6px;
+  margin-right: auto;
+  background: rgba(139, 92, 246, 0.1);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.item-price { font-weight: 600; color: #a78bfa; }
 
-.no-items { font-style: italic; color: #9ca3af; text-align: center; padding: 1rem; }
+.no-items {
+  font-style: italic;
+  color: #6b7280;
+  text-align: center;
+  padding: 1.5rem;
+  background: rgba(139, 92, 246, 0.05);
+  border-radius: 8px;
+}
 
 @keyframes slideDown {
   from { opacity: 0; transform: translateY(-10px); }
@@ -328,10 +565,74 @@ onMounted(() => {
 }
 
 /* PROSTY MODAL */
-.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
-.modal-content { background: white; padding: 2rem; border-radius: 12px; width: 400px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
-.modal-content input { width: 100%; padding: 10px; margin-bottom: 1rem; border: 1px solid #d1d5db; border-radius: 6px; }
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal-content {
+  background: #1e1b4b;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  padding: 2rem;
+  border-radius: 16px;
+  width: 400px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+.modal-content h2 {
+  color: #f3f4f6;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+}
+.modal-content input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  background: rgba(0, 0, 0, 0.2);
+  color: #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+.modal-content input:focus {
+  outline: none;
+  border-color: #8b5cf6;
+  background: rgba(0, 0, 0, 0.3);
+}
+.modal-content input::placeholder {
+  color: #6b7280;
+}
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
-.modal-actions button { padding: 8px 16px; cursor: pointer; border-radius: 6px; border: 1px solid #d1d5db; background: white; }
-.modal-actions button.primary { background: #8b5cf6; color: white; border: none; }
+.modal-actions button {
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 8px;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  background: rgba(139, 92, 246, 0.1);
+  color: #e5e7eb;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.modal-actions button:hover {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: rgba(139, 92, 246, 0.5);
+}
+.modal-actions button.primary {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+}
+.modal-actions button.primary:hover {
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
+  transform: translateY(-2px);
+}
 </style>
