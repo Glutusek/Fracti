@@ -107,6 +107,7 @@
         <h2>Nowe rozliczenie</h2>
         <form @submit.prevent="createSettlement">
           <input v-model="newSettlementName" placeholder="Nazwa (np. Wyjazd w góry)" required />
+          <input v-model="newSettlementDescription" required />
           <div class="modal-actions">
             <button type="button" @click="showCreateModal = false">Anuluj</button>
             <button type="submit" class="primary">Utwórz</button>
@@ -146,6 +147,7 @@ const error = ref<string | null>(null);
 const showCreateModal = ref(false);
 const showJoinModal = ref(false);
 const newSettlementName = ref('');
+const newSettlementDescription = ref('');
 const joinCode = ref('');
 
 // Przechowujemy ID rozwiniętych kafelków (Set jest szybszy niż Array)
@@ -188,11 +190,16 @@ const toggleExpand = (id: string) => {
 
 const createSettlement = async () => {
   try {
-    const newSettlement = await fractiService.createSettlement({ name: newSettlementName.value });
+    const newSettlement = await fractiService.createSettlement({
+      name: newSettlementName.value,
+      description: newSettlementDescription.value
+    });
     settlements.value.unshift(newSettlement);
     showCreateModal.value = false;
     newSettlementName.value = '';
+    newSettlementDescription.value = '';
   } catch (e) {
+    console.error('Błąd tworzenia rozliczenia:', e);
     alert('Błąd tworzenia rozliczenia');
   }
 };

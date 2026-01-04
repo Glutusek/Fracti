@@ -97,19 +97,17 @@
             <h3>Utwórz konto</h3>
             <p>Zarejestruj się w kilka sekund i zacznij zarządzać wydatkami</p>
           </div>
-          <div class="step-arrow">→</div>
+
           <div class="step">
             <div class="step-number">2</div>
             <h3>Zaproś znajomych</h3>
             <p>Dodaj osoby, z którymi dzielisz koszty</p>
           </div>
-          <div class="step-arrow">→</div>
           <div class="step">
             <div class="step-number">3</div>
             <h3>Dodaj wydatki</h3>
             <p>Zeskanuj paragon lub wprowadź wydatek ręcznie</p>
           </div>
-          <div class="step-arrow">→</div>
           <div class="step">
             <div class="step-number">4</div>
             <h3>Rozlicz się</h3>
@@ -131,32 +129,6 @@
         </router-link>
       </div>
     </section>
-
-    <!-- Footer -->
-    <footer class="footer" id="contact">
-      <div class="container">
-        <div class="footer-content">
-          <div class="footer-section">
-            <h4>Fracti</h4>
-            <p>Inteligentne rozliczanie wydatków</p>
-          </div>
-          <div class="footer-section">
-            <h4>Kontakt</h4>
-            <p>kontakt@fracti.app</p>
-          </div>
-          <div class="footer-section">
-            <h4>Social</h4>
-            <div class="social-links">
-              <a href="#" class="social-link">GitHub</a>
-              <a href="#" class="social-link">Twitter</a>
-            </div>
-          </div>
-        </div>
-        <div class="footer-bottom">
-          <p>&copy; 2024 Fracti. Wszystkie prawa zastrzeżone.</p>
-        </div>
-      </div>
-    </footer>
   </div>
 </template>
 
@@ -320,7 +292,8 @@ const isLoggedIn = computed(() => authStore.isLoggedIn);
 
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  /*grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));*/
+  grid-template-columns: repeat(2, 1fr);
   gap: 2rem;
 }
 
@@ -408,12 +381,6 @@ const isLoggedIn = computed(() => authStore.isLoggedIn);
   font-size: 0.95rem;
 }
 
-.step-arrow {
-  font-size: 2rem;
-  color: #8b5cf6;
-  flex-shrink: 0;
-}
-
 /* CTA Section */
 .cta-section {
   padding: 6rem 0;
@@ -428,51 +395,16 @@ const isLoggedIn = computed(() => authStore.isLoggedIn);
   margin-left: auto;
   margin-right: auto;
 }
-
-/* Footer */
-.footer {
-  background: rgba(0, 0, 0, 0.3);
-  padding: 3rem 0 1rem;
-  border-top: 1px solid rgba(139, 92, 246, 0.2);
-}
-
-.footer-content {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 2rem;
-  margin-bottom: 2rem;
-}
-
-.footer-section h4 {
-  font-size: 1.25rem;
-  margin-bottom: 1rem;
-  color: #8b5cf6;
-}
-
-.footer-section p {
-  color: #9ca3af;
-}
-
-.social-links {
-  display: flex;
-  gap: 1rem;
-}
-
-.social-link {
-  color: #9ca3af;
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.social-link:hover {
-  color: #8b5cf6;
-}
-
-.footer-bottom {
-  text-align: center;
-  padding-top: 2rem;
-  border-top: 1px solid rgba(139, 92, 246, 0.1);
-  color: #6b7280;
+@media (768px <= width <= 975px) {
+  .steps{
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    justify-items: center;
+  }
+  .step{
+    min-width: auto;
+    width: 100%;
+  }
 }
 
 @media (max-width: 768px) {
@@ -494,6 +426,9 @@ const isLoggedIn = computed(() => authStore.isLoggedIn);
 
   .steps {
     flex-direction: column;
+  }
+  .features-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
