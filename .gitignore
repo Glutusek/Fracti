@@ -19,3 +19,6 @@ yarn-debug.log*
 .vscode/
 .coverage
 htmlcov/
+media/
+backend/media/
+backend/receipts/*
