@@ -295,18 +295,45 @@
             }, 50);
         }
 
-        // Poll for internal location change (e.g., from user clicking a map)
+        const debouncedUpdate = debounce(() => updateMapFromInputs(false), 800);
+
+        // Monitor location input changes using MutationObserver and event listeners
         /** @type {HTMLTextAreaElement} */
         const locInput = /** @type {any} */ (locationInput);
         let lastValue = locInput.value;
-        setInterval(() => {
+        
+        // Use MutationObserver to detect changes from map interactions
+        const observer = new MutationObserver(() => {
             if (locInput.value !== lastValue) {
                 lastValue = locInput.value;
                 updateInputsFromMap();
             }
-        }, 500);
-
-        const debouncedUpdate = debounce(() => updateMapFromInputs(false), 800);
+        });
+        
+        observer.observe(locInput, {
+            attributes: true,
+            attributeFilter: ['value'],
+            characterData: false,
+            childList: false,
+            subtree: false
+        });
+        
+        // Also listen to input/change events as a fallback
+        const handleLocationChange = () => {
+            if (locInput.value !== lastValue) {
+                lastValue = locInput.value;
+                updateInputsFromMap();
+            }
+        };
+        
+        locInput.addEventListener('input', handleLocationChange);
+        locInput.addEventListener('change', handleLocationChange);
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            observer.disconnect();
+            debouncedUpdate.cancel();
+        });
 
         [latInput, lonInput].forEach(el => {
             el.addEventListener('input', debouncedUpdate);
