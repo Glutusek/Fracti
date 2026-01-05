@@ -57,13 +57,15 @@ class ReceiptAdmin(GISModelAdmin):
     default_zoom = 12
     point_zoom = 14
     
-    gis_widget_kwargs = {
-        'attrs': {
-            'default_lon': 21.0122,
-            'default_lat': 52.2297,
-            'default_zoom': 12,
+    @property
+    def gis_widget_kwargs(self):
+        return {
+            'attrs': {
+                'default_lon': self.default_lon,
+                'default_lat': self.default_lat,
+                'default_zoom': self.default_zoom,
+            }
         }
-    }
 
     fieldsets = (
         (None, {
@@ -96,13 +98,15 @@ class ProductAdmin(GISModelAdmin):
     default_zoom = 12
     point_zoom = 14
     
-    gis_widget_kwargs = {
-        'attrs': {
-            'default_lon': 21.0122,
-            'default_lat': 52.2297,
-            'default_zoom': 12,
+    @property
+    def gis_widget_kwargs(self):
+        return {
+            'attrs': {
+                'default_lon': self.default_lon,
+                'default_lat': self.default_lat,
+                'default_zoom': self.default_zoom,
+            }
         }
-    }
 
     fieldsets = (
         (None, {
