@@ -304,7 +304,7 @@
         
         // Intercept value property changes to detect updates from GeoDjango widget
         const originalValueDescriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
-        if (originalValueDescriptor && originalValueDescriptor.set) {
+        if (originalValueDescriptor && originalValueDescriptor.get && originalValueDescriptor.set) {
             const originalSetter = originalValueDescriptor.set;
             Object.defineProperty(locInput, 'value', {
                 get: originalValueDescriptor.get,
