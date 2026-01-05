@@ -279,18 +279,58 @@
             }, 50);
         }
 
-        // Poll for internal location change (e.g., from user clicking a map)
+        const debouncedUpdate = debounce(() => updateMapFromInputs(false), 800);
+
+        // Monitor location input changes from map widget interactions
         /** @type {HTMLTextAreaElement} */
         const locInput = /** @type {any} */ (locationInput);
         let lastValue = locInput.value;
-        setInterval(() => {
+        let propertyOverridden = false;
+        
+        // Intercept value property changes to detect updates from GeoDjango widget
+        const originalValueDescriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
+        if (originalValueDescriptor && originalValueDescriptor.get && originalValueDescriptor.set) {
+            const originalSetter = originalValueDescriptor.set;
+            const originalGetter = originalValueDescriptor.get;
+            Object.defineProperty(locInput, 'value', {
+                get: function() {
+                    return originalGetter.call(this);
+                },
+                set: function(newValue) {
+                    originalSetter.call(this, newValue);
+                    if (newValue !== lastValue) {
+                        lastValue = newValue;
+                        updateInputsFromMap();
+                    }
+                },
+                enumerable: originalValueDescriptor.enumerable,
+                configurable: true
+            });
+            propertyOverridden = true;
+        }
+        
+        // Listen to input/change events for standard form interactions
+        const handleLocationChange = () => {
             if (locInput.value !== lastValue) {
                 lastValue = locInput.value;
                 updateInputsFromMap();
             }
-        }, 500);
-
-        const debouncedUpdate = debounce(() => updateMapFromInputs(false), 800);
+        };
+        
+        locInput.addEventListener('input', handleLocationChange);
+        locInput.addEventListener('change', handleLocationChange);
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            // Remove event listeners
+            locInput.removeEventListener('input', handleLocationChange);
+            locInput.removeEventListener('change', handleLocationChange);
+            // Restore original value descriptor only if it was overridden
+            if (propertyOverridden && originalValueDescriptor) {
+                Object.defineProperty(locInput, 'value', originalValueDescriptor);
+            }
+            debouncedUpdate.cancel();
+        });
 
         [latInput, lonInput].forEach(el => {
             el.addEventListener('input', debouncedUpdate);
