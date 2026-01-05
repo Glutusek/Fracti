@@ -302,9 +302,11 @@
 
         // Initial centering for new objects with default coordinates
         setTimeout(() => {
-            const lat = parseFloat(/** @type {HTMLInputElement} */ (latInput).value);
-            const lon = parseFloat(/** @type {HTMLInputElement} */ (lonInput).value);
-            if (lat === 52.2297 && lon === 21.0122 && !locInput.value?.trim()) {
+            const latEl = /** @type {HTMLInputElement} */ (latInput);
+            const lonEl = /** @type {HTMLInputElement} */ (lonInput);
+            const hasDefaultCoords = latEl.dataset.isDefault === 'true' && lonEl.dataset.isDefault === 'true';
+            
+            if (hasDefaultCoords && !locInput.value?.trim()) {
                 updateMapFromInputs(true);
             }
         }, 1500);
