@@ -118,32 +118,7 @@
     let retryCount = 0;
     const MAX_RETRIES = 10;
 
-    function initMapSync() {
-        const latInput = document.querySelector('input[id$="latitude"]');
-        const lonInput = document.querySelector('input[id$="longitude"]');
-        const locationInput = document.querySelector('textarea[id$="location"]');
-
-        if (!latInput || !lonInput || !locationInput) {
-            if (retryCount < MAX_RETRIES) {
-                retryCount++;
-                setTimeout(initMapSync, 1000);
-                return;
-            }
-            // Elements not found after max retries, use MutationObserver
-            const observer = new MutationObserver((mutations, obs) => {
-                const lat = document.querySelector('input[id$="latitude"]');
-                const lon = document.querySelector('input[id$="longitude"]');
-                const loc = document.querySelector('textarea[id$="location"]');
-                if (lat && lon && loc) {
-                    obs.disconnect();
-                    retryCount = 0; // Reset for next potential initialization
-                    initMapSync();
-                }
-            });
-            observer.observe(document.body, { childList: true, subtree: true });
-            return;
-        }
-
+    function setupMapSync(latInput, lonInput, locationInput) {
         const win = /** @type {CustomWindow} */ (window);
         const ol = win.ol || win.django?.ol;
 
@@ -341,6 +316,34 @@
                 updateMapFromInputs(true);
             }
         }, 1500);
+    }
+
+    function initMapSync() {
+        const latInput = document.querySelector('input[id$="latitude"]');
+        const lonInput = document.querySelector('input[id$="longitude"]');
+        const locationInput = document.querySelector('textarea[id$="location"]');
+
+        if (!latInput || !lonInput || !locationInput) {
+            if (retryCount < MAX_RETRIES) {
+                retryCount++;
+                setTimeout(initMapSync, 1000);
+                return;
+            }
+            // Elements not found after max retries, use MutationObserver
+            const observer = new MutationObserver((mutations, obs) => {
+                const lat = document.querySelector('input[id$="latitude"]');
+                const lon = document.querySelector('input[id$="longitude"]');
+                const loc = document.querySelector('textarea[id$="location"]');
+                if (lat && lon && loc) {
+                    obs.disconnect();
+                    setupMapSync(lat, lon, loc);
+                }
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+            return;
+        }
+
+        setupMapSync(latInput, lonInput, locationInput);
     }
 
     if (document.readyState === 'complete') initMapSync();
