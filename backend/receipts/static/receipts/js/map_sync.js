@@ -186,7 +186,7 @@
                         [lon, lat] = data.coordinates;
                     }
                 } else if (rawValue.toUpperCase().startsWith('POINT')) {
-                    const match = rawValue.match(/POINT\s*\(([-\d.]+)\s+([-\d.]+)\)/i);
+                    const match = rawValue.match(/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i);
                     if (match) {
                         lon = parseFloat(match[1]);
                         lat = parseFloat(match[2]);
