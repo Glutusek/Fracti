@@ -26,8 +26,11 @@ class MapItemAdminForm(forms.ModelForm):
             self.fields['longitude'].initial = self.instance.location.x
             self.fields['latitude'].initial = self.instance.location.y
         elif not self.instance.pk:
+            # Set default coordinates for new objects and mark them as defaults
             self.fields['latitude'].initial = 52.2297
             self.fields['longitude'].initial = 21.0122
+            self.fields['latitude'].widget.attrs['data-is-default'] = 'true'
+            self.fields['longitude'].widget.attrs['data-is-default'] = 'true'
 
     def save(self, commit=True):
         instance = super().save(commit=False)
