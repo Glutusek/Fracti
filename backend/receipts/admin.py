@@ -5,6 +5,13 @@ from django.contrib.gis.geos import Point
 from .models import Receipt, Product, Settlement
 
 
+# Default map configuration constants
+DEFAULT_LONGITUDE = 21.0122
+DEFAULT_LATITUDE = 52.2297
+DEFAULT_ZOOM = 12
+POINT_ZOOM = 14
+
+
 class MapItemAdminForm(forms.ModelForm):
     latitude = forms.FloatField(
         required=False,
@@ -26,8 +33,8 @@ class MapItemAdminForm(forms.ModelForm):
             self.fields['longitude'].initial = self.instance.location.x
             self.fields['latitude'].initial = self.instance.location.y
         elif not self.instance.pk:
-            self.fields['latitude'].initial = 52.2297
-            self.fields['longitude'].initial = 21.0122
+            self.fields['latitude'].initial = DEFAULT_LATITUDE
+            self.fields['longitude'].initial = DEFAULT_LONGITUDE
 
     def save(self, commit=True):
         instance = super().save(commit=False)
@@ -52,20 +59,18 @@ class ReceiptAdmin(GISModelAdmin):
     form = ReceiptForm
     list_display = ('merchant_name', 'purchase_date', 'total_amount', 'id')
     
-    default_lon = 21.0122
-    default_lat = 52.2297
-    default_zoom = 12
-    point_zoom = 14
+    default_lon = DEFAULT_LONGITUDE
+    default_lat = DEFAULT_LATITUDE
+    default_zoom = DEFAULT_ZOOM
+    point_zoom = POINT_ZOOM
     
-    @property
-    def gis_widget_kwargs(self):
-        return {
-            'attrs': {
-                'default_lon': self.default_lon,
-                'default_lat': self.default_lat,
-                'default_zoom': self.default_zoom,
-            }
+    gis_widget_kwargs = {
+        'attrs': {
+            'default_lon': DEFAULT_LONGITUDE,
+            'default_lat': DEFAULT_LATITUDE,
+            'default_zoom': DEFAULT_ZOOM,
         }
+    }
 
     fieldsets = (
         (None, {
@@ -93,20 +98,18 @@ class ProductAdmin(GISModelAdmin):
     list_display = ('name', 'price', 'receipt', 'id')
     list_filter = ('receipt',)
     
-    default_lon = 21.0122
-    default_lat = 52.2297
-    default_zoom = 12
-    point_zoom = 14
+    default_lon = DEFAULT_LONGITUDE
+    default_lat = DEFAULT_LATITUDE
+    default_zoom = DEFAULT_ZOOM
+    point_zoom = POINT_ZOOM
     
-    @property
-    def gis_widget_kwargs(self):
-        return {
-            'attrs': {
-                'default_lon': self.default_lon,
-                'default_lat': self.default_lat,
-                'default_zoom': self.default_zoom,
-            }
+    gis_widget_kwargs = {
+        'attrs': {
+            'default_lon': DEFAULT_LONGITUDE,
+            'default_lat': DEFAULT_LATITUDE,
+            'default_zoom': DEFAULT_ZOOM,
         }
+    }
 
     fieldsets = (
         (None, {
