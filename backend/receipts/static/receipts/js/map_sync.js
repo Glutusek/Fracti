@@ -301,6 +301,7 @@
         /** @type {HTMLTextAreaElement} */
         const locInput = /** @type {any} */ (locationInput);
         let lastValue = locInput.value;
+        let propertyOverridden = false;
         
         // Intercept value property changes to detect updates from GeoDjango widget
         const originalValueDescriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
@@ -320,6 +321,7 @@
                 },
                 configurable: true
             });
+            propertyOverridden = true;
         }
         
         // Listen to input/change events for standard form interactions
@@ -338,8 +340,8 @@
             // Remove event listeners
             locInput.removeEventListener('input', handleLocationChange);
             locInput.removeEventListener('change', handleLocationChange);
-            // Restore original value descriptor
-            if (originalValueDescriptor) {
+            // Restore original value descriptor only if it was overridden
+            if (propertyOverridden && originalValueDescriptor) {
                 Object.defineProperty(locInput, 'value', originalValueDescriptor);
             }
             debouncedUpdate.cancel();
