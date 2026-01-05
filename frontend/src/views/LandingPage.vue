@@ -153,7 +153,7 @@
           </div>
         </div>
         <div class="footer-bottom">
-          <p>&copy; 2024 Fracti. Wszystkie prawa zastrzeżone.</p>
+          <p>&copy; {{ currentYear }} Fracti. Wszystkie prawa zastrzeżone.</p>
         </div>
       </div>
     </footer>
@@ -166,6 +166,7 @@ import { computed } from 'vue';
 
 const authStore = useAuthStore();
 const isLoggedIn = computed(() => authStore.isLoggedIn);
+const currentYear = new Date().getFullYear();
 </script>
 
 <style scoped>
