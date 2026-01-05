@@ -146,6 +146,8 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# BASE_DIR points to the 'backend' directory, so this path correctly resolves to
+# backend/receipts/static where the static files are located
 STATICFILES_DIRS = [
     BASE_DIR / 'receipts' / 'static',
 ]
