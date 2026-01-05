@@ -319,6 +319,7 @@
                         updateInputsFromMap();
                     }
                 },
+                enumerable: originalValueDescriptor.enumerable,
                 configurable: true
             });
             propertyOverridden = true;
