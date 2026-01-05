@@ -228,7 +228,9 @@
             if (typeof mapObject.deserialize === 'function') {
                 try {
                     mapObject.deserialize(wkt);
-                } catch (e) {}
+                } catch (e) {
+                    console.debug("Map deserialization failed", e);
+                }
             }
 
             if (ol) {
