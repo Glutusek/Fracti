@@ -256,16 +256,6 @@
                         }
                     }
 
-                    if (actualMap.getLayers) {
-                        actualMap.getLayers().getArray().forEach(layer => {
-                            const source = layer.getSource?.();
-                            if (source?.addFeature && !source.getTileGrid) {
-                                source.clear();
-                                source.addFeature(feature.clone());
-                            }
-                        });
-                    }
-
                     if (shouldCenter && actualMap.getView) {
                         actualMap.getView().setCenter(coords3857);
                     }
