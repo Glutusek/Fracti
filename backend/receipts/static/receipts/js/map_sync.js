@@ -297,28 +297,29 @@
 
         const debouncedUpdate = debounce(() => updateMapFromInputs(false), 800);
 
-        // Monitor location input changes using MutationObserver and event listeners
+        // Monitor location input changes from map widget interactions
         /** @type {HTMLTextAreaElement} */
         const locInput = /** @type {any} */ (locationInput);
         let lastValue = locInput.value;
         
-        // Use MutationObserver to detect changes from map interactions
-        const observer = new MutationObserver(() => {
-            if (locInput.value !== lastValue) {
-                lastValue = locInput.value;
-                updateInputsFromMap();
-            }
-        });
+        // Intercept value property changes to detect updates from GeoDjango widget
+        const originalValueDescriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
+        if (originalValueDescriptor && originalValueDescriptor.set) {
+            const originalSetter = originalValueDescriptor.set;
+            Object.defineProperty(locInput, 'value', {
+                get: originalValueDescriptor.get,
+                set: function(newValue) {
+                    originalSetter.call(this, newValue);
+                    if (newValue !== lastValue) {
+                        lastValue = newValue;
+                        updateInputsFromMap();
+                    }
+                },
+                configurable: true
+            });
+        }
         
-        observer.observe(locInput, {
-            attributes: true,
-            attributeFilter: ['value'],
-            characterData: false,
-            childList: false,
-            subtree: false
-        });
-        
-        // Also listen to input/change events as a fallback
+        // Listen to input/change events for standard form interactions
         const handleLocationChange = () => {
             if (locInput.value !== lastValue) {
                 lastValue = locInput.value;
@@ -331,7 +332,10 @@
         
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
-            observer.disconnect();
+            // Restore original value descriptor
+            if (originalValueDescriptor) {
+                Object.defineProperty(locInput, 'value', originalValueDescriptor);
+            }
             debouncedUpdate.cancel();
         });
 
