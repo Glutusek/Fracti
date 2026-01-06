@@ -20,9 +20,7 @@ class SettlementViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        # ZABEZPIECZENIE DANYCH:
-        # Zwracamy tylko te rozliczenia, do których należy user.
-        # Nawet jak haker zgadnie ID innej grupy, baza danych mu jej nie zwróci.
+
         return Settlement.objects.filter(members=self.request.user)
 
     def perform_create(self, serializer):

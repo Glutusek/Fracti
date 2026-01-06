@@ -17,13 +17,15 @@
 
       <div class="nav-right">
         <template v-if="!authStore.isLoggedIn">
-          <router-link to="/#about" class="nav-link">O nas</router-link>
-          <router-link to="/#contact" class="nav-link">Kontakt</router-link>
+          <router-link to="/about" class="nav-link">O nas</router-link>
+          <router-link to="/contact" class="nav-link">Kontakt</router-link>
           <router-link to="/auth" class="nav-link login-btn">Zaloguj się</router-link>
         </template>
         <template v-else>
           <router-link to="/settlements" class="nav-link">Rozliczenia</router-link>
           <router-link to="/ocr" class="nav-link">OCR Paragony</router-link>
+          <router-link to="/about" class="nav-link">O nas</router-link>
+          <router-link to="/contact" class="nav-link">Kontakt</router-link>
           <button @click="logout" class="nav-link logout-btn">Wyloguj</button>
         </template>
       </div>

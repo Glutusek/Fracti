@@ -61,8 +61,8 @@ class SettlementSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'description', 'join_code', 'members','receipts', 'loose_products', 'total_expenses', 'created_at']
 
     def create(self, validated_data):
-        # Generujemy unikalny kod dołączania (np. 8 znaków z UUID)
-        validated_data['join_code'] = str(uuid.uuid4())[:8].upper()
+        # join_code jest automatycznie generowane przez model (uuid.uuid4)
+        # nie musimy go tutaj nadpisywać
         return super().create(validated_data)
 
     def get_loose_products(self, obj):
