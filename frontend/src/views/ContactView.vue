@@ -25,6 +25,11 @@
             </div>
 
             <div class="form-group">
+              <label for="subject">Temat</label>
+              <input type="text" id="subject" v-model="form.subject" placeholder="Temat wiadomości" required />
+            </div>
+
+            <div class="form-group">
               <label for="message">Wiadomość</label>
               <textarea id="message" v-model="form.message" rows="5" placeholder="W czym możemy pomóc?"
                         required></textarea>
@@ -37,6 +42,7 @@
                     d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/>
               </svg>
             </button>
+            <p v-if="errorMessage" class="error-text" style="color:#f87171;margin-top:8px">{{ errorMessage }}</p>
           </form>
         </div>
 
@@ -109,30 +115,69 @@
 </template>
 
 <script setup lang="ts">
-import {reactive, ref} from 'vue';
+import { reactive, ref } from 'vue';
+import contactService from '@/services/contact.service';
 
 const form = reactive({
   name: '',
   email: '',
+  subject: '',
   message: ''
 });
 
 const showSuccessModal = ref(false);
 const isSending = ref(false);
+const errorMessage = ref<string | null>(null);
+const cooldownUntil = ref<number>(0);
 
-const sendMessage = () => {
+const sendMessage = async () => {
+  if (isSending.value) return;
+  if (Date.now() < cooldownUntil.value) {
+    errorMessage.value = 'Proszę chwilę poczekać przed ponowną próbą.';
+    return;
+  }
   isSending.value = true;
-
-
-  setTimeout(() => {
-
-
-    isSending.value = false;
+  errorMessage.value = null;
+  try {
+    await contactService.sendContact({
+      name: form.name,
+      email: form.email,
+      subject: form.subject,
+      message: form.message,
+    });
     showSuccessModal.value = true;
     form.name = '';
     form.email = '';
-    form.message = '';
-  }, 1500);
+      form.subject = '';
+      form.message = '';
+  } catch (err) {
+    console.error('Contact send error', err);
+    // Spróbuj wydobyć komunikat z odpowiedzi serwera (np. walidacja pól)
+    const resp = (err as any)?.response;
+    if (resp && resp.data) {
+      const data = resp.data;
+      if (typeof data === 'string') {
+        errorMessage.value = data;
+      } else if (data.detail) {
+        errorMessage.value = data.detail;
+      } else {
+        const parts: string[] = [];
+        for (const key of Object.keys(data)) {
+          const v = (data as any)[key];
+          if (Array.isArray(v)) parts.push(v.join(' '));
+          else if (typeof v === 'string') parts.push(v);
+          else parts.push(JSON.stringify(v));
+        }
+        errorMessage.value = parts.join(' ');
+      }
+    } else {
+      errorMessage.value = 'Wystąpił błąd podczas wysyłania wiadomości. Spróbuj ponownie.';
+    }
+  } finally {
+    isSending.value = false;
+    // cooldown to prevent rapid resubmits (in ms)
+    cooldownUntil.value = Date.now() + 3000;
+  }
 };
 </script>
 

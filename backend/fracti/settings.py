@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.gis',  # GeoDjango
     'receipts',
     'users',
+    'inbox',
 ]
 
 MIDDLEWARE = [
@@ -91,6 +92,10 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '10/min',
+        'user': '60/min',
+    },
 }
 CELERY_BROKER_URL = 'redis://redis:6379/0'
 CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
