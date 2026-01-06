@@ -58,17 +58,29 @@ class Settlement(models.Model):
         products_total = sum(p.price for p in self.products.filter(receipt__isnull=True))
 
         return receipts_total + products_total
+    
+    class Meta:
+        verbose_name = _("Rozliczenie")
+        verbose_name_plural = _("Rozliczenia")
 
 
 # --- MODEL PARAGONU (ZMODYFIKOWANY) ---
 class Receipt(MapItem):
     merchant_name = models.CharField(_("Nazwa sklepu"), max_length=255)
     purchase_date = models.DateTimeField(_("Data zakupu"), null=True, blank=True)
-    total_amount = models.DecimalField(_("Kwota całkowita"), max_digits=10, decimal_places=2, null=True, blank=True)
-    image = models.ImageField(upload_to='receipts/%Y/%m/', null=True, blank=True)
+    total_amount = models.DecimalField(
+        _("Kwota całkowita"),
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.00'))]
+    )
+    image = models.ImageField(_("Obraz"), upload_to='receipts/%Y/%m/', null=True, blank=True)
 
     purchaser = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        verbose_name=_("Kupujący"),
         on_delete=models.CASCADE,
         related_name='purchased_receipts',
         null=True, blank=True
@@ -77,6 +89,7 @@ class Receipt(MapItem):
     # NOWOŚĆ: Do którego rozliczenia to należy?
     settlement = models.ForeignKey(
         Settlement,
+        verbose_name=_("Rozliczenie"),
         on_delete=models.CASCADE,  # Jak usuniesz grupę, paragony też znikną (lub SET_NULL)
         related_name='receipts',
         null=True,  # Paragon może być prywatny (bez grupy)
@@ -97,11 +110,20 @@ class Receipt(MapItem):
 class Product(MapItem):
 
     name = models.CharField(_("Nazwa produktu"), max_length=255)
-    price = models.DecimalField(_("Cena"), max_digits=10, decimal_places=2)
-    receipt = models.ForeignKey(Receipt, on_delete=models.SET_NULL, related_name='products', null=True, blank=True)
+    price = models.DecimalField(
+        _("Cena"),
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.00'))]
+    )
+    receipt = models.ForeignKey(Receipt, verbose_name=_("Paragon"), on_delete=models.SET_NULL, related_name='products', null=True, blank=True)
     settlement = models.ForeignKey(Settlement, on_delete=models.CASCADE, related_name='products', null=True, blank=True, verbose_name=_("Przypisane rozliczenie"))
     consumers = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='consumed_products', blank=True, verbose_name=_("Konsumenci"))
     category = models.CharField(_("Kategoria"), max_length=20, choices=CategoryChoices.choices, default=CategoryChoices.OTHER)
 
     def __str__(self):
         return f"{self.name} ({self.price})"
+    
+    class Meta:
+        verbose_name = _("Produkt")
+        verbose_name_plural = _("Produkty")

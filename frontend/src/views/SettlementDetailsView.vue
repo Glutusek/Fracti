@@ -125,7 +125,7 @@
           </div>
           <div class="form-group">
             <label>Cena (zł)</label>
-            <input v-model="newProduct.price" type="number" step="0.01" required />
+            <input v-model="newProduct.price" type="number" step="0.01" min="0" required />
           </div>
           <div class="form-group">
             <label>Kategoria</label>
@@ -189,7 +189,7 @@
           </div>
           <div class="form-group">
             <label>Cena (zł)</label>
-            <input v-model="editingProduct.price" type="number" step="0.01" required />
+            <input v-model="editingProduct.price" type="number" step="0.01" min="0" required />
           </div>
           <div class="form-group">
             <label>Kategoria</label>
@@ -234,7 +234,7 @@
           </div>
           <div class="form-group">
             <label>Całkowita kwota (zł)</label>
-            <input v-model="editingReceipt.total_amount" type="number" step="0.01" required />
+            <input v-model="editingReceipt.total_amount" type="number" step="0.01" min="0" required />
           </div>
           <div class="form-group">
             <label>Data zakupu</label>
