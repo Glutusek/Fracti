@@ -129,6 +129,32 @@
         </router-link>
       </div>
     </section>
+
+    <!-- Footer -->
+    <footer class="footer" id="contact">
+      <div class="container">
+        <div class="footer-content">
+          <div class="footer-section">
+            <h4>Fracti</h4>
+            <p>Inteligentne rozliczanie wydatków</p>
+          </div>
+          <div class="footer-section">
+            <h4>Kontakt</h4>
+            <p>kontakt@fracti.app</p>
+          </div>
+          <div class="footer-section">
+            <h4>Social</h4>
+            <div class="social-links">
+              <a href="#" class="social-link">GitHub</a>
+              <a href="#" class="social-link">Twitter</a>
+            </div>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p>&copy; {{ currentYear }} Fracti. Wszystkie prawa zastrzeżone.</p>
+        </div>
+      </div>
+    </footer>
   </div>
 </template>
 
@@ -138,6 +164,7 @@ import { computed } from 'vue';
 
 const authStore = useAuthStore();
 const isLoggedIn = computed(() => authStore.isLoggedIn);
+const currentYear = new Date().getFullYear();
 </script>
 
 <style scoped>
