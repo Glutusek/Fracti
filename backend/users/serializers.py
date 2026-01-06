@@ -18,3 +18,20 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             password=validated_data['password'],
         )
         return user
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'email', 'first_name', 'last_name')
+        read_only_fields = ('id', 'username')
+
+    def update(self, instance, validated_data):
+        # Do not allow raw password changes here. Use a dedicated endpoint for password changes.
+        for attr, value in validated_data.items():
+            if attr == 'username':
+                # username is read-only by default but protect if attempted
+                continue
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
