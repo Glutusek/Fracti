@@ -7,7 +7,7 @@ django-cors-headers==4.6.0
 djangorestframework-simplejwt==5.3.1
 
 # --- Database & GIS ---
-psycopg[binary]==3.2.1
+psycopg[binary]==3.2.13
 geopy==2.4.1
 dj-database-url==2.3.0
 
