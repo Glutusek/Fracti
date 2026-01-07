@@ -37,9 +37,11 @@
             :class="{ 'is-receipt': item.type === 'receipt', 'is-expanded': expandedReceipts.has(item.id) }"
           >
             <div class="item-main" @click="item.type === 'receipt' ? toggleReceipt(item.id) : editItem(item)">
+
               <div class="item-icon">
                 {{ item.type === 'receipt' ? '🧾' : '🛒' }}
               </div>
+
               <div class="item-info">
                 <div class="item-name">{{ item.name }}</div>
                 <div class="item-meta">
@@ -47,26 +49,34 @@
                   <span class="payer">Płatnik: {{ getUserName(item.payerId) }}</span>
                 </div>
               </div>
-              <div class="item-amount">{{ formatMoney(item.amount) }} zł</div>
-              <button v-if="item.type === 'receipt'" class="expand-btn" @click.stop="toggleReceipt(item.id)">
-                {{ expandedReceipts.has(item.id) ? '▲' : '▼' }}
-              </button>
+
+              <div class="item-right-panel">
+                <div class="item-amount">{{ formatMoney(item.amount) }} zł</div>
+
+                <button class="action-icon-btn edit" @click.stop="editItem(item)" title="Edytuj">
+                  ✏️
+                </button>
+
+                <button v-if="item.type === 'receipt'" class="action-icon-btn expand">
+                  {{ expandedReceipts.has(item.id) ? '▲' : '▼' }}
+                </button>
+              </div>
             </div>
 
             <!-- Receipt Products (Expanded) -->
             <div v-if="item.type === 'receipt' && expandedReceipts.has(item.id)" class="receipt-products">
-              <div
-                v-for="product in item.products"
-                :key="product.id"
-                class="product-item"
-                @click="editProduct(product)"
-              >
-                <div class="product-name">{{ product.name }}</div>
-                <div class="product-meta">
-                  <span class="category">{{ CATEGORY_LABELS[product.category] }}</span>
-                  <span class="consumers">👥 {{ product.consumers.length }} os.</span>
+              <div v-for="product in item.products" :key="product.id" class="product-item">
+                <div class="product-info">
+                  <div class="product-name">{{ product.name }}</div>
+                  <div class="product-meta">
+                    <span class="category-tag">{{ CATEGORY_LABELS[product.category] }}</span>
+                    <span class="consumers-tag">👥 {{ product.consumers.length }}</span>
+                  </div>
                 </div>
-                <div class="product-amount">{{ formatMoney(product.price) }} zł</div>
+                <div class="product-right">
+                  <div class="product-amount">{{ formatMoney(product.price) }} zł</div>
+                  <button class="edit-icon-btn" @click.stop="editProduct(product)" title="Edytuj">✏️</button>
+                </div>
               </div>
             </div>
           </div>
@@ -83,7 +93,7 @@
           <button @click="addReceipt" class="action-btn receipt-btn">
             📸 Dodaj Paragon
           </button>
-          <button @click="showAddProductModal = true" class="action-btn product-btn">
+          <button @click="openAddProductModal" class="action-btn product-btn">
             🛒 Dodaj Produkt
           </button>
         </div>
@@ -123,18 +133,27 @@
             <label>Nazwa produktu</label>
             <input v-model="newProduct.name" required />
           </div>
-          <div class="form-group">
-            <label>Cena (zł)</label>
-            <input v-model="newProduct.price" type="number" step="0.01" min="0" required />
+          <div class="form-row">
+            <div class="form-group half">
+              <label>Cena (zł)</label>
+              <input v-model="newProduct.price" type="number" step="0.01" min="0" required />
+            </div>
+            <div class="form-group half">
+              <label>Kategoria</label>
+              <select v-model="newProduct.category">
+                <option v-for="cat in categories" :key="cat.value" :value="cat.value">{{ cat.label }}</option>
+              </select>
+            </div>
           </div>
+
           <div class="form-group">
-            <label>Kategoria</label>
-            <select v-model="newProduct.category">
-              <option v-for="cat in categories" :key="cat.value" :value="cat.value">
-                {{ cat.label }}
-              </option>
-            </select>
+            <label>Lokalizacja zakupu (Kliknij na mapie)</label>
+            <div id="map-add" class="modal-map"></div>
+            <div class="coords-display" v-if="newProduct.latitude">
+              📍 Wybrano: {{ newProduct.latitude.toFixed(6) }}, {{ newProduct.longitude.toFixed(6) }}
+            </div>
           </div>
+
           <div class="form-group">
             <label>Płatnik</label>
             <select v-model="newProduct.payer" required>
@@ -144,6 +163,7 @@
               </option>
             </select>
           </div>
+
           <div class="form-group">
             <label>Konsumenci</label>
             <div class="checkbox-group">
@@ -187,25 +207,27 @@
             <label>Nazwa produktu</label>
             <input v-model="editingProduct.name" required />
           </div>
-          <div class="form-group">
-            <label>Cena (zł)</label>
-            <input v-model="editingProduct.price" type="number" step="0.01" min="0" required />
-          </div>
-          <div class="form-group">
-            <label>Kategoria</label>
-            <select v-model="editingProduct.category">
-              <option v-for="cat in categories" :key="cat.value" :value="cat.value">
-                {{ cat.label }}
-              </option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Lokalizacja (opcjonalnie)</label>
-            <div class="location-inputs">
-              <input v-model.number="editingProduct.latitude" type="number" step="any" placeholder="Szerokość" />
-              <input v-model.number="editingProduct.longitude" type="number" step="any" placeholder="Długość" />
+          <div class="form-row">
+            <div class="form-group half">
+              <label>Cena</label>
+              <input v-model="editingProduct.price" type="number" step="0.01" />
+            </div>
+            <div class="form-group half">
+              <label>Kategoria</label>
+              <select v-model="editingProduct.category">
+                <option v-for="cat in categories" :key="cat.value" :value="cat.value">{{ cat.label }}</option>
+              </select>
             </div>
           </div>
+
+          <div class="form-group">
+            <label>Lokalizacja</label>
+            <div id="map-edit-prod" class="modal-map"></div>
+            <div class="coords-display" v-if="editingProduct.latitude">
+              📍 {{ editingProduct.latitude.toFixed(6) }}, {{ editingProduct.longitude.toFixed(6) }}
+            </div>
+          </div>
+
           <div class="form-group">
             <label>Konsumenci</label>
             <div class="checkbox-group">
@@ -229,39 +251,34 @@
         <h2>Edytuj Paragon</h2>
         <form @submit.prevent="updateReceipt">
           <div class="form-group">
-            <label>Nazwa sklepu</label>
+            <label>Sklep</label>
             <input v-model="editingReceipt.merchant_name" required />
           </div>
+
           <div class="form-group">
-            <label>Całkowita kwota (zł)</label>
-            <input v-model="editingReceipt.total_amount" type="number" step="0.01" min="0" required />
+            <label>Lokalizacja sklepu</label>
+            <div id="map-edit-receipt" class="modal-map"></div>
+            <div class="coords-display" v-if="editingReceipt.latitude">
+              📍 {{ editingReceipt.latitude.toFixed(6) }}, {{ editingReceipt.longitude.toFixed(6) }}
+            </div>
           </div>
-          <div class="form-group">
-            <label>Data zakupu</label>
-            <input v-model="editingReceipt.purchase_date" type="date" required />
+
+          <div class="form-row">
+            <div class="form-group half">
+              <label>Kwota</label>
+              <input v-model="editingReceipt.total_amount" type="number" step="0.01" />
+            </div>
+            <div class="form-group half">
+              <label>Data</label>
+              <input v-model="editingReceipt.purchase_date" type="date" />
+            </div>
           </div>
-          <div class="form-group">
-            <label>Kategoria</label>
-            <select v-model="editingReceipt.category">
-              <option v-for="cat in categories" :key="cat.value" :value="cat.value">
-                {{ cat.label }}
-              </option>
-            </select>
-          </div>
+
           <div class="form-group">
             <label>Płatnik</label>
-            <select v-model="editingReceipt.purchaser" required>
-              <option v-for="member in settlement?.members" :key="member.id" :value="member.id">
-                {{ member.username }}
-              </option>
+            <select v-model="editingReceipt.purchaser">
+              <option v-for="member in settlement?.members" :key="member.id" :value="member.id">{{ member.username }}</option>
             </select>
-          </div>
-          <div class="form-group">
-            <label>Lokalizacja (opcjonalnie)</label>
-            <div class="location-inputs">
-              <input v-model.number="editingReceipt.latitude" type="number" step="any" placeholder="Szerokość" />
-              <input v-model.number="editingReceipt.longitude" type="number" step="any" placeholder="Długość" />
-            </div>
           </div>
           <div class="modal-actions">
             <button type="button" @click="showEditReceiptModal = false">Anuluj</button>
@@ -274,9 +291,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import fractiService, { type Settlement, type Receipt, type Product, CATEGORY_LABELS, Category } from '@/services/receipts.service';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 const router = useRouter();
 const route = useRoute();
@@ -291,12 +310,18 @@ const showEditProductModal = ref(false);
 const showEditReceiptModal = ref(false);
 const codeCopied = ref(false);
 
+// Map instances
+let mapInstance: L.Map | null = null;
+let markerInstance: L.Marker | null = null;
+
 const newProduct = ref({
   name: '',
   price: '',
   category: Category.FOOD,
   payer: null as number | null,
-  consumers: [] as number[]
+  consumers: [] as number[],
+  latitude: null as number | null,
+  longitude: null as number | null
 });
 
 const editingProduct = ref<Product | null>(null);
@@ -425,25 +450,100 @@ const formatDate = (dateString: string): string => {
   });
 };
 
-const editItem = (item: any) => {
+// --- MAP LOGIC ---
+
+const initMap = (elementId: string, lat: number | null, lng: number | null, onUpdate: (lat: number, lng: number) => void) => {
+  // Jeśli mapa już istnieje, zniszcz ją (żeby nie było błędów przy ponownym otwarciu)
+  if (mapInstance) {
+    mapInstance.remove();
+    mapInstance = null;
+  }
+
+  // Domyślna pozycja (np. Warszawa) lub pozycja produktu
+  const startLat = lat || 52.2297;
+  const startLng = lng || 21.0122;
+  const zoom = lat ? 15 : 6;
+
+  mapInstance = L.map(elementId).setView([startLat, startLng], zoom);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(mapInstance);
+
+  // Dodaj marker jeśli mamy współrzędne
+  if (lat && lng) {
+    markerInstance = L.marker([lat, lng]).addTo(mapInstance);
+  }
+
+  // Kliknięcie na mapę
+  mapInstance.on('click', (e: L.LeafletMouseEvent) => {
+    const { lat, lng } = e.latlng;
+
+    // Aktualizuj marker
+    if (markerInstance) {
+      markerInstance.setLatLng([lat, lng]);
+    } else {
+      markerInstance = L.marker([lat, lng]).addTo(mapInstance!);
+    }
+
+    // Wywołaj callback, żeby zaktualizować dane w formularzu
+    onUpdate(lat, lng);
+  });
+};
+
+const openAddProductModal = async () => {
+  newProduct.value = {
+    name: '',
+    price: '',
+    category: Category.FOOD,
+    payer: null,
+    consumers: [],
+    latitude: null,
+    longitude: null
+  };
+  showAddProductModal.value = true;
+
+  // Czekamy aż modal się wyrenderuje, żeby DIV mapy istniał
+  await nextTick();
+  initMap('map-add', null, null, (lat, lng) => {
+    newProduct.value.latitude = lat;
+    newProduct.value.longitude = lng;
+  });
+};
+
+const editItem = async (item: any) => {
   if (item.type === 'receipt') {
     const receipt = settlement.value?.receipts?.find(r => r.id === item.id);
     if (receipt) {
       editingReceipt.value = { ...receipt };
       showEditReceiptModal.value = true;
+
+      await nextTick();
+      initMap('map-edit-receipt', receipt.latitude, receipt.longitude, (lat, lng) => {
+        if (editingReceipt.value) {
+          editingReceipt.value.latitude = lat;
+          editingReceipt.value.longitude = lng;
+        }
+      });
     }
   } else {
+    // To jest loose product
     const product = settlement.value?.loose_products?.find(p => p.id === item.id);
-    if (product) {
-      editingProduct.value = { ...product };
-      showEditProductModal.value = true;
-    }
+    if (product) await editProduct(product);
   }
 };
 
-const editProduct = (product: Product) => {
-  editingProduct.value = { ...product };
+const editProduct = async (product: Product) => {
+  editingProduct.value = { ...product }; // Kopia
   showEditProductModal.value = true;
+
+  await nextTick();
+  initMap('map-edit-prod', product.latitude, product.longitude, (lat, lng) => {
+    if (editingProduct.value) {
+      editingProduct.value.latitude = lat;
+      editingProduct.value.longitude = lng;
+    }
+  });
 };
 
 const copyCode = async () => {
@@ -488,7 +588,9 @@ const createLooseProduct = async () => {
       price: '',
       category: Category.FOOD,
       payer: null,
-      consumers: []
+      consumers: [],
+      latitude: null,
+      longitude: null
     };
 
     showAddProductModal.value = false;
@@ -749,7 +851,6 @@ onMounted(() => {
   background: rgba(139, 92, 246, 0.05);
   border: 1px solid rgba(139, 92, 246, 0.15);
   border-radius: 8px;
-  cursor: pointer;
   transition: all 0.2s;
 }
 
@@ -758,31 +859,62 @@ onMounted(() => {
   border-color: rgba(139, 92, 246, 0.3);
 }
 
-.product-name {
+.product-info {
   flex: 1;
+}
+
+.product-name {
   font-weight: 500;
   color: #e5e7eb;
+  margin-bottom: 0.25rem;
 }
 
 .product-meta {
   display: flex;
-  gap: 0.75rem;
-  margin-right: 1rem;
+  gap: 0.5rem;
   font-size: 0.85rem;
 }
 
-.product-meta .category,
-.product-meta .consumers {
+.product-meta .category-tag,
+.product-meta .consumers-tag {
   background: rgba(139, 92, 246, 0.15);
   padding: 2px 8px;
   border-radius: 6px;
   color: #c4b5fd;
 }
 
+.product-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .product-amount {
   font-weight: 600;
   color: #a78bfa;
   font-size: 1.1rem;
+}
+
+.edit-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  background: rgba(139, 92, 246, 0.1);
+  color: #e5e7eb;
+}
+
+.edit-icon-btn:hover {
+  background: #8b5cf6;
+  color: white;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
 }
 
 /* Right Column - 40% */
@@ -1155,5 +1287,85 @@ onMounted(() => {
     border-left: none;
     border-top: 1px solid rgba(139, 92, 246, 0.2);
   }
+}
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a78bfa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1em;
+  padding-right: 2.5rem; /* Miejsce na strzałkę */
+  cursor: pointer;
+}
+
+
+select option {
+  background-color: #1e1b4b;
+  color: #e5e7eb;
+  padding: 10px;
+}
+.item-right-panel {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem; /* Odstęp między ceną a guzikami */
+}
+
+/* Wspólny styl dla guzików akcji (Ołówek i Strzałka) */
+.action-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 1rem;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  background: rgba(139, 92, 246, 0.1);
+  color: #e5e7eb;
+}
+
+
+.action-icon-btn.edit:hover {
+  background: #8b5cf6; /* Fioletowy po najechaniu */
+  color: white;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
+}
+
+
+.action-icon-btn.expand:hover {
+  background: rgba(139, 92, 246, 0.25);
+  border-color: rgba(139, 92, 246, 0.5);
+}
+.expand-btn {
+  display: none;
+}
+
+/* Map Styles */
+.modal-map {
+  height: 200px;
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  margin-top: 0.5rem;
+  z-index: 1;
+}
+
+.coords-display {
+  font-size: 0.8rem;
+  color: #a78bfa;
+  margin-top: 4px;
+  text-align: right;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.form-group.half {
+  flex: 1;
 }
 </style>
