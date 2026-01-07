@@ -126,6 +126,45 @@ class FractiApiService {
     return response.data;
   }
 
+  async updateProduct(id: number, data: Partial<Product>): Promise<Product> {
+    const response = await apiClient.patch<Product>(`/products/${id}/`, data);
+    return response.data;
+  }
+
+  async deleteProduct(id: number): Promise<void> {
+    await apiClient.delete(`/products/${id}/`);
+  }
+
+  // --- PARAGONY - EDYCJA ---
+
+  async updateReceipt(id: number, data: Partial<Receipt>): Promise<Receipt> {
+    const response = await apiClient.patch<Receipt>(`/receipts/${id}/`, data);
+    return response.data;
+  }
+
+  async deleteReceipt(id: number): Promise<void> {
+    await apiClient.delete(`/receipts/${id}/`);
+  }
+
+  // --- POZYCJE PARAGONU ---
+
+  async addReceiptItem(receiptId: number, data: Partial<Product>): Promise<Product> {
+    const response = await apiClient.post<Product>('/products/', {
+      ...data,
+      receipt: receiptId
+    });
+    return response.data;
+  }
+
+  async updateReceiptItem(itemId: number, data: Partial<Product>): Promise<Product> {
+    const response = await apiClient.patch<Product>(`/products/${itemId}/`, data);
+    return response.data;
+  }
+
+  async deleteReceiptItem(itemId: number): Promise<void> {
+    await apiClient.delete(`/products/${itemId}/`);
+  }
+
   // --- POMOCNICZE ---
 
   getCategoriesOptionList() {

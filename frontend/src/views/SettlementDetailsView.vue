@@ -75,7 +75,7 @@
                 </div>
                 <div class="product-right">
                   <div class="product-amount">{{ formatMoney(product.price) }} zł</div>
-                  <button class="edit-icon-btn" @click.stop="editProduct(product)" title="Edytuj">✏️</button>
+                  <button class="edit-icon-btn" @click.stop="openReceiptItemModal(product, item.id)" title="Edytuj pozycję">✏️</button>
                 </div>
               </div>
             </div>
@@ -149,7 +149,7 @@
           <div class="form-group">
             <label>Lokalizacja zakupu (Kliknij na mapie)</label>
             <div id="map-add" class="modal-map"></div>
-            <div class="coords-display" v-if="newProduct.latitude">
+            <div class="coords-display" v-if="newProduct.latitude && newProduct.longitude">
               📍 Wybrano: {{ newProduct.latitude.toFixed(6) }}, {{ newProduct.longitude.toFixed(6) }}
             </div>
           </div>
@@ -223,7 +223,7 @@
           <div class="form-group">
             <label>Lokalizacja</label>
             <div id="map-edit-prod" class="modal-map"></div>
-            <div class="coords-display" v-if="editingProduct.latitude">
+            <div class="coords-display" v-if="editingProduct.latitude && editingProduct.longitude">
               📍 {{ editingProduct.latitude.toFixed(6) }}, {{ editingProduct.longitude.toFixed(6) }}
             </div>
           </div>
@@ -245,10 +245,12 @@
       </div>
     </div>
 
-    <!-- Edit Receipt Modal -->
+    <!-- Edit Receipt Modal (Rozszerzony) -->
     <div v-if="showEditReceiptModal && editingReceipt" class="modal-overlay" @click="showEditReceiptModal = false">
       <div class="modal-content" @click.stop>
         <h2>Edytuj Paragon</h2>
+
+        <div class="modal-section-title">Dane ogólne</div>
         <form @submit.prevent="updateReceipt">
           <div class="form-group">
             <label>Sklep</label>
@@ -258,14 +260,14 @@
           <div class="form-group">
             <label>Lokalizacja sklepu</label>
             <div id="map-edit-receipt" class="modal-map"></div>
-            <div class="coords-display" v-if="editingReceipt.latitude">
+            <div class="coords-display" v-if="editingReceipt.latitude && editingReceipt.longitude">
               📍 {{ editingReceipt.latitude.toFixed(6) }}, {{ editingReceipt.longitude.toFixed(6) }}
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group half">
-              <label>Kwota</label>
+              <label>Kwota (Suma)</label>
               <input v-model="editingReceipt.total_amount" type="number" step="0.01" />
             </div>
             <div class="form-group half">
@@ -280,9 +282,101 @@
               <option v-for="member in settlement?.members" :key="member.id" :value="member.id">{{ member.username }}</option>
             </select>
           </div>
+
           <div class="modal-actions">
-            <button type="button" @click="showEditReceiptModal = false">Anuluj</button>
-            <button type="submit" class="primary">Zapisz</button>
+            <button type="submit" class="primary full-width">Zapisz zmiany w nagłówku</button>
+          </div>
+        </form>
+
+        <hr class="modal-divider" />
+
+        <div class="modal-section-header">
+          <div class="modal-section-title">Pozycje na paragonie</div>
+          <button type="button" class="add-item-btn" @click="openReceiptItemModal(null, editingReceipt.id)">
+            + Dodaj pozycję
+          </button>
+        </div>
+
+        <div class="receipt-items-list">
+          <div v-if="!editingReceipt.products || editingReceipt.products.length === 0" class="empty-list">
+            Brak pozycji. Dodaj coś!
+          </div>
+          <div
+            v-for="prod in editingReceipt.products"
+            :key="prod.id"
+            class="receipt-list-item"
+          >
+            <div class="r-item-info">
+              <div class="r-item-name">{{ prod.name }}</div>
+              <div class="r-item-meta">
+                {{ formatMoney(prod.price) }} zł • {{ prod.consumers.length }} os.
+              </div>
+            </div>
+            <div class="r-item-actions">
+              <button class="icon-btn edit" @click="openReceiptItemModal(prod, editingReceipt.id)">✏️</button>
+              <button class="icon-btn delete" @click="deleteReceiptItem(prod.id)">🗑️</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="calculated-total-box">
+          <div class="calc-label">Przeliczona suma pozycji:</div>
+          <div class="calc-value">{{ formatMoney(calculatedReceiptTotal) }} zł</div>
+          <button
+            type="button"
+            class="sync-btn"
+            @click="syncReceiptTotal"
+            title="Zastosuj obliczoną sumę jako total_amount"
+          >
+            ⟳ Zastosuj
+          </button>
+        </div>
+
+        <div class="modal-actions mt-4">
+           <button type="button" @click="showEditReceiptModal = false">Zamknij okno</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Receipt Item Modal (Nowy/Edycja pozycji paragonu) -->
+    <div v-if="showReceiptItemModal" class="modal-overlay z-high" @click="showReceiptItemModal = false">
+      <div class="modal-content small" @click.stop>
+        <h2>{{ editingReceiptItem?.id ? 'Edytuj pozycję' : 'Nowa pozycja' }}</h2>
+
+        <form @submit.prevent="saveReceiptItem">
+          <div class="form-group">
+            <label>Nazwa produktu</label>
+            <input v-model="receiptItemForm.name" required placeholder="np. Chipsy" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group half">
+              <label>Cena (zł)</label>
+              <input v-model="receiptItemForm.price" type="number" step="0.01" min="0" required />
+            </div>
+            <div class="form-group half">
+              <label>Kategoria</label>
+              <select v-model="receiptItemForm.category">
+                <option v-for="cat in categories" :key="cat.value" :value="cat.value">{{ cat.label }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Kto to zjadł?</label>
+            <div class="checkbox-group">
+              <label v-for="member in settlement?.members" :key="member.id">
+                <input type="checkbox" :value="member.id" v-model="receiptItemForm.consumers" />
+                {{ member.username }}
+              </label>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" @click="showReceiptItemModal = false">Anuluj</button>
+            <button type="submit" class="primary">
+              {{ editingReceiptItem?.id ? 'Zaktualizuj' : 'Dodaj' }}
+            </button>
           </div>
         </form>
       </div>
@@ -308,6 +402,7 @@ const showAddProductModal = ref(false);
 const showAddUserModal = ref(false);
 const showEditProductModal = ref(false);
 const showEditReceiptModal = ref(false);
+const showReceiptItemModal = ref(false);
 const codeCopied = ref(false);
 
 // Map instances
@@ -326,10 +421,24 @@ const newProduct = ref({
 
 const editingProduct = ref<Product | null>(null);
 const editingReceipt = ref<Receipt | null>(null);
+const editingReceiptItem = ref<Product | null>(null);
+const currentReceiptId = ref<number | null>(null);
+const receiptItemForm = ref({
+  name: '',
+  price: '',
+  category: Category.FOOD,
+  consumers: [] as number[]
+});
 
 const categories = fractiService.getCategoriesOptionList();
 
 // Computed
+const calculatedReceiptTotal = computed(() => {
+  if (!editingReceipt.value?.products) return 0;
+  return editingReceipt.value.products.reduce((sum, product) => {
+    return sum + parseFloat(product.price.toString() || '0');
+  }, 0);
+});
 const combinedTimeline = computed(() => {
   if (!settlement.value) return [];
 
@@ -466,8 +575,11 @@ const initMap = (elementId: string, lat: number | null, lng: number | null, onUp
 
   mapInstance = L.map(elementId).setView([startLat, startLng], zoom);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
+  // Ciemny motyw mapy CartoDB Dark Matter
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap contributors, © CARTO',
+    subdomains: 'abcd',
+    maxZoom: 19
   }).addTo(mapInstance);
 
   // Dodaj marker jeśli mamy współrzędne
@@ -508,6 +620,7 @@ const openAddProductModal = async () => {
   initMap('map-add', null, null, (lat, lng) => {
     newProduct.value.latitude = lat;
     newProduct.value.longitude = lng;
+
   });
 };
 
@@ -519,7 +632,7 @@ const editItem = async (item: any) => {
       showEditReceiptModal.value = true;
 
       await nextTick();
-      initMap('map-edit-receipt', receipt.latitude, receipt.longitude, (lat, lng) => {
+      initMap('map-edit-receipt', receipt.latitude ?? null, receipt.longitude ?? null, (lat, lng) => {
         if (editingReceipt.value) {
           editingReceipt.value.latitude = lat;
           editingReceipt.value.longitude = lng;
@@ -538,7 +651,7 @@ const editProduct = async (product: Product) => {
   showEditProductModal.value = true;
 
   await nextTick();
-  initMap('map-edit-prod', product.latitude, product.longitude, (lat, lng) => {
+  initMap('map-edit-prod', product.latitude ?? null, product.longitude ?? null, (lat, lng) => {
     if (editingProduct.value) {
       editingProduct.value.latitude = lat;
       editingProduct.value.longitude = lng;
@@ -567,32 +680,17 @@ const createLooseProduct = async () => {
       return;
     }
 
-    const productData = {
+    await fractiService.addLooseProduct({
       name: newProduct.value.name,
       price: newProduct.value.price,
       category: newProduct.value.category,
       consumers: newProduct.value.consumers,
-      settlement: settlement.value?.id,
-      // For now, we'll use payer as first consumer if not in list
-      // Backend should handle this better
-    };
+      latitude: newProduct.value.latitude,
+      longitude: newProduct.value.longitude,
+      settlement: settlement.value?.id
+    });
 
-    await fractiService.addLooseProduct(productData);
-
-    // Reload settlement
     await loadSettlement();
-
-    // Reset form
-    newProduct.value = {
-      name: '',
-      price: '',
-      category: Category.FOOD,
-      payer: null,
-      consumers: [],
-      latitude: null,
-      longitude: null
-    };
-
     showAddProductModal.value = false;
   } catch (error) {
     console.error('Błąd dodawania produktu:', error);
@@ -602,40 +700,121 @@ const createLooseProduct = async () => {
 
 const updateProduct = async () => {
   if (!editingProduct.value) return;
-
   try {
-    // TODO: Implement update API call
-    // await fractiService.updateProduct(editingProduct.value.id, editingProduct.value);
-
-    console.log('Updating product:', editingProduct.value);
-    alert('Funkcja edycji produktu wymaga rozszerzenia API backendu');
-
+    await fractiService.updateProduct(editingProduct.value.id, {
+      name: editingProduct.value.name,
+      price: editingProduct.value.price,
+      category: editingProduct.value.category,
+      consumers: editingProduct.value.consumers,
+      latitude: editingProduct.value.latitude,
+      longitude: editingProduct.value.longitude
+    });
     await loadSettlement();
     showEditProductModal.value = false;
-    editingProduct.value = null;
-  } catch (error) {
-    console.error('Błąd aktualizacji produktu:', error);
+  } catch (e) {
+    console.error('Błąd aktualizacji produktu:', e);
     alert('Nie udało się zaktualizować produktu');
   }
 };
 
 const updateReceipt = async () => {
   if (!editingReceipt.value) return;
-
   try {
-    // TODO: Implement update API call
-    // await fractiService.updateReceipt(editingReceipt.value.id, editingReceipt.value);
-
-    console.log('Updating receipt:', editingReceipt.value);
-    alert('Funkcja edycji paragonu wymaga rozszerzenia API backendu');
-
+    await fractiService.updateReceipt(editingReceipt.value.id, {
+      merchant_name: editingReceipt.value.merchant_name,
+      total_amount: editingReceipt.value.total_amount,
+      purchase_date: editingReceipt.value.purchase_date,
+      purchaser: editingReceipt.value.purchaser,
+      latitude: editingReceipt.value.latitude,
+      longitude: editingReceipt.value.longitude
+    });
     await loadSettlement();
-    showEditReceiptModal.value = false;
-    editingReceipt.value = null;
-  } catch (error) {
-    console.error('Błąd aktualizacji paragonu:', error);
+    const refreshedReceipt = settlement.value?.receipts?.find(r => r.id === editingReceipt.value?.id);
+    if (refreshedReceipt) {
+      editingReceipt.value = { ...refreshedReceipt };
+    }
+  } catch (e) {
+    console.error('Błąd aktualizacji paragonu:', e);
     alert('Nie udało się zaktualizować paragonu');
   }
+};
+
+const openReceiptItemModal = (item: Product | null, receiptId: number) => {
+  currentReceiptId.value = receiptId;
+  editingReceiptItem.value = item;
+
+  if (item) {
+    // Edycja istniejącej pozycji
+    receiptItemForm.value = {
+      name: item.name,
+      price: item.price.toString(),
+      category: item.category,
+      consumers: [...item.consumers]
+    };
+  } else {
+    // Nowa pozycja - domyślnie wszyscy uczestnicy
+    receiptItemForm.value = {
+      name: '',
+      price: '',
+      category: Category.FOOD,
+      consumers: settlement.value?.members?.map(m => m.id) || []
+    };
+  }
+  showReceiptItemModal.value = true;
+};
+
+const saveReceiptItem = async () => {
+  if (!currentReceiptId.value) return;
+
+  try {
+    const payload = {
+      name: receiptItemForm.value.name,
+      price: parseFloat(receiptItemForm.value.price),
+      category: receiptItemForm.value.category,
+      consumers: receiptItemForm.value.consumers
+    };
+
+    if (editingReceiptItem.value) {
+      // UPDATE istniejącego
+      await fractiService.updateReceiptItem(editingReceiptItem.value.id, payload);
+    } else {
+      // TWORZENIE nowego
+      await fractiService.addReceiptItem(currentReceiptId.value, payload);
+    }
+
+    await loadSettlement();
+
+    // Odśwież lokalny stan edytowanego paragonu
+    const refreshedReceipt = settlement.value?.receipts?.find(r => r.id === currentReceiptId.value);
+    if (refreshedReceipt) {
+      editingReceipt.value = { ...refreshedReceipt };
+    }
+
+    showReceiptItemModal.value = false;
+  } catch (e) {
+    console.error('Błąd zapisu pozycji:', e);
+    alert('Nie udało się zapisać pozycji');
+  }
+};
+
+const deleteReceiptItem = async (itemId: number) => {
+  if (!confirm('Czy na pewno chcesz usunąć tę pozycję?')) return;
+  try {
+    await fractiService.deleteReceiptItem(itemId);
+    await loadSettlement();
+
+    if (editingReceipt.value) {
+      editingReceipt.value.products = editingReceipt.value.products.filter(p => p.id !== itemId);
+    }
+  } catch (e) {
+    console.error(e);
+    alert('Błąd usuwania');
+  }
+};
+
+const syncReceiptTotal = () => {
+  if (!editingReceipt.value) return;
+  editingReceipt.value.total_amount = calculatedReceiptTotal.value.toString();
 };
 
 const loadSettlement = async () => {
@@ -1367,5 +1546,182 @@ select option {
 
 .form-group.half {
   flex: 1;
+}
+
+/* --- STYLE DLA MODALA EDYCJI PARAGONU --- */
+.modal-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.modal-section-title {
+  color: #a78bfa;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.modal-divider {
+  border: 0;
+  border-top: 1px solid rgba(139, 92, 246, 0.3);
+  margin: 1.5rem 0;
+}
+
+.add-item-btn {
+  background: rgba(139, 92, 246, 0.2);
+  border: 1px dashed rgba(139, 92, 246, 0.5);
+  color: #c4b5fd;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.add-item-btn:hover {
+  background: rgba(139, 92, 246, 0.3);
+  color: white;
+}
+
+/* Lista pozycji w modalu */
+.receipt-items-list {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.receipt-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+.receipt-list-item:last-child {
+  border-bottom: none;
+}
+
+.r-item-info {
+  flex: 1;
+}
+
+.r-item-name {
+  color: #e5e7eb;
+  font-weight: 500;
+}
+
+.r-item-meta {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.r-item-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.icon-btn.edit {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+.icon-btn.delete {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.icon-btn:hover {
+  filter: brightness(1.2);
+  transform: scale(1.05);
+}
+
+.empty-list {
+  padding: 20px;
+  text-align: center;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.mt-4 {
+  margin-top: 1rem;
+}
+
+/* Z-INDEX dla zagnieżdżonego modala */
+.z-high {
+  z-index: 200 !important;
+  background: rgba(0,0,0,0.85);
+}
+
+/* Box z obliczoną sumą */
+.calculated-total-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(99, 102, 241, 0.1) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  border-radius: 10px;
+  padding: 15px 20px;
+  margin-top: 1rem;
+  gap: 1rem;
+}
+
+.calc-label {
+  color: #9ca3af;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.calc-value {
+  flex: 1;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #a78bfa;
+  letter-spacing: 0.5px;
+}
+
+.sync-btn {
+  background: rgba(139, 92, 246, 0.2);
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  color: #c4b5fd;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.sync-btn:hover {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  color: white;
+  border-color: #8b5cf6;
+  transform: scale(1.05);
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
 }
 </style>
