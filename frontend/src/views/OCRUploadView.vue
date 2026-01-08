@@ -21,6 +21,7 @@
 
       <!-- Upload Area -->
       <div
+        v-if="!showCropper"
         class="upload-area"
         :class="{ 'drag-over': isDragging, 'has-image': previewUrl }"
         @drop.prevent="handleDrop"
@@ -46,6 +47,29 @@
         <div v-else class="preview-container">
           <img :src="previewUrl" alt="Preview" class="preview-image" />
           <button @click.stop="clearImage" class="remove-btn">✕</button>
+          <button @click.stop="openCropper" class="crop-btn">✂️ Przytnij</button>
+        </div>
+      </div>
+
+      <!-- Cropper Modal -->
+      <div v-if="showCropper" class="cropper-modal">
+        <div class="cropper-container">
+          <div class="cropper-header">
+            <h3>Przytnij zdjęcie</h3>
+            <button @click="closeCropper" class="close-btn">✕</button>
+          </div>
+          <Cropper
+            ref="cropperRef"
+            :src="originalImageUrl"
+            :stencil-props="{
+              aspectRatio: undefined
+            }"
+            class="cropper"
+          />
+          <div class="cropper-actions">
+            <button @click="closeCropper" class="btn-secondary">Anuluj</button>
+            <button @click="applyCrop" class="btn-primary">✓ Zastosuj</button>
+          </div>
         </div>
       </div>
 
@@ -105,6 +129,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import fractiService, { type Settlement, Category } from '@/services/receipts.service';
+import { Cropper } from 'vue-advanced-cropper';
+import 'vue-advanced-cropper/dist/style.css';
 
 const router = useRouter();
 
@@ -117,6 +143,10 @@ const isUploading = ref(false);
 const includeLocation = ref(false);
 const selectedSettlement = ref<string | null>(null);
 const settlements = ref<Settlement[]>([]);
+
+const originalImageUrl = ref<string | null>(null);
+const showCropper = ref(false);
+const cropperRef = ref<InstanceType<typeof Cropper> | null>(null);
 
 const successMessage = ref('');
 const errorMessage = ref('');
@@ -178,13 +208,52 @@ const processFile = (file: File) => {
   // Create preview
   const reader = new FileReader();
   reader.onload = (e) => {
-    previewUrl.value = e.target?.result as string;
+    const dataUrl = e.target?.result as string;
+    previewUrl.value = dataUrl;
+    originalImageUrl.value = dataUrl;
   };
   reader.readAsDataURL(file);
 
   // Clear messages
   errorMessage.value = '';
   successMessage.value = '';
+};
+
+const openCropper = () => {
+  showCropper.value = true;
+};
+
+const closeCropper = () => {
+  showCropper.value = false;
+};
+
+const applyCrop = () => {
+  const cropper = cropperRef.value;
+  if (!cropper) return;
+
+  const { canvas } = cropper.getResult();
+  if (!canvas) return;
+
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+
+    // Create new file from cropped image
+    const croppedFile = new File([blob], selectedFile.value?.name || 'cropped.jpg', {
+      type: 'image/jpeg',
+      lastModified: Date.now()
+    });
+
+    selectedFile.value = croppedFile;
+
+    // Update preview with cropped image
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      previewUrl.value = e.target?.result as string;
+    };
+    reader.readAsDataURL(croppedFile);
+
+    showCropper.value = false;
+  }, 'image/jpeg', 0.9);
 };
 
 const clearImage = () => {
@@ -433,6 +502,103 @@ onMounted(() => {
 .remove-btn:hover {
   background: #dc2626;
   transform: scale(1.1);
+}
+
+.crop-btn {
+  position: absolute;
+  top: 1rem;
+  right: 5rem;
+  padding: 10px 20px;
+  background: rgba(139, 92, 246, 0.9);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+}
+
+.crop-btn:hover {
+  background: #8b5cf6;
+  transform: translateY(-2px);
+}
+
+/* Cropper Modal */
+.cropper-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 2rem;
+}
+
+.cropper-container {
+  background: #1e1b4b;
+  border-radius: 16px;
+  max-width: 900px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.cropper-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.cropper-header h3 {
+  color: #a78bfa;
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  color: #e5e7eb;
+  font-size: 2rem;
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.cropper {
+  height: 500px;
+  background: #0f172a;
+}
+
+.cropper-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  padding: 1.5rem;
+  border-top: 1px solid rgba(139, 92, 246, 0.2);
 }
 
 /* Manual Entry */
