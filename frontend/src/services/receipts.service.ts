@@ -165,6 +165,21 @@ class FractiApiService {
     await apiClient.delete(`/products/${itemId}/`);
   }
 
+  // --- OCR ---
+
+async analyzeReceipt(formData: FormData): Promise<{task_id: string; status: string}> {
+    // ZMIANA: Adres URL zmieniony z '/receipts/analyze/' na '/ocr/analyze/'
+    const response = await apiClient.post<{task_id: string; status: string}>('/ocr/analyze/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+  }
+
+  async getOCRResult(taskId: string): Promise<any> {
+    // ZMIANA: Adres URL zmieniony z '/receipts/result/...' na '/ocr/result/...'
+    const response = await apiClient.get(`/ocr/result/${taskId}/`);
+    return response.data;
+  }
   // --- POMOCNICZE ---
 
   getCategoriesOptionList() {
