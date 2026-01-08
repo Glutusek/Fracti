@@ -15,17 +15,23 @@
         </router-link>
       </div>
 
-      <div class="nav-right">
+      <button class="hamburger" @click="toggleMobileMenu" :class="{ active: isMobileMenuOpen }">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+
+      <div class="nav-right" :class="{ 'mobile-open': isMobileMenuOpen }">
         <template v-if="!authStore.isLoggedIn">
-          <router-link to="/about" class="nav-link">O nas</router-link>
-          <router-link to="/contact" class="nav-link">Kontakt</router-link>
-          <router-link to="/auth" class="nav-link login-btn">Zaloguj się</router-link>
+          <router-link to="/about" class="nav-link" @click="closeMobileMenu">O nas</router-link>
+          <router-link to="/contact" class="nav-link" @click="closeMobileMenu">Kontakt</router-link>
+          <router-link to="/auth" class="nav-link login-btn" @click="closeMobileMenu">Zaloguj się</router-link>
         </template>
         <template v-else>
-          <router-link to="/settlements" class="nav-link">Rozliczenia</router-link>
-          <router-link to="/ocr" class="nav-link">OCR Paragony</router-link>
-          <router-link to="/about" class="nav-link">O nas</router-link>
-          <router-link to="/contact" class="nav-link">Kontakt</router-link>
+          <router-link to="/settlements" class="nav-link" @click="closeMobileMenu">Rozliczenia</router-link>
+          <router-link to="/ocr-upload" class="nav-link" @click="closeMobileMenu">Zeskanuj paragon!</router-link>
+          <router-link to="/about" class="nav-link" @click="closeMobileMenu">O nas</router-link>
+          <router-link to="/contact" class="nav-link" @click="closeMobileMenu">Kontakt</router-link>
           <button @click="logout" class="nav-link logout-btn">Wyloguj</button>
         </template>
       </div>
@@ -37,13 +43,24 @@
 import logoSrc from '@/assets/fracti_logo.svg'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { ref } from 'vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const isMobileMenuOpen = ref(false)
 
 const logout = () => {
   authStore.logout()
   router.push('/')
+  isMobileMenuOpen.value = false
+}
+
+const toggleMobileMenu = () => {
+  isMobileMenuOpen.value = !isMobileMenuOpen.value
+}
+
+const closeMobileMenu = () => {
+  isMobileMenuOpen.value = false
 }
 </script>
 
@@ -167,5 +184,77 @@ const logout = () => {
 .logout-btn:hover {
   background: rgba(239, 68, 68, 0.2);
   border-color: rgba(239, 68, 68, 0.5);
+}
+
+.hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  z-index: 1001;
+}
+
+.hamburger span {
+  width: 25px;
+  height: 3px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  transition: all 0.3s ease;
+}
+
+.hamburger.active span:nth-child(1) {
+  transform: rotate(45deg) translate(8px, 8px);
+}
+
+.hamburger.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(7px, -7px);
+}
+
+@media (max-width: 768px) {
+  .hamburger {
+    display: flex;
+  }
+
+  .nav-right {
+    position: fixed;
+    top: 73px;
+    right: -100%;
+    width: 100%;
+    height: calc(100vh - 73px);
+    background: rgba(17, 24, 39, 0.98);
+    backdrop-filter: blur(10px);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 2rem;
+    transition: right 0.3s ease;
+    border-left: 1px solid rgba(139, 92, 246, 0.2);
+  }
+
+  .nav-right.mobile-open {
+    right: 0;
+  }
+
+  .nav-link {
+    padding: 1rem;
+    text-align: center;
+    border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+  }
+
+  .nav-link::after {
+    display: none;
+  }
+
+  .login-btn,
+  .logout-btn {
+    margin-top: 1rem;
+  }
 }
 </style>
