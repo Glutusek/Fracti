@@ -82,8 +82,8 @@
           <button
             v-for="cat in filterOptions"
             :key="cat.value"
-            @click="activeFilter = cat.value"
-            :class="['filter-chip', { active: activeFilter === cat.value }]"
+            @click="toggleFilter(cat.value)"
+            :class="['filter-chip', { active: isFilterActive(cat.value) }]"
           >
             {{ cat.label }}
           </button>
@@ -166,7 +166,7 @@ const shadowUrl = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/m
 // --- STATE ---
 const currentSettlement = ref<Settlement | null>(null);
 const items = ref<any[]>([]);
-const activeFilter = ref<string>('ALL');
+const selectedFilters = ref<Set<string>>(new Set());
 const loading = ref(true);
 const errorMessage = ref('');
 
@@ -179,9 +179,27 @@ const filterOptions = computed(() => [
   }))
 ]);
 
+const toggleFilter = (val: string) => {
+  if (val === 'ALL') {
+    selectedFilters.value.clear();
+    return;
+  }
+
+  if (selectedFilters.value.has(val)) {
+    selectedFilters.value.delete(val);
+  } else {
+    selectedFilters.value.add(val);
+  }
+};
+
+const isFilterActive = (val: string) => {
+  if (val === 'ALL') return selectedFilters.value.size === 0;
+  return selectedFilters.value.has(val);
+};
+
 const filteredItems = computed(() => {
-  if (activeFilter.value === 'ALL') return items.value;
-  return items.value.filter(i => i.category === activeFilter.value);
+  if (selectedFilters.value.size === 0) return items.value;
+  return items.value.filter(i => selectedFilters.value.has(i.category));
 });
 
 // --- IKONY ---
