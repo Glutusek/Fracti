@@ -5,6 +5,8 @@ import MapView from '../views/MapView.vue'
 import SettlementsView from '../views/SettlementsView.vue'
 import SettlementDetailsView from '../views/SettlementDetailsView.vue'
 import OCRUploadView from '../views/OCRUploadView.vue'
+import AboutUsView from '../views/AboutUsView.vue'
+import ContactView from '../views/ContactView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -36,6 +38,16 @@ const router = createRouter({
       name: 'ocr-upload',
       component: OCRUploadView,
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/about',
+      name: 'about',
+      component: AboutUsView
+    },
+    {
+      path: '/contact',
+      name: 'contact',
+      component: ContactView
     },
     {
       path: '/map',
