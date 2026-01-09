@@ -43,6 +43,16 @@
              <input v-model="receiptData.merchant_name" placeholder="Nazwa sklepu" />
            </div>
 
+            <div class="form-group">
+           <label>Opis (opcjonalnie)</label>
+           <textarea
+             v-model="receiptData.description"
+             rows="2"
+             placeholder="Dodatkowy opis, np. 'Wyjazd służbowy'"
+           ></textarea>
+            </div>
+
+
            <div class="form-row">
              <div class="form-group half">
                <label>Data</label>
@@ -285,6 +295,7 @@ const selectedOcrIndices = ref<Set<number>>(new Set());
 const receiptProducts = ref<any[]>([]);
 const receiptData = ref({
   merchant_name: '',
+  description: '',
   purchase_date: new Date().toISOString().split('T')[0],
   total_amount: '',
   purchaser: null as number | null,
@@ -608,6 +619,9 @@ const submitReceipt = async () => {
     }
 
     fd.append('merchant_name', receiptData.value.merchant_name);
+    if (receiptData.value.description) {
+      fd.append('description', receiptData.value.description);
+    }
     fd.append('purchase_date', receiptData.value.purchase_date);
     fd.append('total_amount', receiptData.value.total_amount);
     fd.append('category', 'SHOPPING');
@@ -740,6 +754,16 @@ const goBack = () => router.back();
 .form-group input, .form-group select {
   width: 100%; padding: 10px; border-radius: 8px;
   background: rgba(0,0,0,0.3); border: 1px solid rgba(139,92,246,0.3); color: white;
+}
+.form-group textarea {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(139,92,246,0.3);
+  color: white;
+  font-family: inherit; /* Ważne dla textarea */
+  resize: vertical;     /* Pozwala zmieniać wysokość */
 }
 .highlight input {
   font-size: 1.2rem; font-weight: bold; color: #a78bfa; border-color: #8b5cf6;

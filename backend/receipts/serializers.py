@@ -19,7 +19,7 @@ class ProductSerializer(serializers.ModelSerializer):
     consumers = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.all(), required=False)
     class Meta:
         model = Product
-        fields = ['id', 'name', 'price', 'receipt', 'settlement', 'consumers', 'latitude', 'longitude', 'created_at', 'category']
+        fields = ['id', 'name', 'description', 'price', 'receipt', 'settlement', 'consumers', 'latitude', 'longitude', 'created_at', 'category']
 
     def get_latitude(self, obj):
         # Wyciągamy Y (Szerokość) z obiektu Point, jeśli istnieje
@@ -57,7 +57,7 @@ class ReceiptSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Receipt
-        fields = ['id', 'merchant_name', 'total_amount', 'purchase_date', 'image', 'latitude', 'longitude', 'products',
+        fields = ['id', 'merchant_name', 'description', 'total_amount', 'purchase_date', 'image', 'latitude', 'longitude', 'products',
                   'created_at', 'settlement', 'purchaser', 'category']
 
     def get_latitude(self, obj):

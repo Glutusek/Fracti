@@ -128,6 +128,10 @@
             <label>Nazwa produktu</label>
             <input v-model="newProduct.name" required />
           </div>
+          <div class="form-group">
+            <label>Opis (opcjonalnie)</label>
+            <textarea v-model="newProduct.description" rows="2" placeholder="Dodatkowy opis..."></textarea>
+          </div>
           <div class="form-row">
             <div class="form-group half">
               <label>Cena (zł)</label>
@@ -200,6 +204,10 @@
             <label>Nazwa produktu</label>
             <input v-model="editingProduct.name" required />
           </div>
+          <div class="form-group">
+            <label>Opis</label>
+            <textarea v-model="editingProduct.description" rows="2"></textarea>
+          </div>
           <div class="form-row">
             <div class="form-group half">
               <label>Cena</label>
@@ -254,7 +262,10 @@
             <label>Sklep</label>
             <input v-model="editingReceipt.merchant_name" required />
           </div>
-
+          <div class="form-group">
+            <label>Opis paragonu</label>
+            <textarea v-model="editingReceipt.description" rows="2" placeholder="Np. zakupy na grilla"></textarea>
+          </div>
           <div class="form-group">
             <label>Lokalizacja sklepu</label>
             <div id="map-edit-receipt" class="modal-map"></div>
@@ -429,6 +440,7 @@ let markerInstance: L.Marker | null = null;
 
 const newProduct = ref({
   name: '',
+  description: '',
   price: '',
   category: Category.FOOD,
   payer: null as number | null,
@@ -707,6 +719,7 @@ const createLooseProduct = async () => {
 
     await fractiService.addLooseProduct({
       name: newProduct.value.name,
+      description: newProduct.value.description,
       price: newProduct.value.price,
       category: newProduct.value.category,
       consumers: newProduct.value.consumers,
@@ -728,6 +741,7 @@ const updateProduct = async () => {
   try {
     await fractiService.updateProduct(editingProduct.value.id, {
       name: editingProduct.value.name,
+      description: editingProduct.value.description,
       price: editingProduct.value.price,
       category: editingProduct.value.category,
       consumers: editingProduct.value.consumers,
@@ -771,6 +785,7 @@ const updateReceipt = async () => {
   try {
     await fractiService.updateReceipt(editingReceipt.value.id, {
       merchant_name: editingReceipt.value.merchant_name,
+      description: editingReceipt.value.description,
       total_amount: editingReceipt.value.total_amount,
       purchase_date: editingReceipt.value.purchase_date,
       purchaser: editingReceipt.value.purchaser,
@@ -1837,5 +1852,21 @@ select option {
   border-color: #ef4444 !important;
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
   transform: translateY(-1px);
+}
+textarea {
+  width: 100%;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 8px;
+  color: #e5e7eb;
+  font-size: 1rem;
+  resize: vertical; /* Pozwala zmieniać wysokość */
+  font-family: inherit;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #8b5cf6;
 }
 </style>
