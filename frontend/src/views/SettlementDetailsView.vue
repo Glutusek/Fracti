@@ -36,7 +36,7 @@
             class="timeline-item"
             :class="{ 'is-receipt': item.type === 'receipt', 'is-expanded': expandedReceipts.has(item.id) }"
           >
-            <div class="item-main" @click="item.type === 'receipt' ? toggleReceipt(item.id) : editItem(item)">
+            <div class="item-main" @click="openOnMap(item)">
 
               <div class="item-icon">
                 {{ item.type === 'receipt' ? '🧾' : '🛒' }}
@@ -53,11 +53,15 @@
               <div class="item-right-panel">
                 <div class="item-amount">{{ formatMoney(item.amount) }} zł</div>
 
+                <button class="action-icon-btn map" @click.stop="openOnMap(item)" title="Pokaż na mapie">
+                  🗺️
+                </button>
+
                 <button class="action-icon-btn edit" @click.stop="editItem(item)" title="Edytuj">
                   ✏️
                 </button>
 
-                <button v-if="item.type === 'receipt'" class="action-icon-btn expand">
+                <button v-if="item.type === 'receipt'" class="action-icon-btn expand" @click.stop="toggleReceipt(item.id)">
                   {{ expandedReceipts.has(item.id) ? '▲' : '▼' }}
                 </button>
               </div>
@@ -492,6 +496,12 @@ const goBack = () => {
 
 const goToMap = () => {
   router.push(`/map/${settlement.value?.id}`);
+};
+
+const openOnMap = (item: { type: string; id: number; }) => {
+  // focus key matches MapView uniqueId format: r-<id> or p-<id>
+  const uniqueId = item.type === 'receipt' ? `r-${item.id}` : `p-${item.id}`;
+  router.push({ name: 'map-settlement', params: { uuid: settlement.value?.id }, query: { focus: uniqueId } });
 };
 
 const addReceipt = () => {
