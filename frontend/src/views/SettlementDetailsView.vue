@@ -1,6 +1,5 @@
 <template>
   <div class="details-container">
-    <!-- Header -->
     <div class="header">
       <button @click="goBack" class="back-btn">← Powrót</button>
       <div class="header-info">
@@ -11,9 +10,7 @@
       </div>
     </div>
 
-    <!-- Main Content -->
     <div class="content-split">
-      <!-- Left Column - 60% - Timeline -->
       <div class="left-column">
         <div class="timeline-header">
           <h2>Historia wydatków</h2>
@@ -29,7 +26,6 @@
         </div>
 
         <div v-else class="timeline">
-          <!-- Receipt Item -->
           <div
             v-for="item in combinedTimeline"
             :key="item.type + '-' + item.id"
@@ -67,7 +63,6 @@
               </div>
             </div>
 
-            <!-- Receipt Products (Expanded) -->
             <div v-if="item.type === 'receipt' && expandedReceipts.has(item.id)" class="receipt-products">
               <div v-for="product in item.products" :key="product.id" class="product-item">
                 <div class="product-info">
@@ -87,9 +82,7 @@
         </div>
       </div>
 
-      <!-- Right Column - 40% - Sidebar -->
       <div class="right-column">
-        <!-- Action Buttons -->
         <div class="action-panel">
           <button @click="goToMap" class="action-btn map-btn">
             🗺️ Mapa
@@ -102,7 +95,6 @@
           </button>
         </div>
 
-        <!-- Users List -->
         <div class="users-section">
           <h3>Uczestnicy ({{ settlement?.members?.length || 0 }})</h3>
           <div class="users-list">
@@ -128,7 +120,6 @@
       </div>
     </div>
 
-    <!-- Add Product Modal -->
     <div v-if="showAddProductModal" class="modal-overlay" @click="showAddProductModal = false">
       <div class="modal-content" @click.stop>
         <h2>Dodaj Produkt</h2>
@@ -185,7 +176,6 @@
       </div>
     </div>
 
-    <!-- Share Code Modal -->
     <div v-if="showAddUserModal" class="modal-overlay" @click="showAddUserModal = false">
       <div class="modal-content small" @click.stop>
         <h2>Kod zaproszenia</h2>
@@ -202,7 +192,6 @@
       </div>
     </div>
 
-    <!-- Edit Product Modal -->
     <div v-if="showEditProductModal && editingProduct" class="modal-overlay" @click="showEditProductModal = false">
       <div class="modal-content" @click.stop>
         <h2>Edytuj Produkt</h2>
@@ -241,15 +230,20 @@
               </label>
             </div>
           </div>
-          <div class="modal-actions">
-            <button type="button" @click="showEditProductModal = false">Anuluj</button>
-            <button type="submit" class="primary">Zapisz</button>
+
+          <div class="modal-actions space-between">
+            <button type="button" class="danger-btn" @click="deleteLooseProduct">
+              🗑️ Usuń
+            </button>
+            <div class="right-actions">
+              <button type="button" @click="showEditProductModal = false">Anuluj</button>
+              <button type="submit" class="primary">Zapisz</button>
+            </div>
           </div>
         </form>
       </div>
     </div>
 
-    <!-- Edit Receipt Modal (Rozszerzony) -->
     <div v-if="showEditReceiptModal && editingReceipt" class="modal-overlay" @click="showEditReceiptModal = false">
       <div class="modal-content" @click.stop>
         <h2>Edytuj Paragon</h2>
@@ -287,8 +281,11 @@
             </select>
           </div>
 
-          <div class="modal-actions">
-            <button type="submit" class="primary full-width">Zapisz zmiany w nagłówku</button>
+          <div class="modal-actions space-between">
+            <button type="button" class="danger-btn" @click="deleteReceipt">
+              🗑️ Usuń paragon
+            </button>
+            <button type="submit" class="primary">Zapisz zmiany w nagłówku</button>
           </div>
         </form>
 
@@ -342,7 +339,6 @@
       </div>
     </div>
 
-    <!-- Receipt Item Modal (Nowy/Edycja pozycji paragonu) -->
     <div v-if="showReceiptItemModal" class="modal-overlay z-high" @click="showReceiptItemModal = false">
       <div class="modal-content small" @click.stop>
         <h2>{{ editingReceiptItem?.id ? 'Edytuj pozycję' : 'Nowa pozycja' }}</h2>
@@ -385,6 +381,22 @@
         </form>
       </div>
     </div>
+    <div v-if="showConfirmModal" class="modal-overlay z-max" @click="showConfirmModal = false">
+      <div class="modal-content small alert-box" @click.stop>
+        <div class="alert-icon">⚠️</div>
+        <h2>{{ confirmMessage }}</h2>
+        <p class="info-text center-text">{{ confirmSubMessage }}</p>
+
+        <div class="modal-actions space-between mt-4">
+          <button type="button" @click="showConfirmModal = false" class="ghost-btn">
+            Anuluj
+          </button>
+          <button type="button" class="danger-btn full-confirm" @click="handleConfirmDelete">
+            🗑️ Tak, usuń
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -408,7 +420,9 @@ const showEditProductModal = ref(false);
 const showEditReceiptModal = ref(false);
 const showReceiptItemModal = ref(false);
 const codeCopied = ref(false);
-
+const showConfirmModal = ref(false);
+const confirmMessage = ref('');
+const confirmSubMessage = ref('');
 // Map instances
 let mapInstance: L.Map | null = null;
 let markerInstance: L.Marker | null = null;
@@ -423,6 +437,7 @@ const newProduct = ref({
   longitude: null as number | null
 });
 
+const pendingDeleteAction = ref<(() => Promise<void>) | null>(null);
 const editingProduct = ref<Product | null>(null);
 const editingReceipt = ref<Receipt | null>(null);
 const editingReceiptItem = ref<Product | null>(null);
@@ -480,6 +495,7 @@ const combinedTimeline = computed(() => {
       payerId: product.consumers[0] || 0 // First consumer as payer
     });
   });
+
 
   // Sort by date (newest first)
   return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -572,7 +588,6 @@ const formatDate = (dateString: string): string => {
 // --- MAP LOGIC ---
 
 const initMap = (elementId: string, lat: number | null, lng: number | null, onUpdate: (lat: number, lng: number) => void) => {
-  // Jeśli mapa już istnieje, zniszcz ją (żeby nie było błędów przy ponownym otwarciu)
   if (mapInstance) {
     mapInstance.remove();
     mapInstance = null;
@@ -727,6 +742,30 @@ const updateProduct = async () => {
   }
 };
 
+
+const deleteLooseProduct = () => {
+  if (!editingProduct.value) return;
+
+
+  openConfirmModal(
+    'Usunąć produkt?',
+    `Czy na pewno chcesz trwale usunąć "${editingProduct.value.name}"?`,
+    async () => {
+      // To jest logika, która wykona się dopiero po potwierdzeniu
+      if (!editingProduct.value) return;
+      try {
+        await fractiService.deleteProduct(editingProduct.value.id);
+        showEditProductModal.value = false; // Zamknij modal edycji
+        editingProduct.value = null;
+        await loadSettlement();
+      } catch (e) {
+        console.error('Błąd usuwania produktu:', e);
+        alert('Wystąpił błąd podczas usuwania.');
+      }
+    }
+  );
+};
+
 const updateReceipt = async () => {
   if (!editingReceipt.value) return;
   try {
@@ -747,6 +786,41 @@ const updateReceipt = async () => {
     console.error('Błąd aktualizacji paragonu:', e);
     alert('Nie udało się zaktualizować paragonu');
   }
+};
+
+const openConfirmModal = (title: string, subTitle: string, action: () => Promise<void>) => {
+  confirmMessage.value = title;
+  confirmSubMessage.value = subTitle;
+  pendingDeleteAction.value = action;
+  showConfirmModal.value = true;
+};
+const handleConfirmDelete = async () => {
+  if (pendingDeleteAction.value) {
+    await pendingDeleteAction.value();
+  }
+  showConfirmModal.value = false;
+  pendingDeleteAction.value = null;
+};
+// NOWA FUNKCJA USUWANIA PARAGONU
+const deleteReceipt = async () => {
+ if (!editingReceipt.value) return;
+
+  openConfirmModal(
+    'Usunąć paragon?',
+    'Zostanie usunięty paragon oraz WSZYSTKIE przypisane do niego pozycje. Tej operacji nie można cofnąć.',
+    async () => {
+      if (!editingReceipt.value) return;
+      try {
+        await fractiService.deleteReceipt(editingReceipt.value.id);
+        showEditReceiptModal.value = false; // Zamknij modal edycji
+        editingReceipt.value = null;
+        await loadSettlement();
+      } catch (e) {
+        console.error('Błąd usuwania paragonu:', e);
+        alert('Wystąpił błąd podczas usuwania.');
+      }
+    }
+  );
 };
 
 const openReceiptItemModal = (item: Product | null, receiptId: number) => {
@@ -808,18 +882,21 @@ const saveReceiptItem = async () => {
 };
 
 const deleteReceiptItem = async (itemId: number) => {
-  if (!confirm('Czy na pewno chcesz usunąć tę pozycję?')) return;
-  try {
-    await fractiService.deleteReceiptItem(itemId);
-    await loadSettlement();
-
-    if (editingReceipt.value) {
-      editingReceipt.value.products = editingReceipt.value.products.filter(p => p.id !== itemId);
+  openConfirmModal(
+    'Usunąć pozycję?',
+    'Pozycja zniknie z tego paragonu.',
+    async () => {
+      try {
+        await fractiService.deleteReceiptItem(itemId);
+        await loadSettlement();
+        if (editingReceipt.value) {
+          editingReceipt.value.products = editingReceipt.value.products.filter(p => p.id !== itemId);
+        }
+      } catch (e) {
+        console.error(e);
+      }
     }
-  } catch (e) {
-    console.error(e);
-    alert('Błąd usuwania');
-  }
+  );
 };
 
 const syncReceiptTotal = () => {
@@ -1733,5 +1810,32 @@ select option {
   border-color: #8b5cf6;
   transform: scale(1.05);
   box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+}
+
+/* --- STYLE DLA PRZYCISKÓW USUWANIA (NOWE) --- */
+.modal-actions.space-between {
+  justify-content: space-between;
+  width: 100%;
+}
+
+.right-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.danger-btn {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+  color: #f87171 !important;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.danger-btn:hover {
+  background: rgba(239, 68, 68, 0.25) !important;
+  border-color: #ef4444 !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+  transform: translateY(-1px);
 }
 </style>
