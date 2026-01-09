@@ -1,586 +1,1013 @@
 <template>
-  <div class="ocr-container">
-    <div class="content-wrapper">
+  <div class="ocr-page">
+    <div class="ocr-container">
+
       <div class="header">
-        <button @click="goBack" class="back-btn">
-          ← Powrót
-        </button>
-        <h1>Skanuj Paragon</h1>
+        <button @click="goBack" class="back-btn">← Powrót</button>
+        <h1>Nowy Paragon</h1>
       </div>
 
-      <!-- Wybór Settlement -->
-      <div class="settlement-selector" v-if="settlements.length > 0">
-        <label>Przypisz do grupy rozliczeniowej:</label>
-        <select v-model="selectedSettlement">
-          <option :value="null">Bez grupy (tylko mój paragon)</option>
-          <option v-for="settlement in settlements" :key="settlement.id" :value="settlement.id">
-            {{ settlement.name }}
-          </option>
-        </select>
-      </div>
-
-      <!-- Upload Area -->
-      <div
-        class="upload-area"
-        :class="{ 'drag-over': isDragging, 'has-image': previewUrl }"
-        @drop.prevent="handleDrop"
-        @dragover.prevent="isDragging = true"
-        @dragleave.prevent="isDragging = false"
-        @click="triggerFileInput"
-      >
-        <input
-          ref="fileInput"
-          type="file"
-          accept="image/*"
-          :capture="isMobile ? 'environment' : undefined"
-          @change="handleFileSelect"
-          style="display: none"
-        />
-
-        <div v-if="!previewUrl" class="upload-prompt">
-          <div class="icon">📸</div>
-          <h3>{{ isMobile ? 'Zrób zdjęcie lub wybierz z galerii' : 'Przeciągnij zdjęcie lub kliknij aby wybrać' }}</h3>
-          <p class="hint">Obsługiwane formaty: JPG, PNG, HEIC</p>
-        </div>
-
-        <div v-else class="preview-container">
-          <img :src="previewUrl" alt="Preview" class="preview-image" />
-          <button @click.stop="clearImage" class="remove-btn">✕</button>
-        </div>
-      </div>
-
-      <!-- Manual Data Entry -->
-      <div class="manual-entry" v-if="previewUrl">
-        <h3>Dane paragonu</h3>
-        <div class="form-group">
-          <label>Nazwa sklepu</label>
-          <input v-model="receiptData.merchant_name" type="text" placeholder="np. Biedronka" />
-        </div>
-
-        <div class="form-group">
-          <label>Data zakupu</label>
-          <input v-model="receiptData.purchase_date" type="date" />
-        </div>
-
-        <div class="form-group">
-          <label>Kategoria</label>
-          <select v-model="receiptData.category">
-            <option v-for="cat in categories" :key="cat.value" :value="cat.value">
-              {{ cat.label }}
-            </option>
+      <div class="section-card">
+        <h2 class="section-title">1. Wybierz rozliczenie</h2>
+        <div class="settlement-selector">
+          <select v-model="selectedSettlementId" @change="handleSettlementChange">
+            <option :value="null" disabled>-- Wybierz grupę --</option>
+            <option v-for="s in settlements" :key="s.id" :value="s.id">{{ s.name }}</option>
+            <option value="NEW_SETTLEMENT">➕ Utwórz nowe rozliczenie...</option>
           </select>
         </div>
 
-        <div class="form-group">
-          <label>Całkowita kwota (zł)</label>
-          <input v-model="receiptData.total_amount" type="number" step="0.01" min="0" placeholder="0.00" />
-        </div>
-
-        <!-- Location (optional) -->
-        <div class="form-group">
-          <label class="checkbox-label">
-            <input v-model="includeLocation" type="checkbox" />
-            Dodaj lokalizację
-          </label>
+        <div v-if="showNewSettlementForm" class="new-settlement-form fade-in">
+          <h3>Nowa grupa rozliczeniowa</h3>
+          <div class="form-group">
+            <label>Nazwa</label>
+            <input v-model="newSettlement.name" placeholder="np. Wyjazd Mazury" />
+          </div>
+          <div class="form-group">
+            <label>Opis</label>
+            <input v-model="newSettlement.description" placeholder="Opcjonalny opis" />
+          </div>
+          <div class="form-actions">
+            <button @click="createSettlement" class="btn-primary small">Utwórz i wybierz</button>
+            <button @click="cancelNewSettlement" class="btn-secondary small">Anuluj</button>
+          </div>
         </div>
       </div>
 
-      <!-- Action Buttons -->
-      <div class="actions" v-if="previewUrl">
-        <button @click="clearImage" class="btn-secondary">Anuluj</button>
-        <button @click="uploadReceipt" class="btn-primary" :disabled="isUploading || !isFormValid">
-          <span v-if="!isUploading">📤 Prześlij paragon</span>
-          <span v-else class="spinner-inline">⏳ Przesyłanie...</span>
-        </button>
+      <div v-if="canEditForm" class="section-card fade-in">
+        <h2 class="section-title">2. Dane Paragonu</h2>
+
+        <div class="form-grid">
+           <div class="form-group">
+             <label>Sklep</label>
+             <input v-model="receiptData.merchant_name" placeholder="Nazwa sklepu" />
+           </div>
+
+           <div class="form-row">
+             <div class="form-group half">
+               <label>Data</label>
+               <input type="date" v-model="receiptData.purchase_date" />
+             </div>
+             <div class="form-group half">
+               <label>Płatnik</label>
+               <select v-model="receiptData.purchaser">
+                 <option :value="null" disabled>Kto płacił?</option>
+                 <option v-for="m in settlementMembers" :key="m.id" :value="m.id">{{ m.username }}</option>
+               </select>
+             </div>
+           </div>
+
+           <div class="form-group highlight">
+             <label>Kwota Całkowita (PLN)</label>
+             <div class="amount-input-wrapper">
+               <input
+                 type="number"
+                 step="0.01"
+                 v-model="receiptData.total_amount"
+                 placeholder="0.00"
+               />
+               <button @click="calculateTotalFromProducts" class="btn-calc" title="Oblicz z sumy produktów">∑ Przelicz</button>
+             </div>
+           </div>
+
+           <div class="form-group">
+              <label>Lokalizacja (opcjonalnie)</label>
+              <div id="map-ocr" class="mini-map"></div>
+              <div class="coords-display" v-if="receiptData.latitude && receiptData.longitude">
+                  📍 {{ receiptData.latitude.toFixed(5) }}, {{ receiptData.longitude.toFixed(5) }}
+              </div>
+           </div>
+        </div>
       </div>
 
-      <!-- Success/Error Messages -->
-      <div v-if="successMessage" class="message success">✓ {{ successMessage }}</div>
-      <div v-if="errorMessage" class="message error">✕ {{ errorMessage }}</div>
+      <div v-if="canEditForm" class="section-card fade-in">
+        <h2 class="section-title">3. Pozycje</h2>
+
+        <div class="ocr-trigger-section">
+            <input ref="fileInput" type="file" accept="image/*" hidden @change="handleFileSelect" />
+
+            <button class="ocr-upload-btn" @click="triggerFileInput" :disabled="isAnalyzing">
+                <span class="icon">📸</span>
+                <div class="text-content">
+                    <span class="main-text" v-if="!isAnalyzing">Wczytaj pozycje ze zdjęcia</span>
+                    <span class="main-text" v-else>Analizowanie... ({{ pollingAttempts }})</span>
+                    <span class="sub-text">Automatycznie odczytaj produkty i ceny</span>
+                </div>
+            </button>
+        </div>
+
+        <div class="products-manager">
+          <div class="pm-header">
+            <h3>Lista produktów ({{ receiptProducts.length }})</h3>
+            <button @click="openProductModal(null)" class="btn-text">+ Dodaj ręcznie</button>
+          </div>
+
+          <div v-if="receiptProducts.length === 0" class="empty-products">
+            Brak pozycji. Dodaj ręcznie lub zeskanuj paragon powyżej.
+          </div>
+
+          <div v-else class="products-list">
+             <div v-for="(prod, idx) in receiptProducts" :key="idx" class="product-row">
+                <div class="prod-info">
+                   <div class="prod-name">{{ prod.name }}</div>
+                   <div class="prod-cat">{{ getCategoryLabel(prod.category) }} • 👥 {{ prod.consumers.length }}</div>
+                </div>
+                <div class="prod-price">{{ prod.price.toFixed(2) }} zł</div>
+                <div class="prod-actions">
+                   <button @click="openProductModal(idx)" class="btn-mini edit">✏️</button>
+                   <button @click="confirmRemoveProduct(idx)" class="btn-mini delete">🗑️</button>
+                </div>
+             </div>
+          </div>
+        </div>
+
+        <div class="final-actions">
+           <button @click="submitReceipt" class="btn-save" :disabled="isUploading">
+              <span v-if="isUploading">Zapisywanie...</span>
+              <span v-else>💾 Zapisz Paragon</span>
+           </button>
+        </div>
+      </div>
+
     </div>
+
+    <div v-if="showCropperModal" class="modal-overlay z-high">
+       <div class="modal-content large">
+          <h3>Przytnij paragon</h3>
+          <p class="hint-text">Zaznacz obszar zawierający listę zakupów.</p>
+          <cropper
+            ref="cropperRef"
+            class="cropper-container"
+            :src="originalImageUrl"
+            :stencil-props="{ aspectRatio: undefined }"
+          />
+          <div class="modal-actions">
+             <button @click="cancelCrop">Anuluj</button>
+             <button @click="applyCropAndAnalyze" class="primary">✂️ Przytnij i Analizuj</button>
+          </div>
+       </div>
+    </div>
+
+    <div v-if="showOcrOverlay && ocrResult" class="ocr-overlay">
+       <div class="ocr-header">
+          <h2>Wyniki analizy</h2>
+          <div class="ocr-instruct">Kliknij na pozycje, które chcesz dodać (Zielone = Wybrane)</div>
+          <button @click="closeOcrOverlay" class="close-overlay">✕</button>
+       </div>
+
+       <div class="ocr-workspace">
+          <div class="img-container" :style="{ width: ocrResult.image_dim.width + 'px', height: ocrResult.image_dim.height + 'px' }">
+             <img :src="croppedImageUrl || ''" class="overlay-bg" alt="Przycięty paragon" />
+
+             <div
+               v-for="(item, idx) in ocrResult.items"
+               :key="idx"
+               class="ocr-box"
+               :class="{ 'selected': selectedOcrIndices.has(idx) }"
+               :style="getBoxStyle(item.box)"
+               @click="toggleOcrItem(idx)"
+             >
+               <div class="tooltip">{{ item.name }} ({{ item.price }} zł)</div>
+             </div>
+          </div>
+       </div>
+
+       <div class="ocr-footer">
+          <div class="selection-summary">
+             Wybrano: <strong>{{ selectedOcrIndices.size }}</strong> pozycji
+          </div>
+          <div class="ocr-footer-actions">
+             <button @click="selectAllOcr" class="btn-secondary-outline">
+               Zaznacz wszystkie
+             </button>
+
+             <button @click="importOcrItems" class="btn-import-glow" :disabled="selectedOcrIndices.size === 0">
+               📥 Importuj do listy
+             </button>
+          </div>
+       </div>
+    </div>
+
+    <div v-if="showProductModal" class="modal-overlay z-high">
+       <div class="modal-content small">
+          <h3>{{ editingProductIndex !== null ? 'Edytuj pozycję' : 'Dodaj pozycję' }}</h3>
+          <form @submit.prevent="saveProduct">
+             <div class="form-group">
+                <label>Nazwa</label>
+                <input v-model="productForm.name" required />
+             </div>
+             <div class="form-row">
+                <div class="form-group half">
+                   <label>Cena (zł)</label>
+                   <input type="number" step="0.01" v-model="productForm.price" required />
+                </div>
+                <div class="form-group half">
+                   <label>Kategoria</label>
+                   <select v-model="productForm.category">
+                      <option v-for="c in categories" :key="c.value" :value="c.value">{{ c.label }}</option>
+                   </select>
+                </div>
+             </div>
+
+             <div class="form-group">
+                <label>Konsumenci (kto płaci za tę część?)</label>
+                <div class="checkbox-group">
+                   <label v-for="member in settlementMembers" :key="member.id">
+                      <input type="checkbox" :value="member.id" v-model="productForm.consumers" />
+                      {{ member.username }}
+                   </label>
+                </div>
+                <p v-if="settlementMembers.length === 0" class="hint-error">Brak członków w grupie.</p>
+             </div>
+
+             <div class="modal-actions">
+                <button type="button" @click="showProductModal = false">Anuluj</button>
+                <button type="submit" class="primary">Zapisz</button>
+             </div>
+          </form>
+       </div>
+    </div>
+
+    <div v-if="showConfirmModal" class="modal-overlay z-max" @click="showConfirmModal = false">
+      <div class="modal-content small alert-box" @click.stop>
+        <div class="alert-icon">⚠️</div>
+        <h2>{{ confirmMessage }}</h2>
+        <p class="info-text center-text">{{ confirmSubMessage }}</p>
+
+        <div class="modal-actions space-between mt-4">
+          <button type="button" @click="showConfirmModal = false" class="ghost-btn">
+            Anuluj
+          </button>
+          <button type="button" class="danger-btn full-confirm" @click="handleConfirmDelete">
+            🗑️ Tak, usuń
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="errorMessage" class="toast error">{{ errorMessage }}</div>
+    <div v-if="successMessage" class="toast success">{{ successMessage }}</div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, nextTick, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import fractiService, { type Settlement, Category } from '@/services/receipts.service';
+import fractiService, { type Settlement, type User, Category, CATEGORY_LABELS } from '@/services/receipts.service';
+import { Cropper } from 'vue-advanced-cropper';
+import 'vue-advanced-cropper/dist/style.css';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 const router = useRouter();
 
-// State
-const fileInput = ref<HTMLInputElement | null>(null);
-const previewUrl = ref<string | null>(null);
-const selectedFile = ref<File | null>(null);
-const isDragging = ref(false);
-const isUploading = ref(false);
-const includeLocation = ref(false);
-const selectedSettlement = ref<string | null>(null);
+// --- STATE ---
+// 1. Settlement & Users
 const settlements = ref<Settlement[]>([]);
+const selectedSettlementId = ref<string | number | null>(null);
+const settlementMembers = ref<User[]>([]);
+const showNewSettlementForm = ref(false);
+const newSettlement = ref({ name: '', description: '' });
 
-const successMessage = ref('');
-const errorMessage = ref('');
+// 2. OCR / File / Cropper
+const fileInput = ref<HTMLInputElement|null>(null);
+const originalImageUrl = ref<string|null>(null);
+const croppedImageUrl = ref<string|null>(null); // Do wyświetlania pod overlayem
+const showCropperModal = ref(false);
+const cropperRef = ref<any>(null);
+const isAnalyzing = ref(false);
+const pollingAttempts = ref(0);
+const ocrResult = ref<any>(null);
+const showOcrOverlay = ref(false);
+const selectedOcrIndices = ref<Set<number>>(new Set());
 
+// 3. Receipt Data Form
+const receiptProducts = ref<any[]>([]);
 const receiptData = ref({
   merchant_name: '',
   purchase_date: new Date().toISOString().split('T')[0],
-  category: Category.FOOD,
-  total_amount: ''
+  total_amount: '',
+  purchaser: null as number | null,
+  latitude: null as number | null,
+  longitude: null as number | null
 });
 
-// Detect mobile
-const isMobile = computed(() => {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+// 4. Modals State
+const showProductModal = ref(false);
+const editingProductIndex = ref<number | null>(null);
+const productForm = ref({
+  name: '', price: '', category: Category.FOOD, consumers: [] as number[]
 });
 
-// Categories
+// 5. Confirmation Modal State
+const showConfirmModal = ref(false);
+const confirmMessage = ref('');
+const confirmSubMessage = ref('');
+const pendingDeleteAction = ref<(() => void) | null>(null);
+
+// UI Helpers
+const isUploading = ref(false);
+const errorMessage = ref('');
+const successMessage = ref('');
 const categories = fractiService.getCategoriesOptionList();
+let mapInstance: L.Map | null = null;
+let markerInstance: L.Marker | null = null;
 
-// Form validation
-const isFormValid = computed(() => {
-  return receiptData.value.merchant_name.trim() !== '' &&
-         receiptData.value.total_amount !== '' &&
-         parseFloat(receiptData.value.total_amount) > 0;
+// --- COMPUTED ---
+const canEditForm = computed(() => {
+  return selectedSettlementId.value !== null && selectedSettlementId.value !== 'NEW_SETTLEMENT';
 });
 
-// Methods
-const goBack = () => {
-  router.push('/settlements');
-};
+// --- LIFECYCLE ---
+onMounted(async () => {
+  try {
+    settlements.value = await fractiService.getSettlements();
+  } catch (e) {
+    console.error(e);
+  }
+});
 
-const triggerFileInput = () => {
-  fileInput.value?.click();
-};
+// --- METHODS: Settlement ---
+const handleSettlementChange = async () => {
+  if (selectedSettlementId.value === 'NEW_SETTLEMENT') {
+    showNewSettlementForm.value = true;
+    settlementMembers.value = [];
+  } else if (selectedSettlementId.value) {
+    showNewSettlementForm.value = false;
+    try {
+      const s = await fractiService.getSettlementDetails(selectedSettlementId.value as string);
+      settlementMembers.value = s.members;
+      // Domyślny płatnik
+      if (s.members.length > 0) receiptData.value.purchaser = s.members[0].id;
 
-const handleFileSelect = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  if (target.files && target.files[0]) {
-    processFile(target.files[0]);
+      // Inicjalizacja mapy po pojawieniu się sekcji
+      nextTick(() => initMap('map-ocr'));
+    } catch (e) { console.error(e); }
   }
 };
 
-const handleDrop = (event: DragEvent) => {
-  isDragging.value = false;
-  if (event.dataTransfer?.files && event.dataTransfer.files[0]) {
-    processFile(event.dataTransfer.files[0]);
+const createSettlement = async () => {
+  try {
+    const s = await fractiService.createSettlement(newSettlement.value);
+    settlements.value.push(s);
+    selectedSettlementId.value = s.id;
+    settlementMembers.value = s.members;
+    showNewSettlementForm.value = false;
+    nextTick(() => initMap('map-ocr'));
+  } catch (e) { alert('Błąd tworzenia grupy'); }
+};
+
+const cancelNewSettlement = () => {
+  selectedSettlementId.value = null;
+  showNewSettlementForm.value = false;
+};
+
+// --- METHODS: OCR Process ---
+const triggerFileInput = () => fileInput.value?.click();
+
+const handleFileSelect = (e: Event) => {
+  const file = (e.target as HTMLInputElement).files?.[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      originalImageUrl.value = ev.target?.result as string;
+      showCropperModal.value = true; // Krok 1: Pokaż cropper
+    };
+    reader.readAsDataURL(file);
+  }
+  // Reset input
+  if (fileInput.value) fileInput.value.value = '';
+};
+
+const cancelCrop = () => {
+  showCropperModal.value = false;
+  originalImageUrl.value = null;
+};
+
+const applyCropAndAnalyze = () => {
+  const { canvas } = cropperRef.value.getResult();
+  if (canvas) {
+    canvas.toBlob(async (blob: Blob) => {
+      // 1. Zapisz przycięty obraz do wyświetlenia w overlayu
+      croppedImageUrl.value = URL.createObjectURL(blob);
+      showCropperModal.value = false;
+
+      // 2. Rozpocznij analizę
+      await analyzeReceiptImage(blob);
+    }, 'image/jpeg');
   }
 };
 
-const processFile = (file: File) => {
-  // Validate file type
-  if (!file.type.startsWith('image/')) {
-    errorMessage.value = 'Proszę wybrać plik graficzny';
-    return;
-  }
-
-  selectedFile.value = file;
-
-  // Create preview
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    previewUrl.value = e.target?.result as string;
-  };
-  reader.readAsDataURL(file);
-
-  // Clear messages
-  errorMessage.value = '';
-  successMessage.value = '';
-};
-
-const clearImage = () => {
-  previewUrl.value = null;
-  selectedFile.value = null;
-  if (fileInput.value) {
-    fileInput.value.value = '';
-  }
-};
-
-const getCurrentLocation = (): Promise<{ latitude: number; longitude: number }> => {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error('Geolokalizacja nie jest obsługiwana'));
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude
-        });
-      },
-      (error) => {
-        reject(error);
-      }
-    );
-  });
-};
-
-const uploadReceipt = async () => {
-  if (!selectedFile.value || !isFormValid.value) return;
-
-  isUploading.value = true;
-  errorMessage.value = '';
-  successMessage.value = '';
+const analyzeReceiptImage = async (blob: Blob) => {
+  isAnalyzing.value = true;
+  pollingAttempts.value = 0;
 
   try {
     const formData = new FormData();
-    formData.append('image', selectedFile.value);
-    formData.append('merchant_name', receiptData.value.merchant_name);
-    formData.append('purchase_date', receiptData.value.purchase_date);
-    formData.append('category', receiptData.value.category);
-    formData.append('total_amount', receiptData.value.total_amount);
+    formData.append('image', blob, 'receipt.jpg');
 
-    if (selectedSettlement.value) {
-      formData.append('settlement', selectedSettlement.value);
+    // Start Task
+    const { task_id } = await fractiService.analyzeReceipt(formData);
+
+    // Polling
+    await pollResult(task_id);
+
+  } catch (e) {
+    console.error(e);
+    errorMessage.value = "Błąd wysyłania zdjęcia.";
+    isAnalyzing.value = false;
+  }
+};
+
+const pollResult = async (taskId: string) => {
+  const interval = setInterval(async () => {
+    pollingAttempts.value++;
+    try {
+       const res = await fractiService.getOCRResult(taskId);
+       if (res.status === 'SUCCESS') {
+         clearInterval(interval);
+         isAnalyzing.value = false;
+         ocrResult.value = res.data;
+
+         // Jeśli kwota całkowita jest pusta, uzupełnij z OCR
+         if (!receiptData.value.total_amount && res.data.total_amount) {
+            receiptData.value.total_amount = res.data.total_amount.toString();
+         }
+
+         showOcrOverlay.value = true;
+       } else if (res.status === 'FAILURE') {
+         clearInterval(interval);
+         isAnalyzing.value = false;
+         errorMessage.value = "Analiza OCR nie powiodła się.";
+       }
+
+       if (pollingAttempts.value > 30) {
+         clearInterval(interval);
+         isAnalyzing.value = false;
+         errorMessage.value = "Timeout analizy.";
+       }
+    } catch (e) {
+       clearInterval(interval);
+       isAnalyzing.value = false;
+    }
+  }, 1000);
+};
+
+// --- METHODS: Overlay Logic ---
+const getBoxStyle = (box: any) => {
+  if (!ocrResult.value) return {};
+  const dim = ocrResult.value.image_dim;
+  return {
+    left: (box.x / dim.width) * 100 + '%',
+    top: (box.y / dim.height) * 100 + '%',
+    width: (box.w / dim.width) * 100 + '%',
+    height: (box.h / dim.height) * 100 + '%'
+  };
+};
+
+const toggleOcrItem = (idx: number) => {
+  if (selectedOcrIndices.value.has(idx)) selectedOcrIndices.value.delete(idx);
+  else selectedOcrIndices.value.add(idx);
+};
+
+const selectAllOcr = () => {
+  ocrResult.value.items.forEach((_:any, i:number) => selectedOcrIndices.value.add(i));
+};
+
+const importOcrItems = () => {
+  selectedOcrIndices.value.forEach(idx => {
+    const item = ocrResult.value.items[idx];
+    receiptProducts.value.push({
+      name: item.name,
+      price: item.price,
+      category: Category.FOOD,
+      // Domyślnie wszyscy członkowie płacą
+      consumers: settlementMembers.value.map(u => u.id)
+    });
+  });
+  showOcrOverlay.value = false;
+  selectedOcrIndices.value.clear();
+  successMessage.value = "Dodano produkty do listy.";
+  setTimeout(() => successMessage.value = '', 2000);
+};
+
+const closeOcrOverlay = () => {
+  showOcrOverlay.value = false;
+};
+
+// --- METHODS: Product Management (CRUD) ---
+const openProductModal = (idx: number | null) => {
+  editingProductIndex.value = idx;
+  if (idx !== null) {
+    // Edit existing
+    const p = receiptProducts.value[idx];
+    productForm.value = {
+      name: p.name,
+      price: p.price.toString(),
+      category: p.category,
+      consumers: [...p.consumers] // Kopia tablicy
+    };
+  } else {
+    // New
+    productForm.value = {
+      name: '', price: '', category: Category.FOOD,
+      consumers: settlementMembers.value.map(u => u.id) // Default all
+    };
+  }
+  showProductModal.value = true;
+};
+
+const saveProduct = () => {
+  const payload = {
+    name: productForm.value.name,
+    price: parseFloat(productForm.value.price),
+    category: productForm.value.category,
+    consumers: productForm.value.consumers
+  };
+
+  if (editingProductIndex.value !== null) {
+    receiptProducts.value[editingProductIndex.value] = payload;
+  } else {
+    receiptProducts.value.push(payload);
+  }
+  showProductModal.value = false;
+};
+
+// Confirm Modal Logic
+const openConfirmModal = (title: string, subTitle: string, action: () => void) => {
+  confirmMessage.value = title;
+  confirmSubMessage.value = subTitle;
+  pendingDeleteAction.value = action;
+  showConfirmModal.value = true;
+};
+
+const handleConfirmDelete = () => {
+  if (pendingDeleteAction.value) pendingDeleteAction.value();
+  showConfirmModal.value = false;
+  pendingDeleteAction.value = null;
+};
+
+const confirmRemoveProduct = (idx: number) => {
+  openConfirmModal(
+    'Usunąć pozycję?',
+    `Czy na pewno chcesz usunąć "${receiptProducts.value[idx].name}"?`,
+    () => {
+      receiptProducts.value.splice(idx, 1);
+    }
+  );
+};
+
+const calculateTotalFromProducts = () => {
+  const sum = receiptProducts.value.reduce((acc, p) => acc + p.price, 0);
+  receiptData.value.total_amount = sum.toFixed(2);
+};
+
+const getCategoryLabel = (cat: string) => CATEGORY_LABELS[cat as Category] || cat;
+
+// --- METHODS: Map & Submit ---
+const initMap = (elId: string) => {
+  if (mapInstance) mapInstance.remove();
+  const el = document.getElementById(elId);
+  if (!el) return;
+
+  mapInstance = L.map(elId).setView([52.2297, 21.0122], 13);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap &copy; CARTO',
+      subdomains: 'abcd',
+      maxZoom: 19
+  }).addTo(mapInstance);
+
+  mapInstance.on('click', (e: L.LeafletMouseEvent) => {
+    if (markerInstance) markerInstance.setLatLng(e.latlng);
+    else markerInstance = L.marker(e.latlng).addTo(mapInstance!);
+
+    receiptData.value.latitude = e.latlng.lat;
+    receiptData.value.longitude = e.latlng.lng;
+  });
+};
+
+const submitReceipt = async () => {
+  if (!receiptData.value.merchant_name || !receiptData.value.total_amount) {
+    errorMessage.value = "Uzupełnij nazwę sklepu i kwotę!";
+    setTimeout(() => errorMessage.value = '', 3000);
+    return;
+  }
+
+  isUploading.value = true;
+  try {
+    const fd = new FormData();
+    // Tutaj nie wysyłamy obrazka głównego do utworzenia paragonu (backend powinien akceptować null)
+    // Jeśli backend wymaga pliku, musimy wysłać pusty blob lub zmienić endpoint.
+    // Zakładam, że Twój serwis API obsłuży brak 'image' lub wysyłamy croppedImageUrl jako plik
+
+    if (croppedImageUrl.value) {
+       // Opcjonalnie: Wyślij cropa jako obraz paragonu
+       const resp = await fetch(croppedImageUrl.value);
+       const blob = await resp.blob();
+       fd.append('image', blob, 'receipt_crop.jpg');
     }
 
-    // Add location if requested
-    if (includeLocation.value) {
-      try {
-        const location = await getCurrentLocation();
-        formData.append('latitude', location.latitude.toString());
-        formData.append('longitude', location.longitude.toString());
-      } catch (locError) {
-        console.warn('Nie udało się pobrać lokalizacji:', locError);
-      }
+    fd.append('merchant_name', receiptData.value.merchant_name);
+    fd.append('purchase_date', receiptData.value.purchase_date);
+    fd.append('total_amount', receiptData.value.total_amount);
+    fd.append('category', 'SHOPPING');
+
+    if (receiptData.value.purchaser) fd.append('purchaser', receiptData.value.purchaser.toString());
+    if (selectedSettlementId.value && selectedSettlementId.value !== 'PERSONAL') {
+      fd.append('settlement', selectedSettlementId.value.toString());
+    }
+    if (receiptData.value.latitude && receiptData.value.longitude) {
+      fd.append('latitude', receiptData.value.latitude.toString());
+      fd.append('longitude', receiptData.value.longitude.toString());
     }
 
-    await fractiService.createReceipt(formData);
+    // 1. Utwórz Paragon
+    const receipt = await fractiService.createReceipt(fd);
 
-    successMessage.value = 'Paragon został przesłany pomyślnie!';
+    // 2. Dodaj Pozycje
+    for (const prod of receiptProducts.value) {
+      await fractiService.addReceiptItem(receipt.id, {
+         name: prod.name,
+         price: prod.price.toString(),
+         category: prod.category,
+         consumers: prod.consumers,
+         settlement: selectedSettlementId.value !== 'PERSONAL' ? String(selectedSettlementId.value) : undefined
+      });
+    }
 
-    // Reset form after 2 seconds and redirect
+    successMessage.value = "Paragon zapisany pomyślnie!";
     setTimeout(() => {
-      router.push('/settlements');
-    }, 2000);
+      if (selectedSettlementId.value && selectedSettlementId.value !== 'PERSONAL') {
+        router.push(`/settlements/${selectedSettlementId.value}`);
+      } else {
+        router.push('/settlements');
+      }
+    }, 1500);
 
-  } catch (error: any) {
-    console.error('Błąd przesyłania:', error);
-    errorMessage.value = error.response?.data?.detail || 'Nie udało się przesłać paragonu. Spróbuj ponownie.';
+  } catch (e) {
+    console.error(e);
+    errorMessage.value = "Błąd zapisu paragonu.";
   } finally {
     isUploading.value = false;
   }
 };
 
-const loadSettlements = async () => {
-  try {
-    settlements.value = await fractiService.getSettlements();
-  } catch (error) {
-    console.error('Błąd ładowania grup:', error);
-  }
-};
-
-onMounted(() => {
-  loadSettlements();
-});
+const goBack = () => router.back();
 </script>
 
 <style scoped>
-.ocr-container {
+.ocr-page {
   min-height: 100vh;
   background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
-  padding: 2rem;
   color: #e5e7eb;
+  padding: 2rem;
+  font-family: 'Inter', sans-serif;
 }
 
-.content-wrapper {
-  max-width: 700px;
+.ocr-container {
+  max-width: 800px;
   margin: 0 auto;
 }
 
-/* Header */
 .header {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.5rem;
   margin-bottom: 2rem;
 }
-
+.header h1 {
+  font-size: 2rem;
+  background: linear-gradient(135deg, #fff 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+}
 .back-btn {
-  background: rgba(139, 92, 246, 0.1);
-  border: 1px solid rgba(139, 92, 246, 0.3);
+  background: rgba(139,92,246,0.1);
+  border: 1px solid rgba(139,92,246,0.3);
   color: #a78bfa;
   padding: 8px 16px;
   border-radius: 8px;
   cursor: pointer;
-  font-weight: 500;
-  transition: all 0.2s;
 }
 
-.back-btn:hover {
-  background: rgba(139, 92, 246, 0.2);
-  border-color: rgba(139, 92, 246, 0.5);
-}
-
-.header h1 {
-  background: linear-gradient(135deg, #ffffff 0%, #8b5cf6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  font-size: 2rem;
-  font-weight: 700;
-  margin: 0;
-}
-
-/* Settlement Selector */
-.settlement-selector {
-  margin-bottom: 2rem;
-  background: rgba(139, 92, 246, 0.05);
+/* CARDS */
+.section-card {
+  background: rgba(15, 23, 42, 0.6);
   border: 1px solid rgba(139, 92, 246, 0.2);
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+.section-title {
+  color: #c4b5fd;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0 0 1.5rem 0;
+  border-bottom: 1px solid rgba(139,92,246,0.2);
+  padding-bottom: 0.5rem;
 }
 
-.settlement-selector label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #a78bfa;
-}
-
+/* SETTLEMENT */
 .settlement-selector select {
   width: 100%;
-  padding: 10px;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(139, 92, 246, 0.3);
+  padding: 12px;
+  background: #1e1b4b;
+  border: 1px solid #4c1d95;
+  color: white;
   border-radius: 8px;
-  color: #e5e7eb;
   font-size: 1rem;
 }
+.new-settlement-form {
+  margin-top: 1rem;
+  background: rgba(139,92,246,0.1);
+  padding: 1rem;
+  border-radius: 8px;
+}
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
 
-/* Upload Area */
-.upload-area {
-  background: rgba(139, 92, 246, 0.05);
-  border: 2px dashed rgba(139, 92, 246, 0.3);
-  border-radius: 16px;
-  padding: 3rem;
-  text-align: center;
+/* FORM GRID */
+.form-grid {
+  display: grid; gap: 1rem;
+}
+.form-group label { display: block; color: #9ca3af; font-size: 0.9rem; margin-bottom: 4px; }
+.form-group input, .form-group select {
+  width: 100%; padding: 10px; border-radius: 8px;
+  background: rgba(0,0,0,0.3); border: 1px solid rgba(139,92,246,0.3); color: white;
+}
+.highlight input {
+  font-size: 1.2rem; font-weight: bold; color: #a78bfa; border-color: #8b5cf6;
+}
+.amount-input-wrapper { display: flex; gap: 10px; }
+.btn-calc {
+  background: rgba(139,92,246,0.2); border: 1px solid #8b5cf6; color: #c4b5fd;
+  border-radius: 8px; cursor: pointer; padding: 0 12px; white-space: nowrap;
+}
+.form-row { display: flex; gap: 10px; }
+.form-group.half { flex: 1; }
+.mini-map { height: 150px; width: 100%; border-radius: 8px; margin-top: 5px; }
+.coords-display { font-size: 0.8rem; color: #a78bfa; margin-top: 4px; text-align: right; }
+
+/* OCR TRIGGER BTN */
+.ocr-trigger-section {
+  margin-bottom: 1.5rem;
+}
+.ocr-upload-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background: rgba(139, 92, 246, 0.1);
+  border: 2px dashed rgba(139, 92, 246, 0.4);
+  border-radius: 12px;
+  padding: 1.5rem;
   cursor: pointer;
   transition: all 0.3s;
-  min-height: 300px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 2rem;
-  position: relative;
+  text-align: left;
 }
-
-.upload-area:hover {
-  border-color: rgba(139, 92, 246, 0.5);
-  background: rgba(139, 92, 246, 0.08);
-}
-
-.upload-area.drag-over {
+.ocr-upload-btn:hover {
+  background: rgba(139, 92, 246, 0.2);
   border-color: #8b5cf6;
-  background: rgba(139, 92, 246, 0.15);
-  transform: scale(1.02);
 }
+.ocr-upload-btn .icon { font-size: 2rem; }
+.ocr-upload-btn .text-content { display: flex; flex-direction: column; }
+.ocr-upload-btn .main-text { font-weight: bold; color: #e5e7eb; font-size: 1.1rem; }
+.ocr-upload-btn .sub-text { font-size: 0.9rem; color: #9ca3af; }
 
-.upload-area.has-image {
-  padding: 0;
-  border-style: solid;
+/* PRODUCTS LIST */
+.products-manager {
+  background: rgba(0,0,0,0.2);
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid rgba(139,92,246,0.2);
 }
-
-.upload-prompt .icon {
-  font-size: 4rem;
+.pm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1rem;
 }
-
-.upload-prompt h3 {
-  color: #f3f4f6;
-  margin-bottom: 0.5rem;
+.btn-text {
+  background: none; border: none; color: #a78bfa; cursor: pointer; text-decoration: underline;
 }
-
-.upload-prompt .hint {
-  color: #9ca3af;
-  font-size: 0.9rem;
-}
-
-/* Preview */
-.preview-container {
-  width: 100%;
-  height: 100%;
-  position: relative;
-}
-
-.preview-image {
-  width: 100%;
-  height: auto;
-  max-height: 500px;
-  object-fit: contain;
-  border-radius: 16px;
-}
-
-.remove-btn {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  width: 40px;
-  height: 40px;
-  background: rgba(239, 68, 68, 0.9);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  font-size: 1.5rem;
-  cursor: pointer;
+.products-list { display: flex; flex-direction: column; gap: 8px; }
+.product-row {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.remove-btn:hover {
-  background: #dc2626;
-  transform: scale(1.1);
-}
-
-/* Manual Entry */
-.manual-entry {
-  background: rgba(139, 92, 246, 0.05);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  border-radius: 16px;
-  padding: 2rem;
-  margin-bottom: 2rem;
-}
-
-.manual-entry h3 {
-  color: #a78bfa;
-  margin-bottom: 1.5rem;
-  font-size: 1.2rem;
-}
-
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  color: #9ca3af;
-  font-weight: 500;
-}
-
-.form-group input,
-.form-group select {
-  width: 100%;
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(139, 92, 246, 0.3);
+  background: rgba(139,92,246,0.1);
+  padding: 8px 12px;
   border-radius: 8px;
-  color: #e5e7eb;
-  font-size: 1rem;
-  transition: all 0.2s;
 }
-
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: #8b5cf6;
-  background: rgba(0, 0, 0, 0.3);
+.prod-info { flex: 1; }
+.prod-name { font-weight: 600; color: #fff; }
+.prod-cat { font-size: 0.8rem; color: #9ca3af; }
+.prod-price { font-weight: 700; color: #a78bfa; margin: 0 1rem; }
+.prod-actions { display: flex; gap: 6px; }
+.btn-mini {
+  width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
 }
+.btn-mini.edit { background: rgba(59,130,246,0.2); color: #60a5fa; }
+.btn-mini.delete { background: rgba(239,68,68,0.2); color: #f87171; }
 
-.checkbox-label {
+/* FINAL ACTIONS */
+.final-actions { margin-top: 2rem; }
+.btn-save {
+  width: 100%; padding: 14px;
+  background: #22c55e; color: white; border: none; border-radius: 10px;
+  font-size: 1.2rem; font-weight: bold; cursor: pointer;
+  box-shadow: 0 4px 15px rgba(34,197,94,0.4);
+}
+.btn-save:hover { background: #16a34a; }
+.btn-save:disabled { opacity: 0.6; cursor: wait; }
+
+/* MODALS */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.85); z-index: 1000;
+  display: flex; justify-content: center; align-items: center;
+}
+.z-high { z-index: 2000; }
+.z-max { z-index: 9999; background: rgba(0,0,0,0.9); }
+
+.modal-content {
+  background: #1e1b4b; padding: 2rem; border-radius: 16px;
+  border: 1px solid rgba(139,92,246,0.4);
+  width: 90%; max-width: 500px;
+}
+.modal-content.large { max-width: 800px; }
+
+/* CHECKBOX GROUP */
+.checkbox-group {
+  display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;
+  max-height: 150px; overflow-y: auto;
+}
+.checkbox-group label {
+  display: flex; align-items: center; gap: 0.5rem;
+  color: #e5e7eb; cursor: pointer;
+}
+.hint-error { color: #f87171; font-size: 0.85rem; margin-top: 5px; }
+
+/* CONFIRM MODAL STYLES (FROM SETTLEMENT VIEW) */
+.alert-box {
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: linear-gradient(180deg, #1e1b4b 0%, #280a0a 100%);
+  text-align: center;
+}
+.alert-icon { font-size: 3rem; margin-bottom: 1rem; filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.5)); }
+.center-text { text-align: center; font-size: 0.95rem; margin-bottom: 2rem; }
+.ghost-btn {
+  background: transparent; border: 1px solid rgba(139, 92, 246, 0.3); color: #c4b5fd;
+}
+.full-confirm {
+  flex: 1; display: flex; justify-content: center; align-items: center; gap: 0.5rem;
+  background: rgba(220, 38, 38, 0.2) !important; border: 1px solid #ef4444 !important;
+}
+.full-confirm:hover {
+  background: #dc2626 !important; color: white !important;
+}
+.modal-actions.space-between { justify-content: space-between; width: 100%; display: flex; }
+
+/* OCR OVERLAY */
+.ocr-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 3000;
+  background: rgba(0,0,0,0.95); display: flex; flex-direction: column;
+}
+.ocr-header {
+  padding: 1rem 2rem; background: #1e1b4b; border-bottom: 1px solid #4c1d95;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.ocr-workspace {
+  flex: 1; width: 100%; overflow: auto; padding: 2rem;
+  display: flex; justify-content: center; align-items: flex-start;
+}
+.img-container { position: relative; }
+.overlay-bg { width: 100%; height: 100%; display: block; }
+.ocr-box {
+  position: absolute; border: 2px solid yellow; background: rgba(255,255,0,0.15);
+  cursor: pointer; transition: all 0.2s;
+}
+.ocr-box.selected {
+  border-color: #22c55e; background: rgba(34,197,94,0.3);
+}
+.tooltip {
+  position: absolute; bottom: 100%; left: 0; background: black; color: white;
+  font-size: 0.7rem; padding: 2px 4px; pointer-events: none;
+}
+/* UTILS */
+.fade-in { animation: fadeIn 0.5s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.toast {
+  position: fixed; bottom: 20px; right: 20px; padding: 1rem 2rem; border-radius: 8px; color: white; font-weight: bold; z-index: 4000;
+}
+.toast.error { background: #ef4444; }
+.toast.success { background: #22c55e; }
+.modal-actions button {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    background: rgba(139, 92, 246, 0.1);
+    color: #e5e7eb;
+    font-weight: 500;
+    cursor: pointer;
+}
+.modal-actions button.primary {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+    border: none;
+}
+.close-overlay { background: none; border: none; color: white; font-size: 2rem; cursor: pointer; }
+.btn-link { background: none; border: none; color: #a78bfa; text-decoration: underline; cursor: pointer; }
+/* --- OCR FOOTER STYLING --- */
+
+.ocr-footer {
+  width: 100%;
+  padding: 1.5rem 2rem;
+  background: rgba(15, 23, 42, 0.95); /* Ciemniejsze tło */
+  border-top: 1px solid rgba(139, 92, 246, 0.3);
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
+  backdrop-filter: blur(10px);
 }
 
-.checkbox-label input[type="checkbox"] {
-  width: auto;
-  cursor: pointer;
-}
-
-/* Actions */
-.actions {
+.ocr-footer-actions {
   display: flex;
   gap: 1rem;
-  justify-content: flex-end;
+  align-items: center;
 }
 
-.btn-secondary,
-.btn-primary {
+.selection-summary {
+  color: #e5e7eb;
+  font-size: 1rem;
+}
+
+.selection-summary strong {
+  color: #22c55e; /* Zielony licznik */
+  font-size: 1.1rem;
+}
+
+/* Przycisk "Zaznacz wszystkie" - Styl Ghost */
+.btn-secondary-outline {
+  background: transparent;
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  color: #c4b5fd;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-secondary-outline:hover {
+  border-color: #a78bfa;
+  background: rgba(139, 92, 246, 0.1);
+  color: white;
+  transform: translateY(-1px);
+}
+
+/* Przycisk "Importuj" - Styl Premium Glow */
+.btn-import-glow {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  color: white;
+  border: none;
   padding: 12px 24px;
   border-radius: 10px;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  border: none;
   font-size: 1rem;
-}
-
-.btn-secondary {
-  background: rgba(139, 92, 246, 0.1);
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  color: #e5e7eb;
-}
-
-.btn-secondary:hover {
-  background: rgba(139, 92, 246, 0.2);
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-  color: white;
-  box-shadow: 0 5px 20px rgba(139, 92, 246, 0.3);
-}
-
-.btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(139, 92, 246, 0.5);
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.spinner-inline {
-  display: inline-flex;
+  cursor: pointer;
+  display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.5px;
 }
 
-/* Messages */
-.message {
-  padding: 1rem;
-  border-radius: 8px;
-  margin-top: 1rem;
-  text-align: center;
-  font-weight: 500;
+.btn-import-glow:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.5); /* Mocniejszy blask */
+  filter: brightness(1.1);
 }
 
-.message.success {
-  background: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  color: #4ade80;
+.btn-import-glow:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(139, 92, 246, 0.3);
 }
 
-.message.error {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #f87171;
-}
-
-/* Mobile Responsive */
-@media (max-width: 768px) {
-  .ocr-container {
-    padding: 1rem;
-  }
-
-  .upload-area {
-    padding: 2rem 1rem;
-    min-height: 250px;
-  }
-
-  .actions {
-    flex-direction: column;
-  }
-
-  .btn-secondary,
-  .btn-primary {
-    width: 100%;
-  }
+.btn-import-glow:disabled {
+  background: #374151; /* Szary */
+  color: #9ca3af;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+  opacity: 0.7;
 }
 </style>
