@@ -705,15 +705,7 @@ const goBack = () => router.back();
   cursor: pointer;
 }
 
-/* CARDS */
-.section-card {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  border-radius: 16px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-}
+/* CARDS - użyj globalnych styli */
 .section-title {
   color: #c4b5fd;
   font-size: 1.1rem;
@@ -750,20 +742,9 @@ const goBack = () => router.back();
 .form-grid {
   display: grid; gap: 1rem;
 }
-.form-group label { display: block; color: #9ca3af; font-size: 0.9rem; margin-bottom: 4px; }
-.form-group input, .form-group select {
-  width: 100%; padding: 10px; border-radius: 8px;
-  background: rgba(0,0,0,0.3); border: 1px solid rgba(139,92,246,0.3); color: white;
-}
-.form-group textarea {
-  width: 100%;
-  padding: 10px;
-  border-radius: 8px;
-  background: rgba(0,0,0,0.3);
-  border: 1px solid rgba(139,92,246,0.3);
-  color: white;
-  font-family: inherit; /* Ważne dla textarea */
-  resize: vertical;     /* Pozwala zmieniać wysokość */
+.form-group label {
+  display: block;
+  margin-bottom: 4px;
 }
 .highlight input {
   font-size: 1.2rem; font-weight: bold; color: #a78bfa; border-color: #8b5cf6;
@@ -773,10 +754,8 @@ const goBack = () => router.back();
   background: rgba(139,92,246,0.2); border: 1px solid #8b5cf6; color: #c4b5fd;
   border-radius: 8px; cursor: pointer; padding: 0 12px; white-space: nowrap;
 }
-.form-row { display: flex; gap: 10px; }
-.form-group.half { flex: 1; }
-.mini-map { height: 150px; width: 100%; border-radius: 8px; margin-top: 5px; }
-.coords-display { font-size: 0.8rem; color: #a78bfa; margin-top: 4px; text-align: right; }
+/* Form row i map - użyj globalnych styli */
+.mini-map { height: 150px; margin-top: 5px; }
 
 /* OCR TRIGGER BTN */
 .ocr-trigger-section {
@@ -853,44 +832,10 @@ const goBack = () => router.back();
 .btn-save:hover { background: #16a34a; }
 .btn-save:disabled { opacity: 0.6; cursor: wait; }
 
-/* MODALS */
-.modal-overlay {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.85); z-index: 1000;
-  display: flex; justify-content: center; align-items: center;
-}
-.z-high { z-index: 2000; }
-.z-max { z-index: 9999; background: rgba(0,0,0,0.9); }
+/* MODALS - użyj globalnych styli z App.vue */
 
-.modal-content {
-  background: #1e1b4b; padding: 2rem; border-radius: 16px;
-  border: 1px solid rgba(139,92,246,0.4);
-  width: 90%; max-width: 500px;
-}
-.modal-content.large { max-width: 800px; }
-
-/* CHECKBOX GROUP */
-.checkbox-group {
-  display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;
-  max-height: 150px; overflow-y: auto;
-}
-.checkbox-group label {
-  display: flex; align-items: center; gap: 0.5rem;
-  color: #e5e7eb; cursor: pointer;
-}
-.hint-error { color: #f87171; font-size: 0.85rem; margin-top: 5px; }
-
-/* CONFIRM MODAL STYLES (FROM SETTLEMENT VIEW) */
-.alert-box {
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  background: linear-gradient(180deg, #1e1b4b 0%, #280a0a 100%);
-  text-align: center;
-}
-.alert-icon { font-size: 3rem; margin-bottom: 1rem; filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.5)); }
-.center-text { text-align: center; font-size: 0.95rem; margin-bottom: 2rem; }
-.ghost-btn {
-  background: transparent; border: 1px solid rgba(139, 92, 246, 0.3); color: #c4b5fd;
-}
+/* CONFIRM MODAL - nadpisania */
+.center-text { margin-bottom: 2rem; }
 .full-confirm {
   flex: 1; display: flex; justify-content: center; align-items: center; gap: 0.5rem;
   background: rgba(220, 38, 38, 0.2) !important; border: 1px solid #ef4444 !important;
@@ -898,7 +843,6 @@ const goBack = () => router.back();
 .full-confirm:hover {
   background: #dc2626 !important; color: white !important;
 }
-.modal-actions.space-between { justify-content: space-between; width: 100%; display: flex; }
 
 /* OCR OVERLAY */
 .ocr-overlay {
@@ -926,27 +870,7 @@ const goBack = () => router.back();
   position: absolute; bottom: 100%; left: 0; background: black; color: white;
   font-size: 0.7rem; padding: 2px 4px; pointer-events: none;
 }
-/* UTILS */
-.fade-in { animation: fadeIn 0.5s ease; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-.toast {
-  position: fixed; bottom: 20px; right: 20px; padding: 1rem 2rem; border-radius: 8px; color: white; font-weight: bold; z-index: 4000;
-}
-.toast.error { background: #ef4444; }
-.toast.success { background: #22c55e; }
-.modal-actions button {
-    padding: 10px 20px;
-    border-radius: 8px;
-    border: 1px solid rgba(139, 92, 246, 0.3);
-    background: rgba(139, 92, 246, 0.1);
-    color: #e5e7eb;
-    font-weight: 500;
-    cursor: pointer;
-}
-.modal-actions button.primary {
-    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-    border: none;
-}
+/* UTILS - użyj globalnych styli */
 .close-overlay { background: none; border: none; color: white; font-size: 2rem; cursor: pointer; }
 .btn-link { background: none; border: none; color: #a78bfa; text-decoration: underline; cursor: pointer; }
 /* --- OCR FOOTER STYLING --- */

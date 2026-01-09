@@ -182,45 +182,17 @@ const sendMessage = async () => {
 </script>
 
 <style scoped>
-.page-wrapper {
-  min-height: 100vh;
-  padding-top: 100px;
-  padding-bottom: 4rem;
-  background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
-  color: #e5e7eb;
-  position: relative;
-  overflow: hidden;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 2rem;
-  position: relative;
-  z-index: 10;
-}
-
+/* Specyficzne style dla Contact */
 .header-section {
   text-align: center;
   margin-bottom: 4rem;
 }
 
 .page-title {
-  font-size: 3.5rem;
-  font-weight: 800;
   margin-bottom: 1rem;
 }
 
-.gradient-text {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #a855f7 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
 .page-subtitle {
-  font-size: 1.25rem;
-  color: #9ca3af;
   max-width: 600px;
   margin: 0 auto;
 }
@@ -254,35 +226,8 @@ const sendMessage = async () => {
   color: white;
 }
 
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
 .form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
   color: #cbd5e1;
-  font-size: 0.9rem;
-}
-
-.form-group input,
-.form-group textarea {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  border-radius: 8px;
-  color: white;
-  font-family: inherit;
-  transition: all 0.3s;
-}
-
-.form-group input:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: #8b5cf6;
-  background: rgba(139, 92, 246, 0.05);
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
 }
 
 .submit-button {
@@ -356,21 +301,7 @@ const sendMessage = async () => {
   margin-top: 0.2rem;
 }
 
-/* Tło */
-.bg-elements {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.2;
-}
-
+/* Tło - specyficzne orby dla Contact */
 .orb-1 {
   width: 400px;
   height: 400px;
@@ -387,27 +318,16 @@ const sendMessage = async () => {
   left: -50px;
 }
 
+/* Modal Success - specyficzny dla Contact */
 .modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.8); /* Ciemne tło półprzezroczyste */
-  backdrop-filter: blur(5px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   z-index: 9999;
   padding: 1rem;
 }
 
 .modal-content {
-  background: #1e1b4b; /* Ciemny fiolet */
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  padding: 2.5rem;
-  border-radius: 20px;
   text-align: center;
   max-width: 400px;
   width: 100%;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
   animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
