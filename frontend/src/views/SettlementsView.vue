@@ -429,35 +429,12 @@ onMounted(() => {
   box-shadow: 0 8px 30px rgba(139, 92, 246, 0.5);
 }
 
-/* LOADING / ERROR STATE */
+/* LOADING / ERROR STATE - nadpisania */
 .state-msg {
   max-width: 900px;
   margin: 0 auto;
-  text-align: center;
-  padding: 3rem;
-  color: #9ca3af;
-  font-size: 1.1rem;
 }
-.state-msg.error { color: #f87171; }
-.state-msg.empty { color: #9ca3af; }
 .state-msg .hint { color: #6b7280; margin-top: 0.5rem; }
-
-/* SPINNER */
-.spinner {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 3px solid rgba(139, 92, 246, 0.3);
-  border-top-color: #8b5cf6;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-right: 0.5rem;
-  vertical-align: middle;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
 
 /* KARTA ROZLICZENIA */
 .settlement-card {
@@ -674,76 +651,15 @@ onMounted(() => {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* PROSTY MODAL */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
+/* MODAL - nadpisania dla Settlements */
 .modal-content {
-  background: #1e1b4b;
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  padding: 2rem;
-  border-radius: 16px;
   width: 400px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 .modal-content h2 {
-  color: #f3f4f6;
-  margin-bottom: 1.5rem;
   font-size: 1.5rem;
 }
 .modal-content input {
-  width: 100%;
-  padding: 12px;
   margin-bottom: 1rem;
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  background: rgba(0, 0, 0, 0.2);
-  color: #e5e7eb;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: all 0.2s;
-}
-.modal-content input:focus {
-  outline: none;
-  border-color: #8b5cf6;
-  background: rgba(0, 0, 0, 0.3);
-}
-.modal-content input::placeholder {
-  color: #6b7280;
-}
-.modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
-.modal-actions button {
-  padding: 10px 20px;
-  cursor: pointer;
-  border-radius: 8px;
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  background: rgba(139, 92, 246, 0.1);
-  color: #e5e7eb;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-.modal-actions button:hover {
-  background: rgba(139, 92, 246, 0.2);
-  border-color: rgba(139, 92, 246, 0.5);
-}
-.modal-actions button.primary {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-  color: white;
-  border: none;
-  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
-}
-.modal-actions button.primary:hover {
-  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
-  transform: translateY(-2px);
 }
 .btn-edit {
   background: rgba(139, 92, 246, 0.1);
@@ -766,10 +682,8 @@ onMounted(() => {
   border-color: rgba(139, 92, 246, 0.6);
 }
 
-/* Układ w modalu (lewo/prawo) */
+/* Układ w modalu - nadpisanie */
 .modal-actions.space-between {
-  justify-content: space-between;
-  width: 100%;
   margin-top: 1.5rem;
 }
 
@@ -778,43 +692,22 @@ onMounted(() => {
   gap: 10px;
 }
 
-/* Przyciski Danger (Czerwone) */
-.danger-btn {
-  background: rgba(239, 68, 68, 0.15) !important;
-  border: 1px solid rgba(239, 68, 68, 0.4) !important;
-  color: #f87171 !important;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
+.center-text {
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
 }
 
-.danger-btn:hover {
-  background: rgba(239, 68, 68, 0.25) !important;
-  border-color: #ef4444 !important;
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
-}
-
-.alert-box {
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  background: linear-gradient(180deg, #1e1b4b 0%, #280a0a 100%);
-  text-align: center;
-}
-.alert-icon { font-size: 3rem; margin-bottom: 1rem; filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.5)); }
-.center-text { text-align: center; font-size: 0.95rem; margin-bottom: 1.5rem; }
-.ghost-btn {
-  background: transparent; border: 1px solid rgba(139, 92, 246, 0.3); color: #c4b5fd;
-}
 .full-confirm {
-  flex: 1; display: flex; justify-content: center; align-items: center; gap: 0.5rem;
-  background: rgba(220, 38, 38, 0.2) !important; border: 1px solid #ef4444 !important;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(220, 38, 38, 0.2) !important;
+  border: 1px solid #ef4444 !important;
 }
 .full-confirm:hover {
-  background: #dc2626 !important; color: white !important;
+  background: #dc2626 !important;
+  color: white !important;
 }
-.z-max { z-index: 9999; background: rgba(0,0,0,0.9); }
-.mt-4 { margin-top: 1rem; }
-
-/* Form Group w modalu */
-.form-group { margin-bottom: 1rem; }
-.form-group label { display: block; margin-bottom: 0.5rem; color: #9ca3af; font-size: 0.9rem; }
 </style>

@@ -1359,68 +1359,9 @@ onMounted(() => {
   border-color: rgba(139, 92, 246, 0.5);
 }
 
-/* Loading/Empty States */
-.state-msg {
-  text-align: center;
-  padding: 3rem;
-  color: #9ca3af;
-}
-
-.spinner {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 3px solid rgba(139, 92, 246, 0.3);
-  border-top-color: #8b5cf6;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-right: 0.5rem;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Modal */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
-
+/* Modal - nadpisania dla SettlementDetails */
 .modal-content {
-  background: #1e1b4b;
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  padding: 2rem;
-  border-radius: 16px;
   width: 500px;
-  max-width: 90vw;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  max-height: 80vh;
-  overflow-y: auto;
-}
-
-.modal-content.small {
-  width: 400px;
-}
-
-.modal-content h2 {
-  color: #f3f4f6;
-  margin-bottom: 1.5rem;
-}
-
-.info-text {
-  color: #9ca3af;
-  margin-bottom: 1.5rem;
-  line-height: 1.5;
 }
 
 .code-display {
@@ -1470,52 +1411,7 @@ onMounted(() => {
   width: 100%;
 }
 
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  color: #9ca3af;
-  font-weight: 500;
-}
-
-.form-group input,
-.form-group select {
-  width: 100%;
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  border-radius: 8px;
-  color: #e5e7eb;
-  font-size: 1rem;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: #8b5cf6;
-}
-
-.checkbox-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.checkbox-group label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #e5e7eb;
-  cursor: pointer;
-}
-
-.checkbox-group input[type="checkbox"] {
-  width: auto;
-  cursor: pointer;
-}
+/* Form - użyj globalnych styli z App.vue */
 
 .hint {
   margin-top: 0.5rem;
@@ -1523,38 +1419,7 @@ onMounted(() => {
   color: #6b7280;
 }
 
-.modal-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  margin-top: 2rem;
-}
-
-.modal-actions button {
-  padding: 10px 20px;
-  border-radius: 8px;
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  background: rgba(139, 92, 246, 0.1);
-  color: #e5e7eb;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.modal-actions button:hover {
-  background: rgba(139, 92, 246, 0.2);
-}
-
-.modal-actions button.primary {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-  border: none;
-  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
-}
-
-.modal-actions button.primary:hover {
-  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
-  transform: translateY(-2px);
-}
+/* Modal actions - użyj globalnych styli */
 
 /* Responsive */
 @media (max-width: 1024px) {
@@ -1830,48 +1695,12 @@ select option {
   box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
 }
 
-/* --- STYLE DLA PRZYCISKÓW USUWANIA (NOWE) --- */
-.modal-actions.space-between {
-  justify-content: space-between;
-  width: 100%;
-}
-
+/* Nadpisania dla akcji modala */
 .right-actions {
   display: flex;
   gap: 1rem;
 }
-
-.danger-btn {
-  background: rgba(239, 68, 68, 0.15) !important;
-  border: 1px solid rgba(239, 68, 68, 0.4) !important;
-  color: #f87171 !important;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.danger-btn:hover {
-  background: rgba(239, 68, 68, 0.25) !important;
-  border-color: #ef4444 !important;
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
-  transform: translateY(-1px);
-}
-textarea {
-  width: 100%;
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  border-radius: 8px;
-  color: #e5e7eb;
-  font-size: 1rem;
-  resize: vertical; /* Pozwala zmieniać wysokość */
-  font-family: inherit;
-}
-
-textarea:focus {
-  outline: none;
-  border-color: #8b5cf6;
-}
+/* Textarea - użyj globalnych styli */
 .settlement-description {
   color: #9ca3af;
   font-size: 0.95rem;

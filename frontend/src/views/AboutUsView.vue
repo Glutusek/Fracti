@@ -67,47 +67,9 @@
 </template>
 
 <style scoped>
-.page-wrapper {
-  min-height: 100vh;
-  padding-top: 100px;
-  padding-bottom: 4rem;
-  background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
-  color: #e5e7eb;
-  position: relative;
-  overflow: hidden;
-}
-
+/* Specjalne nadpisanie dla AboutUs */
 .container {
   max-width: 1000px;
-  margin: 0 auto;
-  padding: 0 2rem;
-  position: relative;
-  z-index: 10;
-}
-
-/* Typography Reusable */
-.page-title {
-  font-size: 3.5rem;
-  font-weight: 800;
-  margin-bottom: 1.5rem;
-  text-align: center;
-  line-height: 1.2;
-}
-
-.gradient-text {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #a855f7 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.page-subtitle {
-  font-size: 1.25rem;
-  color: #9ca3af;
-  text-align: center;
-  max-width: 700px;
-  margin: 0 auto 4rem;
-  line-height: 1.6;
 }
 
 /* Story Section */
@@ -217,14 +179,7 @@
   position: relative;
 }
 
-/* Background */
-.bg-elements {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-}
-
+/* Background - specjalny orb dla AboutUs */
 .orb-center {
   width: 600px;
   height: 600px;
@@ -240,10 +195,6 @@
   .story-section {
     grid-template-columns: 1fr;
     gap: 2rem;
-  }
-
-  .page-title {
-    font-size: 2.5rem;
   }
 }
 </style>
