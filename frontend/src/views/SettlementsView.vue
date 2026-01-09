@@ -56,6 +56,10 @@
               🗺️ Mapa
             </button>
 
+            <button @click.stop="openEditModal(settlement)" class="btn-edit" title="Ustawienia grupy">
+              ⚙️
+            </button>
+
             <button
               @click.stop="toggleExpand(settlement.id)"
               class="btn-expand"
@@ -107,7 +111,7 @@
         <h2>Nowe rozliczenie</h2>
         <form @submit.prevent="createSettlement">
           <input v-model="newSettlementName" placeholder="Nazwa (np. Wyjazd w góry)" required />
-          <input v-model="newSettlementDescription" required />
+          <input v-model="newSettlementDescription" placeholder="Opis (opcjonalnie)" />
           <div class="modal-actions">
             <button type="button" @click="showCreateModal = false">Anuluj</button>
             <button type="submit" class="primary">Utwórz</button>
@@ -130,6 +134,48 @@
     </div>
 
   </div>
+  <div v-if="showEditModal" class="modal-overlay" @click="showEditModal = false">
+  <div class="modal-content" @click.stop>
+    <h2>Edytuj Rozliczenie</h2>
+    <form @submit.prevent="updateSettlement">
+      <div class="form-group">
+        <label>Nazwa</label>
+        <input v-model="editingSettlement.name" required />
+      </div>
+      <div class="form-group">
+        <label>Opis</label>
+        <input v-model="editingSettlement.description" placeholder="Krótki opis" />
+      </div>
+
+      <div class="modal-actions space-between">
+        <button type="button" class="danger-btn" @click="confirmDeleteSettlement">
+          🗑️ Usuń grupę
+        </button>
+        <div class="right-actions">
+          <button type="button" @click="showEditModal = false">Anuluj</button>
+          <button type="submit" class="primary">Zapisz</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div v-if="showConfirmModal" class="modal-overlay z-max" @click="showConfirmModal = false">
+  <div class="modal-content small alert-box" @click.stop>
+    <div class="alert-icon">⚠️</div>
+    <h2>{{ confirmMessage }}</h2>
+    <p class="info-text center-text">{{ confirmSubMessage }}</p>
+
+    <div class="modal-actions space-between mt-4">
+      <button type="button" @click="showConfirmModal = false" class="ghost-btn">
+        Anuluj
+      </button>
+      <button type="button" class="danger-btn full-confirm" @click="handleConfirmAction">
+        🗑️ Tak, usuń
+      </button>
+    </div>
+  </div>
+</div>
 </template>
 
 <script setup lang="ts">
@@ -149,6 +195,12 @@ const showJoinModal = ref(false);
 const newSettlementName = ref('');
 const newSettlementDescription = ref('');
 const joinCode = ref('');
+const showEditModal = ref(false);
+const editingSettlement = ref({ id: '', name: '', description: '' });
+const showConfirmModal = ref(false);
+const confirmMessage = ref('');
+const confirmSubMessage = ref('');
+const pendingDeleteAction = ref<(() => Promise<void>) | null>(null);
 
 // Przechowujemy ID rozwiniętych kafelków (Set jest szybszy niż Array)
 const expandedSet = ref<Set<string>>(new Set());
@@ -214,6 +266,57 @@ const joinSettlement = async () => {
     alert('Błąd dołączania do rozliczenia');
   }
 };
+
+const openEditModal = (settlement: Settlement) => {
+  editingSettlement.value = {
+    id: settlement.id,
+    name: settlement.name,
+    description: settlement.description || ''
+  };
+  showEditModal.value = true;
+};
+
+const updateSettlement = async () => {
+  try {
+    await fractiService.updateSettlement(editingSettlement.value.id, {
+      name: editingSettlement.value.name,
+      description: editingSettlement.value.description
+    });
+
+    await loadSettlements();
+    showEditModal.value = false;
+  } catch (e) {
+    console.error('Błąd edycji:', e);
+    alert('Nie udało się zaktualizować rozliczenia.');
+  }
+};
+
+const confirmDeleteSettlement = () => {
+  confirmMessage.value = 'Usunąć rozliczenie?';
+  confirmSubMessage.value = `Czy na pewno chcesz usunąć grupę "${editingSettlement.value.name}"? Zostaną usunięte wszystkie paragony i produkty z nią powiązane.`;
+
+  pendingDeleteAction.value = async () => {
+    try {
+      await fractiService.deleteSettlement(editingSettlement.value.id);
+      showEditModal.value = false;
+      await loadSettlements();
+    } catch (e) {
+      console.error('Błąd usuwania:', e);
+      alert('Nie udało się usunąć rozliczenia.');
+    }
+  };
+
+  showConfirmModal.value = true;
+};
+
+const handleConfirmAction = async () => {
+  if (pendingDeleteAction.value) {
+    await pendingDeleteAction.value();
+  }
+  showConfirmModal.value = false;
+  pendingDeleteAction.value = null;
+};
+
 
 // --- HELPERS ---
 
@@ -642,4 +745,76 @@ onMounted(() => {
   box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
   transform: translateY(-2px);
 }
+.btn-edit {
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  color: #c4b5fd;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  font-size: 1.1rem;
+}
+
+.btn-edit:hover {
+  background: rgba(139, 92, 246, 0.25);
+  transform: rotate(45deg); /* Fajny efekt obrotu przy najechaniu */
+  border-color: rgba(139, 92, 246, 0.6);
+}
+
+/* Układ w modalu (lewo/prawo) */
+.modal-actions.space-between {
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 1.5rem;
+}
+
+.right-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Przyciski Danger (Czerwone) */
+.danger-btn {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+  color: #f87171 !important;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.danger-btn:hover {
+  background: rgba(239, 68, 68, 0.25) !important;
+  border-color: #ef4444 !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+.alert-box {
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: linear-gradient(180deg, #1e1b4b 0%, #280a0a 100%);
+  text-align: center;
+}
+.alert-icon { font-size: 3rem; margin-bottom: 1rem; filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.5)); }
+.center-text { text-align: center; font-size: 0.95rem; margin-bottom: 1.5rem; }
+.ghost-btn {
+  background: transparent; border: 1px solid rgba(139, 92, 246, 0.3); color: #c4b5fd;
+}
+.full-confirm {
+  flex: 1; display: flex; justify-content: center; align-items: center; gap: 0.5rem;
+  background: rgba(220, 38, 38, 0.2) !important; border: 1px solid #ef4444 !important;
+}
+.full-confirm:hover {
+  background: #dc2626 !important; color: white !important;
+}
+.z-max { z-index: 9999; background: rgba(0,0,0,0.9); }
+.mt-4 { margin-top: 1rem; }
+
+/* Form Group w modalu */
+.form-group { margin-bottom: 1rem; }
+.form-group label { display: block; margin-bottom: 0.5rem; color: #9ca3af; font-size: 0.9rem; }
 </style>
