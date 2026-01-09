@@ -34,6 +34,7 @@ export const CATEGORY_LABELS: Record<CategoryType, string> = {
 export interface Product {
   id: number;
   name: string;
+  description?: string | null;
   price: string;
   category: CategoryType;
   consumers: number[];
@@ -47,6 +48,7 @@ export interface Product {
 export interface Receipt {
   id: number;
   merchant_name: string;
+  description?: string | null;
   total_amount: string;
   purchase_date: string;
   image?: string | null;

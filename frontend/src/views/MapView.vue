@@ -30,6 +30,11 @@
           <l-popup>
             <div class="popup-content">
               <strong>{{ item.name }}</strong>
+              <div v-if="item.description" class="popup-desc">
+                <strong>Opis:</strong>
+                <br/>
+                  {{ item.description }}
+           </div>
               <div class="popup-meta">
                 <span>{{ formatDate(item.date) }}</span> •
                 <span class="cat-label">{{ getCategoryLabel(item.category) }}</span>
@@ -46,6 +51,7 @@
                 </ul>
                 <div class="total">Suma: {{ formatMoney(item.amount) }} zł</div>
               </div>
+
 
               <div v-else class="single-preview">
                 Kategoria: {{getCategoryLabel(item.category)}}
@@ -195,6 +201,7 @@ const getIconUrl = (cat: string) => markerIcons[cat] || markerIcons.default;
 const processBackendData = (data: Settlement) => {
   const mappedItems: any[] = [];
 
+  // Przetwarzanie paragonów (Receipts)
   if (data.receipts) {
     data.receipts.forEach(r => {
       if (r.latitude && r.longitude) {
@@ -202,6 +209,7 @@ const processBackendData = (data: Settlement) => {
           uniqueId: `r-${r.id}`,
           type: 'receipt',
           name: r.merchant_name,
+          description: r.description,
           amount: parseFloat(r.total_amount),
           date: r.purchase_date,
           category: r.category,
@@ -212,6 +220,7 @@ const processBackendData = (data: Settlement) => {
     });
   }
 
+  // Przetwarzanie luźnych produktów (Loose Products)
   if (data.loose_products) {
     data.loose_products.forEach(p => {
       if (p.latitude && p.longitude) {
@@ -219,6 +228,7 @@ const processBackendData = (data: Settlement) => {
           uniqueId: `p-${p.id}`,
           type: 'single',
           name: p.name,
+          description: p.description,
           amount: parseFloat(p.price),
           date: p.created_at,
           category: p.category,
@@ -268,7 +278,6 @@ const flyToMarker = (coords: [number, number]) => {
   zoom.value = 16;
 };
 
-// (removed DOM-fallback helper) 
 
 // marker clicks handled via sidebar/timeline; onMarkerClick removed
 
@@ -381,6 +390,13 @@ onMounted(async () => {
   color: white;
 }
 
+popup-desc {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: #4b5563;
+  margin: 4px 0;
+  line-height: 1.2;
+}
 .items-list { flex: 1; overflow-y: auto; padding: 1rem; }
 
 .item-card {

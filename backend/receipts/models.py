@@ -67,6 +67,7 @@ class Settlement(models.Model):
 # --- MODEL PARAGONU (ZMODYFIKOWANY) ---
 class Receipt(MapItem):
     merchant_name = models.CharField(_("Nazwa sklepu"), max_length=255)
+    description = models.TextField(_("Opis"), blank=True, null=True)
     purchase_date = models.DateTimeField(_("Data zakupu"), null=True, blank=True)
     total_amount = models.DecimalField(
         _("Kwota całkowita"),
@@ -110,6 +111,7 @@ class Receipt(MapItem):
 class Product(MapItem):
 
     name = models.CharField(_("Nazwa produktu"), max_length=255)
+    description = models.TextField(_("Opis"), blank=True, null=True)
     price = models.DecimalField(
         _("Cena"),
         max_digits=10,
