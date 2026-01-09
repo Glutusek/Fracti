@@ -4,6 +4,9 @@
       <button @click="goBack" class="back-btn">← Powrót</button>
       <div class="header-info">
         <h1>{{ settlement?.name || 'Ładowanie...' }}</h1>
+        <div v-if="settlement?.description" class="settlement-description">
+         Opis: {{ settlement.description }}
+        </div>
         <div class="total-cost">
           Łączny koszt: <span class="amount">{{ formatMoney(settlement?.total_expenses) }} zł</span>
         </div>
@@ -1868,5 +1871,13 @@ textarea {
 textarea:focus {
   outline: none;
   border-color: #8b5cf6;
+}
+.settlement-description {
+  color: #9ca3af;
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+  max-width: 600px;
+  line-height: 1.5;
+  font-style: italic;
 }
 </style>
