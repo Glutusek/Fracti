@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.contrib.gis.geos import Point
 import uuid
 from .models import Receipt, Product, Settlement
 from django.contrib.auth import get_user_model
@@ -12,8 +13,9 @@ class UserSerializer(serializers.ModelSerializer):
 #PRODUCT
 class ProductSerializer(serializers.ModelSerializer):
     # Pola wirtualne (obliczane w locie), żeby Frontend miał łatwiej
-    latitude = serializers.SerializerMethodField()
-    longitude = serializers.SerializerMethodField()
+    # Umożliwiamy odczyt i zapis współrzędnych (mapa)
+    latitude = serializers.FloatField(required=False, allow_null=True)
+    longitude = serializers.FloatField(required=False, allow_null=True)
     consumers = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.all(), required=False)
     class Meta:
         model = Product
@@ -27,13 +29,31 @@ class ProductSerializer(serializers.ModelSerializer):
         # Wyciągamy X (Długość) z obiektu Point, jeśli istnieje
         return obj.location.x if obj.location else None
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Nadpisujemy pola latitude/longitude z obiektu Point
+        data['latitude'] = instance.location.y if instance.location else None
+        data['longitude'] = instance.location.x if instance.location else None
+        return data
+
+    def update(self, instance, validated_data):
+        lat = validated_data.pop('latitude', None)
+        lon = validated_data.pop('longitude', None)
+        if lat is not None and lon is not None:
+            instance.location = Point(lon, lat)
+        elif lat is None and lon is None and 'latitude' in self.initial_data and 'longitude' in self.initial_data:
+            # Jeśli przesłano jawnie null, wyczyść lokalizację
+            instance.location = None
+
+        return super().update(instance, validated_data)
+
 #RECEIPT
 class ReceiptSerializer(serializers.ModelSerializer):
     # Zagnieżdżamy produkty, żeby jednym zapytaniem pobrać paragon I JEGO pozycje
     products = ProductSerializer(many=True, read_only=True)
 
-    latitude = serializers.SerializerMethodField()
-    longitude = serializers.SerializerMethodField()
+    latitude = serializers.FloatField(required=False, allow_null=True)
+    longitude = serializers.FloatField(required=False, allow_null=True)
 
     class Meta:
         model = Receipt
@@ -45,6 +65,22 @@ class ReceiptSerializer(serializers.ModelSerializer):
 
     def get_longitude(self, obj):
         return obj.location.x if obj.location else None
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['latitude'] = instance.location.y if instance.location else None
+        data['longitude'] = instance.location.x if instance.location else None
+        return data
+
+    def update(self, instance, validated_data):
+        lat = validated_data.pop('latitude', None)
+        lon = validated_data.pop('longitude', None)
+        if lat is not None and lon is not None:
+            instance.location = Point(lon, lat)
+        elif lat is None and lon is None and 'latitude' in self.initial_data and 'longitude' in self.initial_data:
+            instance.location = None
+
+        return super().update(instance, validated_data)
 
 #SETTELMENTS
 class SettlementSerializer(serializers.ModelSerializer):

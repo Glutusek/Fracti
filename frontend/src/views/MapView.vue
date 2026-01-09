@@ -3,6 +3,7 @@
     <div class="map-container">
       <l-map
         ref="map"
+        @ready="onMapReady"
         v-model:zoom="zoom"
         :center="center"
         :use-global-leaflet="false"
@@ -141,6 +142,19 @@ const settlementId = (route.params.id || route.params.uuid) as string;
 // --- CONFIG MAPY ---
 const zoom = ref(6);
 const center = ref<[number, number]>([52.0, 19.0]);
+// reference to the LMap component (vue-leaflet) to access native Leaflet map
+const map = ref<any>(null);
+// store native Leaflet map instance when available
+const mapNative = ref<any>(null);
+
+const onMapReady = (map: any) => {
+  try {
+    mapNative.value = map;
+    console.debug('Map ready, native map set', { center: map.getCenter && map.getCenter(), zoom: map.getZoom && map.getZoom() });
+  } catch (e) {
+    console.debug('onMapReady error', e);
+  }
+};
 const shadowUrl = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png';
 
 // --- STATE ---
@@ -220,9 +234,43 @@ const processBackendData = (data: Settlement) => {
 const goBack = () => router.push(`/settlements/`);
 const goDetails = () => router.push(`/settlements/{${settlementId}}`);
 const flyToMarker = (coords: [number, number]) => {
-  center.value = coords;
+  const lat = Number(coords[0]);
+  const lng = Number(coords[1]);
+  if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+
+  // Prefer native map captured via onMapReady, then try common refs
+  const finalMap = mapNative.value || map.value?.mapObject || map.value?.map || null;
+
+  if (finalMap && typeof finalMap.flyTo === 'function') {
+    // animate and sync after movement
+    finalMap.flyTo([lat, lng], 16, { animate: true });
+    if (typeof finalMap.once === 'function') {
+      finalMap.once('moveend', () => {
+        const after = finalMap.getCenter && finalMap.getCenter();
+        if (after) {
+          center.value = [after.lat, after.lng];
+          zoom.value = finalMap.getZoom ? finalMap.getZoom() : 16;
+        }
+      });
+    } else {
+      // fallback immediate sync
+      const after = finalMap.getCenter && finalMap.getCenter();
+      if (after) {
+        center.value = [after.lat, after.lng];
+        zoom.value = finalMap.getZoom ? finalMap.getZoom() : 16;
+      }
+    }
+    return;
+  }
+
+  // reactive fallback
+  center.value = [lat, lng];
   zoom.value = 16;
 };
+
+// (removed DOM-fallback helper) 
+
+// marker clicks handled via sidebar/timeline; onMarkerClick removed
 
 // --- FORMATOWANIE ---
 const formatMoney = (val: number | string) => Number(val).toFixed(2);
@@ -249,8 +297,19 @@ onMounted(async () => {
     items.value = processBackendData(data);
 
     if (items.value.length > 0) {
+      // default view
       center.value = items.value[0].coords;
       zoom.value = 12;
+    }
+
+    // If navigation included a focus query, pan to that specific item
+    const focus = (route.query.focus as string) || null;
+    if (focus) {
+      const target = items.value.find(i => i.uniqueId === focus);
+      if (target) {
+        // give map some time to initialize
+        setTimeout(() => flyToMarker(target.coords), 150);
+      }
     }
   } catch (error: any) {
     console.error("API Error:", error);
