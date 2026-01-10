@@ -323,21 +323,25 @@ onMounted(async () => {
     currentSettlement.value = data;
     items.value = processBackendData(data);
 
-    if (items.value.length > 0) {
-      // default view
+    // LOGIKA USTAWIANIA CENTRUM MAPY
+    const focusId = (route.query.focus as string) || null;
+    let targetItem = null;
+
+    if (focusId) {
+      targetItem = items.value.find(i => i.uniqueId === focusId);
+    }
+
+    if (targetItem) {
+
+      center.value = targetItem.coords;
+      zoom.value = 16;
+    } else if (items.value.length > 0) {
+      // Jeśli nie wybrano konkretnego, pokaż pierwszy z listy
       center.value = items.value[0].coords;
       zoom.value = 12;
     }
+    // W przeciwnym razie zostaje domyślny środek (Polska) zdefiniowany w ref center
 
-    // If navigation included a focus query, pan to that specific item
-    const focus = (route.query.focus as string) || null;
-    if (focus) {
-      const target = items.value.find(i => i.uniqueId === focus);
-      if (target) {
-        // give map some time to initialize
-        setTimeout(() => flyToMarker(target.coords), 150);
-      }
-    }
   } catch (error: any) {
     console.error("API Error:", error);
     errorMessage.value = error.response?.data?.detail || "Nie udało się pobrać danych.";
@@ -345,6 +349,7 @@ onMounted(async () => {
     loading.value = false;
   }
 });
+
 </script>
 
 <style scoped>
