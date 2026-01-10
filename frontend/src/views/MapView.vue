@@ -7,6 +7,7 @@
         v-model:zoom="zoom"
         :center="center"
         :use-global-leaflet="false"
+        :zoom-snap="0.25"
       >
         <l-tile-layer
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
@@ -129,6 +130,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { LMap, LTileLayer, LMarker, LPopup, LIcon } from '@vue-leaflet/vue-leaflet';
+// Usunąłem import latLngBounds, bo nie jest już potrzebny
 import 'leaflet/dist/leaflet.css';
 
 // Import serwisu
@@ -148,15 +150,13 @@ const settlementId = (route.params.id || route.params.uuid) as string;
 // --- CONFIG MAPY ---
 const zoom = ref(6);
 const center = ref<[number, number]>([52.0, 19.0]);
-// reference to the LMap component (vue-leaflet) to access native Leaflet map
 const map = ref<any>(null);
-// store native Leaflet map instance when available
 const mapNative = ref<any>(null);
 
-const onMapReady = (map: any) => {
+const onMapReady = (mapInstance: any) => {
   try {
-    mapNative.value = map;
-    console.debug('Map ready, native map set', { center: map.getCenter && map.getCenter(), zoom: map.getZoom && map.getZoom() });
+    mapNative.value = mapInstance;
+    console.debug('Map ready, native map set');
   } catch (e) {
     console.debug('onMapReady error', e);
   }
@@ -218,8 +218,6 @@ const getIconUrl = (cat: string) => markerIcons[cat] || markerIcons.default;
 // --- PRZETWARZANIE ---
 const processBackendData = (data: Settlement) => {
   const mappedItems: any[] = [];
-
-  // Przetwarzanie paragonów (Receipts)
   if (data.receipts) {
     data.receipts.forEach(r => {
       if (r.latitude && r.longitude) {
@@ -237,8 +235,6 @@ const processBackendData = (data: Settlement) => {
       }
     });
   }
-
-  // Przetwarzanie luźnych produktów (Loose Products)
   if (data.loose_products) {
     data.loose_products.forEach(p => {
       if (p.latitude && p.longitude) {
@@ -260,44 +256,84 @@ const processBackendData = (data: Settlement) => {
 
 // --- AKCJE ---
 const goBack = () => router.push(`/settlements/`);
-const goDetails = () => router.push(`/settlements/{${settlementId}}`);
+const goDetails = () => router.push(`/settlements/${settlementId}`);
+
+// --- NOWA FUNKCJA: CENTROWANIE NA ŚREDNIEJ (PLAN C) ---
+const centerOnAveragePoint = () => {
+  const leafletMap = mapNative.value || map.value?.leafletObject || map.value?.mapObject;
+
+  // 1. Sprawdzenie instancji mapy
+  if (!leafletMap) return;
+
+  // 2. Pobranie i czyszczenie punktów
+  // Upewniamy się, że mamy tablicę liczb [lat, lng]
+  const points = items.value
+    .map(i => i.coords)
+    .filter(c => Array.isArray(c) && c.length === 2 && !isNaN(Number(c[0])) && !isNaN(Number(c[1])))
+    .map(c => [Number(c[0]), Number(c[1])]);
+
+  // 3. Brak punktów -> Wracamy na domyślną Polskę
+  if (points.length === 0) {
+     leafletMap.setView([52.0693, 19.4803], 6);
+     return;
+  }
+
+  // 4. Jeden punkt -> Idziemy prosto do niego
+  if (points.length === 1) {
+    leafletMap.flyTo(points[0], 14);
+    return;
+  }
+
+  // 5. OBLICZANIE ŚREDNIEJ (CENTROIDU)
+  let sumLat = 0;
+  let sumLng = 0;
+
+  points.forEach(p => {
+    sumLat += p[0];
+    sumLng += p[1];
+  });
+
+  const avgLat = sumLat / points.length;
+  const avgLng = sumLng / points.length;
+
+  // 6. OBLICZANIE ROZRZUTU (żeby dobrać zoom)
+  const lats = points.map(p => p[0]);
+  const lngs = points.map(p => p[1]);
+  const maxDiffLat = Math.max(...lats) - Math.min(...lats);
+  const maxDiffLng = Math.max(...lngs) - Math.min(...lngs);
+
+  // Prosta heurystyka zoomu:
+  // 1 stopień geograficzny to ok. 111 km.
+  // Jeśli różnica > 2 stopnie (ponad 200km) -> pokaż kraj (zoom 6)
+  // Jeśli różnica > 0.5 stopnia (ok 50km) -> pokaż region (zoom 9)
+  // W przeciwnym razie -> pokaż miasto (zoom 13)
+  let targetZoom = 13;
+
+  if (maxDiffLat > 2 || maxDiffLng > 2) {
+    targetZoom = 6;
+  } else if (maxDiffLat > 0.5 || maxDiffLng > 0.5) {
+    targetZoom = 9;
+  }
+
+  // 7. Ustawienie widoku
+  console.log(`Centering map on average: [${avgLat}, ${avgLng}] with zoom ${targetZoom}`);
+  leafletMap.setView([avgLat, avgLng], targetZoom);
+};
+
 const flyToMarker = (coords: [number, number]) => {
   const lat = Number(coords[0]);
   const lng = Number(coords[1]);
   if (Number.isNaN(lat) || Number.isNaN(lng)) return;
 
-  // Prefer native map captured via onMapReady, then try common refs
-  const finalMap = mapNative.value || map.value?.mapObject || map.value?.map || null;
+  const finalMap = mapNative.value || map.value?.leafletObject || map.value?.mapObject;
 
   if (finalMap && typeof finalMap.flyTo === 'function') {
-    // animate and sync after movement
     finalMap.flyTo([lat, lng], 16, { animate: true });
-    if (typeof finalMap.once === 'function') {
-      finalMap.once('moveend', () => {
-        const after = finalMap.getCenter && finalMap.getCenter();
-        if (after) {
-          center.value = [after.lat, after.lng];
-          zoom.value = finalMap.getZoom ? finalMap.getZoom() : 16;
-        }
-      });
-    } else {
-      // fallback immediate sync
-      const after = finalMap.getCenter && finalMap.getCenter();
-      if (after) {
-        center.value = [after.lat, after.lng];
-        zoom.value = finalMap.getZoom ? finalMap.getZoom() : 16;
-      }
-    }
     return;
   }
-
-  // reactive fallback
   center.value = [lat, lng];
   zoom.value = 16;
 };
-
-
-// marker clicks handled via sidebar/timeline; onMarkerClick removed
 
 // --- FORMATOWANIE ---
 const formatMoney = (val: number | string) => Number(val).toFixed(2);
@@ -323,7 +359,6 @@ onMounted(async () => {
     currentSettlement.value = data;
     items.value = processBackendData(data);
 
-    // LOGIKA USTAWIANIA CENTRUM MAPY
     const focusId = (route.query.focus as string) || null;
     let targetItem = null;
 
@@ -331,16 +366,15 @@ onMounted(async () => {
       targetItem = items.value.find(i => i.uniqueId === focusId);
     }
 
-    if (targetItem) {
-
+    if (targetItem && targetItem.coords) {
       center.value = targetItem.coords;
       zoom.value = 16;
-    } else if (items.value.length > 0) {
-      // Jeśli nie wybrano konkretnego, pokaż pierwszy z listy
-      center.value = items.value[0].coords;
-      zoom.value = 12;
+    } else {
+      setTimeout(() => {
+         // Wywołujemy naszą bezpieczną funkcję
+         centerOnAveragePoint();
+      }, 100);
     }
-    // W przeciwnym razie zostaje domyślny środek (Polska) zdefiniowany w ref center
 
   } catch (error: any) {
     console.error("API Error:", error);
@@ -349,7 +383,6 @@ onMounted(async () => {
     loading.value = false;
   }
 });
-
 </script>
 
 <style scoped>
@@ -389,11 +422,10 @@ onMounted(async () => {
 
 .sidebar-header h2 { margin: 0 0 1rem 0; font-size: 1.25rem; }
 
-/* --- ZMIANA DLA CIEBIE: FILTRY ZAWIJANE --- */
 .filters {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap; /* To sprawia, że przyciski spadają do nowej linii */
+  flex-wrap: wrap;
   padding-bottom: 4px;
 }
 
@@ -413,7 +445,7 @@ onMounted(async () => {
   color: white;
 }
 
-popup-desc {
+.popup-desc {
   font-size: 0.85rem;
   font-style: italic;
   color: #4b5563;
@@ -444,7 +476,6 @@ popup-desc {
 .item-meta { font-size: 0.75rem; color: #9ca3af; margin-top: 2px; }
 .item-amount { font-weight: 700; color: #a78bfa; }
 
-/* --- ZMIANA DLA CIEBIE: STYL PRODUKTÓW W SIDEBARZE --- */
 .card-products {
   margin-top: 10px;
   padding-top: 10px;
