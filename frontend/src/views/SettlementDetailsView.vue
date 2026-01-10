@@ -52,7 +52,7 @@
               <div class="item-right-panel">
                 <div class="item-amount">{{ formatMoney(item.amount) }} zł</div>
 
-                <button class="action-icon-btn map" @click.stop="openOnMap(item)" title="Pokaż na mapie">
+                <button v-if="item.latitude && item.longitude" class="action-icon-btn map" @click.stop="openOnMap(item)" title="Pokaż na mapie">
                   🗺️
                 </button>
 
@@ -283,8 +283,8 @@
               <input v-model="editingReceipt.total_amount" type="number" step="0.01" />
             </div>
             <div class="form-group half">
-              <label>Data</label>
-              <input v-model="editingReceipt.purchase_date" type="date" />
+              <label>Data i godzina</label>
+              <input v-model="editingReceipt.purchase_date" type="datetime-local" />
             </div>
           </div>
 
@@ -295,61 +295,58 @@
             </select>
           </div>
 
-          <div class="modal-actions space-between">
-            <button type="button" class="danger-btn" @click="deleteReceipt">
-              🗑️ Usuń paragon
+          <hr class="modal-divider" />
+
+          <div class="modal-section-header">
+            <div class="modal-section-title">Pozycje na paragonie</div>
+            <button type="button" class="add-item-btn" @click="openReceiptItemModal(null, editingReceipt.id)">
+              + Dodaj pozycję
             </button>
-            <button type="submit" class="primary">Zapisz zmiany w nagłówku</button>
           </div>
-        </form>
 
-        <hr class="modal-divider" />
-
-        <div class="modal-section-header">
-          <div class="modal-section-title">Pozycje na paragonie</div>
-          <button type="button" class="add-item-btn" @click="openReceiptItemModal(null, editingReceipt.id)">
-            + Dodaj pozycję
-          </button>
-        </div>
-
-        <div class="receipt-items-list">
-          <div v-if="!editingReceipt.products || editingReceipt.products.length === 0" class="empty-list">
-            Brak pozycji. Dodaj coś!
-          </div>
-          <div
-            v-for="prod in editingReceipt.products"
-            :key="prod.id"
-            class="receipt-list-item"
-          >
-            <div class="r-item-info">
-              <div class="r-item-name">{{ prod.name }}</div>
-              <div class="r-item-meta">
-                {{ formatMoney(prod.price) }} zł • {{ prod.consumers.length }} os.
+          <div class="receipt-items-list">
+            <div v-if="!editingReceipt.products || editingReceipt.products.length === 0" class="empty-list">
+              Brak pozycji. Dodaj coś!
+            </div>
+            <div
+              v-for="prod in editingReceipt.products"
+              :key="prod.id"
+              class="receipt-list-item"
+            >
+              <div class="r-item-info">
+                <div class="r-item-name">{{ prod.name }}</div>
+                <div class="r-item-meta">
+                  {{ formatMoney(prod.price) }} zł • {{ prod.consumers.length }} os.
+                </div>
+              </div>
+              <div class="r-item-actions">
+                <button class="icon-btn edit" @click="openReceiptItemModal(prod, editingReceipt.id)">✏️</button>
+                <button class="icon-btn delete" @click="deleteReceiptItem(prod.id)">🗑️</button>
               </div>
             </div>
-            <div class="r-item-actions">
-              <button class="icon-btn edit" @click="openReceiptItemModal(prod, editingReceipt.id)">✏️</button>
-              <button class="icon-btn delete" @click="deleteReceiptItem(prod.id)">🗑️</button>
-            </div>
           </div>
-        </div>
 
-        <div class="calculated-total-box">
-          <div class="calc-label">Przeliczona suma pozycji:</div>
-          <div class="calc-value">{{ formatMoney(calculatedReceiptTotal) }} zł</div>
-          <button
-            type="button"
-            class="sync-btn"
-            @click="syncReceiptTotal"
-            title="Zastosuj obliczoną sumę jako total_amount"
-          >
-            ⟳ Zastosuj
-          </button>
-        </div>
+          <div class="calculated-total-box">
+            <div class="calc-label">Przeliczona suma pozycji:</div>
+            <div class="calc-value">{{ formatMoney(calculatedReceiptTotal) }} zł</div>
+            <button
+              type="button"
+              class="sync-btn"
+              @click="syncReceiptTotal"
+              title="Zastosuj obliczoną sumę jako total_amount"
+            >
+              ⟳ Zastosuj
+            </button>
+          </div>
 
-        <div class="modal-actions mt-4">
-           <button type="button" @click="showEditReceiptModal = false">Zamknij okno</button>
-        </div>
+          <div class="modal-actions equal-buttons mt-4">
+            <button type="button" class="danger-btn" @click="deleteReceipt">
+              🗑️ Usuń
+            </button>
+            <button type="button" @click="showEditReceiptModal = false">Anuluj</button>
+            <button type="submit" class="primary">📝 Zapisz</button>
+          </div>
+        </form>
       </div>
     </div>
 
@@ -411,6 +408,7 @@
         </div>
       </div>
     </div>
+    <div v-if="toastMessage" class="toast" :class="toastType">{{ toastMessage }}</div>
   </div>
 </template>
 
@@ -487,17 +485,19 @@ const combinedTimeline = computed(() => {
   }> = [];
 
   // Add receipts
-  settlement.value.receipts?.forEach(receipt => {
-    items.push({
-      id: receipt.id,
-      type: 'receipt',
-      name: receipt.merchant_name,
-      amount: receipt.total_amount,
-      date: receipt.purchase_date || receipt.created_at,
-      payerId: receipt.purchaser,
-      products: receipt.products || []
-    });
-  });
+        settlement.value.receipts?.forEach(receipt => {
+          items.push({
+            id: receipt.id,
+            type: 'receipt',
+            name: receipt.merchant_name,
+            amount: receipt.total_amount,
+            date: receipt.purchase_date || new Date().toISOString(),
+            latitude: receipt.latitude ?? null,
+            longitude: receipt.longitude ?? null,
+            payerId: receipt.purchaser,
+            products: receipt.products || []
+          });
+        });
 
   // Add loose products
   settlement.value.loose_products?.forEach(product => {
@@ -507,13 +507,18 @@ const combinedTimeline = computed(() => {
       name: product.name,
       amount: product.price,
       date: product.created_at,
+      latitude: product.latitude ?? null,
+      longitude: product.longitude ?? null,
       payerId: product.consumers[0] || 0 // First consumer as payer
     });
   });
 
 
-  // Sort by date (newest first)
-  return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  return items.sort((a, b) => {
+    const ta = isNaN(new Date(a.date).getTime()) ? 0 : new Date(a.date).getTime();
+    const tb = isNaN(new Date(b.date).getTime()) ? 0 : new Date(b.date).getTime();
+    return tb - ta;
+  });
 });
 
 const totalItemsCount = computed(() => {
@@ -600,6 +605,23 @@ const formatDate = (dateString: string): string => {
   });
 };
 
+
+const toDatetimeLocal = (dateString: string | null | undefined): string => {
+  if (!dateString) return '';
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+const toastMessage = ref('');
+const toastType = ref<'success' | 'error'>('success');
+const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+  toastMessage.value = msg;
+  toastType.value = type;
+  setTimeout(() => (toastMessage.value = ''), 2500);
+};
+
 // --- MAP LOGIC ---
 
 const initMap = (elementId: string, lat: number | null, lng: number | null, onUpdate: (lat: number, lng: number) => void) => {
@@ -668,7 +690,8 @@ const editItem = async (item: any) => {
   if (item.type === 'receipt') {
     const receipt = settlement.value?.receipts?.find(r => r.id === item.id);
     if (receipt) {
-      editingReceipt.value = { ...receipt };
+    const srcDate = receipt.purchase_date || new Date().toISOString();
+    editingReceipt.value = { ...receipt, purchase_date: toDatetimeLocal(srcDate as any) };
       showEditReceiptModal.value = true;
 
       await nextTick();
@@ -733,6 +756,7 @@ const createLooseProduct = async () => {
 
     await loadSettlement();
     showAddProductModal.value = false;
+    showToast('Dodano produkt', 'success');
   } catch (error) {
     console.error('Błąd dodawania produktu:', error);
     alert('Nie udało się dodać produktu');
@@ -775,6 +799,7 @@ const deleteLooseProduct = () => {
         showEditProductModal.value = false; // Zamknij modal edycji
         editingProduct.value = null;
         await loadSettlement();
+        showToast('Usunięto produkt', 'success');
       } catch (e) {
         console.error('Błąd usuwania produktu:', e);
         alert('Wystąpił błąd podczas usuwania.');
@@ -786,19 +811,26 @@ const deleteLooseProduct = () => {
 const updateReceipt = async () => {
   if (!editingReceipt.value) return;
   try {
+    const purchaseDateForApi = editingReceipt.value.purchase_date
+      ? new Date(editingReceipt.value.purchase_date).toISOString()
+      : undefined;
+
     await fractiService.updateReceipt(editingReceipt.value.id, {
       merchant_name: editingReceipt.value.merchant_name,
       description: editingReceipt.value.description,
       total_amount: editingReceipt.value.total_amount,
-      purchase_date: editingReceipt.value.purchase_date,
+      purchase_date: purchaseDateForApi,
       purchaser: editingReceipt.value.purchaser,
       latitude: editingReceipt.value.latitude,
       longitude: editingReceipt.value.longitude
     });
     await loadSettlement();
+    showEditReceiptModal.value = false;
+    showToast('Zapisano pomyślnie', 'success');
     const refreshedReceipt = settlement.value?.receipts?.find(r => r.id === editingReceipt.value?.id);
     if (refreshedReceipt) {
-      editingReceipt.value = { ...refreshedReceipt };
+      const srcDate = refreshedReceipt.purchase_date || new Date().toISOString();
+      editingReceipt.value = { ...refreshedReceipt, purchase_date: toDatetimeLocal(srcDate as any) };
     }
   } catch (e) {
     console.error('Błąd aktualizacji paragonu:', e);
@@ -833,6 +865,7 @@ const deleteReceipt = async () => {
         showEditReceiptModal.value = false; // Zamknij modal edycji
         editingReceipt.value = null;
         await loadSettlement();
+        showToast('Usunięto paragon', 'success');
       } catch (e) {
         console.error('Błąd usuwania paragonu:', e);
         alert('Wystąpił błąd podczas usuwania.');
@@ -904,15 +937,16 @@ const deleteReceiptItem = async (itemId: number) => {
     'Usunąć pozycję?',
     'Pozycja zniknie z tego paragonu.',
     async () => {
-      try {
-        await fractiService.deleteReceiptItem(itemId);
-        await loadSettlement();
-        if (editingReceipt.value) {
-          editingReceipt.value.products = editingReceipt.value.products.filter(p => p.id !== itemId);
+        try {
+          await fractiService.deleteReceiptItem(itemId);
+          await loadSettlement();
+          if (editingReceipt.value) {
+            editingReceipt.value.products = editingReceipt.value.products.filter(p => p.id !== itemId);
+          }
+          showToast('Usunięto pozycję', 'success');
+        } catch (e) {
+          console.error(e);
         }
-      } catch (e) {
-        console.error(e);
-      }
     }
   );
 };
@@ -1695,12 +1729,48 @@ select option {
   box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
 }
 
-/* Nadpisania dla akcji modala */
 .right-actions {
   display: flex;
   gap: 1rem;
 }
-/* Textarea - użyj globalnych styli */
+
+.modal-content .modal-actions.space-between {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+.modal-content .modal-actions.space-between > .danger-btn,
+.modal-content .modal-actions.space-between .right-actions > button {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.modal-content .modal-actions.space-between > .danger-btn,
+.modal-content .modal-actions.space-between .right-actions > button,
+.modal-content .modal-actions.space-between > button {
+  height: 44px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+}
+.modal-content .modal-actions.space-between .right-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.modal-content .modal-actions.equal-buttons {
+  display: flex;
+  gap: 1rem;
+}
+.modal-content .modal-actions.equal-buttons > button {
+  flex: 1 1 0;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 12px;
+  height: 44px;
+  box-sizing: border-box;
+}
+
 .settlement-description {
   color: #9ca3af;
   font-size: 0.95rem;
