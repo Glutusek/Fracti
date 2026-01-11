@@ -86,6 +86,20 @@ class ReceiptSerializer(serializers.ModelSerializer):
         data['longitude'] = instance.location.x if instance.location else None
         return data
 
+    def create(self, validated_data):
+        lat = validated_data.pop('latitude', None)
+        lon = validated_data.pop('longitude', None)
+
+        # Tworzymy instancję paragonu
+        instance = super().create(validated_data)
+
+        # Ustawiamy lokalizację jeśli podano współrzędne
+        if lat is not None and lon is not None:
+            instance.location = Point(lon, lat)
+            instance.save()
+
+        return instance
+
     def update(self, instance, validated_data):
         lat = validated_data.pop('latitude', None)
         lon = validated_data.pop('longitude', None)
