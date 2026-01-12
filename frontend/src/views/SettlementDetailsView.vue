@@ -1834,7 +1834,7 @@ user-actions-row {
 }
 
 .add-user-btn, .add-guest-btn {
-  flex: 1; /* Przyciski zajmą po połowie szerokości */
+  flex: 1;
   padding: 12px;
   border-radius: 10px;
   cursor: pointer;
