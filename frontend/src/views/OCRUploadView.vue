@@ -67,18 +67,6 @@
              </div>
            </div>
 
-           <div class="form-group highlight">
-             <label>Kwota Całkowita (PLN)</label>
-             <div class="amount-input-wrapper">
-               <input
-                 type="number"
-                 step="0.01"
-                 v-model="receiptData.total_amount"
-                 placeholder="0.00"
-               />
-               <button @click="calculateTotalFromProducts" class="btn-calc" title="Oblicz z sumy produktów">∑ Przelicz</button>
-             </div>
-           </div>
 
            <div class="form-group">
               <label>Lokalizacja (opcjonalnie)</label>
@@ -127,6 +115,11 @@
                    <button @click="openProductModal(idx)" class="btn-mini edit">✏️</button>
                    <button @click="confirmRemoveProduct(idx)" class="btn-mini delete">🗑️</button>
                 </div>
+             </div>
+
+             <div class="products-total">
+                <span class="total-label">Suma:</span>
+                <span class="total-value">{{ calculateTotal().toFixed(2) }} zł</span>
              </div>
           </div>
         </div>
@@ -297,7 +290,6 @@ const receiptData = ref({
   merchant_name: '',
   description: '',
   purchase_date: new Date().toISOString().split('T')[0],
-  total_amount: '',
   purchaser: null as number | null,
   latitude: null as number | null,
   longitude: null as number | null
@@ -440,11 +432,6 @@ const pollResult = async (taskId: string) => {
          isAnalyzing.value = false;
          ocrResult.value = res.data;
 
-         // Jeśli kwota całkowita jest pusta, uzupełnij z OCR
-         if (!receiptData.value.total_amount && res.data.total_amount) {
-            receiptData.value.total_amount = res.data.total_amount.toString();
-         }
-
          showOcrOverlay.value = true;
        } else if (res.status === 'FAILURE') {
          clearInterval(interval);
@@ -568,9 +555,8 @@ const confirmRemoveProduct = (idx: number) => {
   );
 };
 
-const calculateTotalFromProducts = () => {
-  const sum = receiptProducts.value.reduce((acc, p) => acc + p.price, 0);
-  receiptData.value.total_amount = sum.toFixed(2);
+const calculateTotal = () => {
+  return receiptProducts.value.reduce((acc, p) => acc + p.price, 0);
 };
 
 const getCategoryLabel = (cat: string) => CATEGORY_LABELS[cat as Category] || cat;
@@ -598,11 +584,14 @@ const initMap = (elId: string) => {
 };
 
 const submitReceipt = async () => {
-  if (!receiptData.value.merchant_name || !receiptData.value.total_amount) {
-    errorMessage.value = "Uzupełnij nazwę sklepu i kwotę!";
+  if (!receiptData.value.merchant_name) {
+    errorMessage.value = "Uzupełnij nazwę sklepu!";
     setTimeout(() => errorMessage.value = '', 3000);
     return;
   }
+
+  // Automatycznie oblicz total_amount z sumy produktów
+  const totalAmount = calculateTotal();
 
   isUploading.value = true;
   try {
@@ -623,7 +612,7 @@ const submitReceipt = async () => {
       fd.append('description', receiptData.value.description);
     }
     fd.append('purchase_date', receiptData.value.purchase_date);
-    fd.append('total_amount', receiptData.value.total_amount);
+    fd.append('total_amount', totalAmount.toString());
     fd.append('category', 'SHOPPING');
 
     if (receiptData.value.purchaser) fd.append('purchaser', receiptData.value.purchaser.toString());
@@ -820,6 +809,30 @@ const goBack = () => router.back();
 }
 .btn-mini.edit { background: rgba(59,130,246,0.2); color: #60a5fa; }
 .btn-mini.delete { background: rgba(239,68,68,0.2); color: #f87171; }
+
+.products-total {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 2px solid rgba(139, 92, 246, 0.3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.total-label {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #c4b5fd;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.total-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
 
 /* FINAL ACTIONS */
 .final-actions { margin-top: 2rem; }

@@ -277,15 +277,9 @@
             </div>
           </div>
 
-          <div class="form-row">
-            <div class="form-group half">
-              <label>Kwota (Suma)</label>
-              <input v-model="editingReceipt.total_amount" type="number" step="0.01" />
-            </div>
-            <div class="form-group half">
-              <label>Data i godzina</label>
-              <input v-model="editingReceipt.purchase_date" type="datetime-local" />
-            </div>
+          <div class="form-group">
+            <label>Data i godzina</label>
+            <input v-model="editingReceipt.purchase_date" type="datetime-local" />
           </div>
 
           <div class="form-group">
@@ -327,16 +321,8 @@
           </div>
 
           <div class="calculated-total-box">
-            <div class="calc-label">Przeliczona suma pozycji:</div>
+            <div class="calc-label">Suma pozycji:</div>
             <div class="calc-value">{{ formatMoney(calculatedReceiptTotal) }} zł</div>
-            <button
-              type="button"
-              class="sync-btn"
-              @click="syncReceiptTotal"
-              title="Zastosuj obliczoną sumę jako total_amount"
-            >
-              ⟳ Zastosuj
-            </button>
           </div>
 
           <div class="modal-actions equal-buttons mt-4">
@@ -815,10 +801,13 @@ const updateReceipt = async () => {
       ? new Date(editingReceipt.value.purchase_date).toISOString()
       : undefined;
 
+    // Automatyczne ustawienie total_amount jako suma produktów
+    const calculatedTotal = calculatedReceiptTotal.value;
+
     await fractiService.updateReceipt(editingReceipt.value.id, {
       merchant_name: editingReceipt.value.merchant_name,
       description: editingReceipt.value.description,
-      total_amount: editingReceipt.value.total_amount,
+      total_amount: calculatedTotal.toString(),
       purchase_date: purchaseDateForApi,
       purchaser: editingReceipt.value.purchaser,
       latitude: editingReceipt.value.latitude,
@@ -923,6 +912,13 @@ const saveReceiptItem = async () => {
     const refreshedReceipt = settlement.value?.receipts?.find(r => r.id === currentReceiptId.value);
     if (refreshedReceipt) {
       editingReceipt.value = { ...refreshedReceipt };
+
+      // Automatycznie zaktualizuj total_amount paragonu jako sumę produktów
+      const newTotal = refreshedReceipt.products?.reduce((sum, p) => sum + parseFloat(p.price.toString() || '0'), 0) || 0;
+      await fractiService.updateReceipt(currentReceiptId.value, {
+        total_amount: newTotal.toString()
+      });
+      await loadSettlement();
     }
 
     showReceiptItemModal.value = false;
@@ -942,6 +938,13 @@ const deleteReceiptItem = async (itemId: number) => {
           await loadSettlement();
           if (editingReceipt.value) {
             editingReceipt.value.products = editingReceipt.value.products.filter(p => p.id !== itemId);
+
+            // Automatycznie zaktualizuj total_amount paragonu jako sumę produktów
+            const newTotal = editingReceipt.value.products?.reduce((sum, p) => sum + parseFloat(p.price.toString() || '0'), 0) || 0;
+            await fractiService.updateReceipt(editingReceipt.value.id, {
+              total_amount: newTotal.toString()
+            });
+            await loadSettlement();
           }
           showToast('Usunięto pozycję', 'success');
         } catch (e) {
@@ -949,11 +952,6 @@ const deleteReceiptItem = async (itemId: number) => {
         }
     }
   );
-};
-
-const syncReceiptTotal = () => {
-  if (!editingReceipt.value) return;
-  editingReceipt.value.total_amount = calculatedReceiptTotal.value.toString();
 };
 
 const loadSettlement = async () => {
