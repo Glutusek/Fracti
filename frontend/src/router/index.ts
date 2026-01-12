@@ -7,6 +7,7 @@ import SettlementDetailsView from '../views/SettlementDetailsView.vue'
 import OCRUploadView from '../views/OCRUploadView.vue'
 import AboutUsView from '../views/AboutUsView.vue'
 import ContactView from '../views/ContactView.vue'
+import {useAuthStore} from "@/stores/auth.ts";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -64,21 +65,19 @@ const router = createRouter({
   ]
 })
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach((to, _, next) => {
+  const authStore = useAuthStore();
 
-  if (to.meta.requiresAuth) {
-
-    const token = localStorage.getItem('accessToken');
-
-
-    if (!token) {
-      next({ name: 'auth', query: { redirect: to.fullPath } });
-    } else {
-      next();
-    }
+  if (to.meta.requiresAuth && !authStore.isLoggedIn) {
+    next({
+      name: 'auth',
+      query: { redirect: to.fullPath }
+    });
   } else {
     next();
   }
 });
+
+
 
 export default router

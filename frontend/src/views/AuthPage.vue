@@ -79,94 +79,108 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
-import api from '../services/auth.service' // Importujemy API do rejestracji (jeśli store tego nie ma)
+import { ref, reactive } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
+import api from '@/services/api.ts';
 
-const router = useRouter()
-const authStore = useAuthStore()
+const router = useRouter();
+const route = useRoute();
+const authStore = useAuthStore();
 
-const isLogin = ref(true)
-const isLoading = ref(false) // Blokada przycisku
-const errorMsg = ref('')     // Wyświetlanie błędów
+// --- STAN KOMPONENTU ---
+const isLogin = ref(true);
+const isLoading = ref(false);
+const errorMsg = ref('');
 
-// Dane formularza
+// --- DANE FORMULARZA ---
 const formData = reactive({
-  username: '',   // Wymagane przez Django
+  username: '',
   email: '',
   password: '',
   confirmPassword: ''
-})
+});
+
 
 const toggleMode = () => {
-  isLogin.value = !isLogin.value
-  errorMsg.value = '' // Czyścimy błędy przy przełączaniu
-  // Reset hasła dla bezpieczeństwa
-  formData.password = ''
-  formData.confirmPassword = ''
-}
+  isLogin.value = !isLogin.value;
+  errorMsg.value = '';
+  formData.password = '';
+  formData.confirmPassword = '';
+};
+
+const handleRedirect = async () => {
+  const redirectPath = route.query.redirect as string | undefined;
+
+  if (redirectPath) {
+    await router.push(redirectPath);
+  } else {
+    await router.push({ name: 'home' });
+  }
+};
 
 const handleSubmit = async () => {
-  errorMsg.value = ''
-  isLoading.value = true
+  errorMsg.value = '';
+  isLoading.value = true;
 
   try {
     if (isLogin.value) {
-      // --- LOGIKA LOGOWANIA ---
-      // Używamy naszego Store'a, który gada z API i zapisuje token
       await authStore.login({
         username: formData.username,
         password: formData.password
-      })
+      });
 
-      // Jak nie wywaliło błędu, to znaczy że sukces -> idziemy na mapę
-      router.push('/')
+      await handleRedirect();
 
     } else {
-      // --- LOGIKA REJESTRACJI ---
+
       if (formData.password !== formData.confirmPassword) {
-        throw new Error('Hasła nie są identyczne!')
+        throw new Error('Hasła nie są identyczne.');
       }
 
-      // Tu zakładamy, że w api.ts dodamy metodę register,
-      // albo użyjemy generycznego post.
-      // Django wymaga zazwyczaj: username i password.
-      await api.register({
-         username: formData.username,
-         email: formData.email,
-         password: formData.password,
-      })
+      if (formData.password.length < 8) {
+        throw new Error('Hasło musi mieć co najmniej 8 znaków.');
+      }
 
-      // Po udanej rejestracji od razu logujemy użytkownika
+      await api.post('auth/users/', {
+        username: formData.username,
+        email: formData.email,
+        password: formData.password
+      });
+
       await authStore.login({
         username: formData.username,
         password: formData.password
-      })
+      });
 
-      router.push('/')
+      await handleRedirect();
     }
 
   } catch (err: any) {
-    console.error("Błąd auth:", err)
-    // Obsługa błędów z backendu (np. "Brak konta" lub "Złe hasło")
-    if (err.response && err.response.status === 401) {
-      errorMsg.value = "Nieprawidłowy login lub hasło."
+    console.error("Auth Error:", err);
+
+    if (err.response) {
+      if (err.response.status === 401) {
+        errorMsg.value = "Nieprawidłowy login lub hasło.";
+      } else if (err.response.status === 400) {
+        const data = err.response.data;
+        const firstError = Object.values(data).flat()[0];
+        errorMsg.value = typeof firstError === 'string' ? firstError : "Błędne dane formularza.";
+      } else {
+        errorMsg.value = "Wystąpił błąd serwera. Spróbuj później.";
+      }
     } else if (err.message) {
-      errorMsg.value = err.message
+      errorMsg.value = err.message;
     } else {
-      errorMsg.value = "Wystąpił błąd połączenia. Spróbuj ponownie."
+      errorMsg.value = "Błąd połączenia. Sprawdź internet.";
     }
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
-}
+};
 </script>
 
 <style scoped>
-/* --- TWOJE STYLE POZOSTAJĄ BEZ ZMIAN --- */
-/* Wklej tutaj cały swój CSS, który mi pokazałeś. */
-/* Jedyne co dodajemy to klasa dla komunikatu błędu: */
 
 .error-message {
   color: #ff6b6b;
@@ -184,12 +198,10 @@ const handleSubmit = async () => {
   filter: grayscale(0.5);
 }
 
-/* ... Reszta Twojego CSS (auth-page, gradienty itd.) ... */
 .auth-page {
   min-height: 100vh;
   background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
 }
-/* ... (wklej resztę stylów z Twojego pliku) ... */
 .auth-container {
   min-height: calc(100vh - 80px);
   display: flex;

@@ -14,5 +14,10 @@ export default {
   // Pobranie profilu (opcjonalnie, przyda się później)
   getProfile() {
     return apiClient.get('/auth/me/');
+  },
+
+  // Odświeżanie tokena
+  refreshToken(refreshToken: string) {
+    return apiClient.post('/auth/token/refresh/', { refresh: refreshToken });
   }
 };
