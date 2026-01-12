@@ -104,7 +104,7 @@
             <div v-for="member in settlement?.members" :key="member.id" class="user-card">
               <div class="user-avatar">{{ member.username.charAt(0).toUpperCase() }}</div>
               <div class="user-info">
-                <div class="user-name">{{ member.username }}</div>
+                <div class="user-name">{{ member.first_name ? member.first_name : member.username }}</div>
                 <div class="user-balance">
                   <span class="paid">Zapłacił: {{ formatMoney(getUserPaid(member.id)) }} zł</span>
                   <span class="owes" :class="getUserBalance(member.id) >= 0 ? 'positive' : 'negative'">
@@ -115,10 +115,14 @@
               </div>
             </div>
           </div>
-
-          <button @click="showAddUserModal = true" class="add-user-btn">
-            + Dodaj Użytkownika
-          </button>
+            <div class="user-actions-row">
+              <button @click="showAddUserModal = true" class="add-user-btn">
+                🔗 Zaproś kodem
+              </button>
+              <button @click="showAddGuestModal = true" class="add-user-btn">
+                👤 Dodaj gościa
+              </button>
+            </div>
         </div>
       </div>
     </div>
@@ -395,6 +399,31 @@
       </div>
     </div>
     <div v-if="toastMessage" class="toast" :class="toastType">{{ toastMessage }}</div>
+    <div v-if="showAddGuestModal" class="modal-overlay" @click="showAddGuestModal = false">
+    <div class="modal-content small" @click.stop>
+      <h2>Dodaj Użytkownika Roboczego</h2>
+      <p class="info-text">
+        Stwórz lokalnego użytkownika (np. "Babcia", "Dzieci"), którego możesz przypisywać do wydatków bez konieczności rejestracji.
+      </p>
+
+      <form @submit.prevent="createGuestUser">
+        <div class="form-group">
+          <label>Nazwa wyświetlana</label>
+          <input
+            v-model="guestName"
+            placeholder="np. Marek (bez apki)"
+            required
+            autofocus
+          />
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" @click="showAddGuestModal = false">Anuluj</button>
+          <button type="submit" class="primary">Dodaj</button>
+        </div>
+      </form>
+    </div>
+</div>
   </div>
 </template>
 
@@ -421,6 +450,8 @@ const codeCopied = ref(false);
 const showConfirmModal = ref(false);
 const confirmMessage = ref('');
 const confirmSubMessage = ref('');
+const showAddGuestModal = ref(false);
+const guestName = ref('');
 // Map instances
 let mapInstance: L.Map | null = null;
 let markerInstance: L.Marker | null = null;
@@ -540,7 +571,7 @@ const toggleReceipt = (id: number) => {
 
 const getUserName = (userId: number): string => {
   const user = settlement.value?.members?.find(m => m.id === userId);
-  return user?.username || 'Nieznany';
+  return user?.first_name || user?.username || 'Nieznany';
 };
 
 const getUserPaid = (userId: number): number => {
@@ -591,6 +622,25 @@ const formatDate = (dateString: string): string => {
   });
 };
 
+const createGuestUser = async () => {
+  if (!guestName.value || !settlement.value) return;
+
+  try {
+    loading.value = true;
+    await fractiService.addGuestUser(settlement.value.id, guestName.value);
+
+    await loadSettlement();
+
+    showAddGuestModal.value = false;
+    guestName.value = '';
+    showToast('Dodano użytkownika roboczego', 'success');
+  } catch (e) {
+    console.error(e);
+    showToast('Błąd dodawania użytkownika', 'error');
+  } finally {
+    loading.value = false;
+  }
+};
 
 const toDatetimeLocal = (dateString: string | null | undefined): string => {
   if (!dateString) return '';
@@ -1384,6 +1434,7 @@ onMounted(() => {
   cursor: pointer;
   font-weight: 600;
   transition: all 0.2s;
+  margin-top: 1rem;
 }
 
 .add-user-btn:hover {
@@ -1391,7 +1442,6 @@ onMounted(() => {
   border-color: rgba(139, 92, 246, 0.5);
 }
 
-/* Modal - nadpisania dla SettlementDetails */
 .modal-content {
   width: 500px;
 }
@@ -1776,5 +1826,29 @@ select option {
   max-width: 600px;
   line-height: 1.5;
   font-style: italic;
+}
+user-actions-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 1rem;
+}
+
+.add-user-btn, .add-guest-btn {
+  flex: 1; /* Przyciski zajmą po połowie szerokości */
+  padding: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+}
+
+.add-user-btn {
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px dashed rgba(139, 92, 246, 0.3);
+  color: #c4b5fd;
+}
+.add-user-btn:hover {
+  background: rgba(139, 92, 246, 0.2);
 }
 </style>

@@ -7,6 +7,7 @@ import apiClient from './api';
 export interface User {
   id: number;
   username: string;
+  first_name?: string;
 }
 
 export const Category = {
@@ -190,6 +191,13 @@ async analyzeReceipt(formData: FormData): Promise<{task_id: string; status: stri
       label: CATEGORY_LABELS[cat],
     }));
   }
+  async addGuestUser(settlementId: string, name: string) {
+  const response = await apiClient.post(`settlements/${settlementId}/add-guest/`, {
+    name: name
+  });
+  return response.data;
 }
+}
+
 
 export default new FractiApiService();

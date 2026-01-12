@@ -8,7 +8,7 @@ User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username'] # Możesz dodać avatar jeśli masz
+        fields = ['id', 'username','first_name']
 
 #PRODUCT
 class ProductSerializer(serializers.ModelSerializer):
@@ -116,8 +116,8 @@ class SettlementSerializer(serializers.ModelSerializer):
     receipts = ReceiptSerializer(many=True, read_only=True)
 
     loose_products = serializers.SerializerMethodField()
+
     members = UserSerializer(many=True, read_only=True)
-    # Dodatkowe pole obliczane w locie (Logika biznesowa)
     total_expenses = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
 
     class Meta:
