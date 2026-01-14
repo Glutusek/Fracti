@@ -82,7 +82,8 @@
 import { ref, reactive } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
-import api from '@/services/api.ts';
+import authService from '@/services/auth.service';
+
 
 const router = useRouter();
 const route = useRoute();
@@ -125,6 +126,7 @@ const handleSubmit = async () => {
 
   try {
     if (isLogin.value) {
+      // --- LOGIKA LOGOWANIA ---
       await authStore.login({
         username: formData.username,
         password: formData.password
@@ -133,7 +135,9 @@ const handleSubmit = async () => {
       await handleRedirect();
 
     } else {
+      // --- LOGIKA REJESTRACJI (POPRAWIONA) ---
 
+      // 1. Walidacja haseł
       if (formData.password !== formData.confirmPassword) {
         throw new Error('Hasła nie są identyczne.');
       }
@@ -142,17 +146,24 @@ const handleSubmit = async () => {
         throw new Error('Hasło musi mieć co najmniej 8 znaków.');
       }
 
-      await api.post('auth/users/', {
+      // 2. Wywołanie rejestracji przez serwis
+      // Używamy metody z auth.service.ts
+      await authService.register({
         username: formData.username,
         email: formData.email,
         password: formData.password
+        // first_name jest opcjonalne, formularz go nie zbiera, więc pomijamy
       });
 
+      // 3. Automatyczne logowanie po udanej rejestracji
+      // Backend zazwyczaj zwraca usera, ale nie token przy rejestracji,
+      // więc logujemy się od razu, żeby użytkownik nie musiał wpisywać danych 2 razy.
       await authStore.login({
         username: formData.username,
         password: formData.password
       });
 
+      // 4. Przekierowanie
       await handleRedirect();
     }
 
@@ -163,13 +174,16 @@ const handleSubmit = async () => {
       if (err.response.status === 401) {
         errorMsg.value = "Nieprawidłowy login lub hasło.";
       } else if (err.response.status === 400) {
+        // Obsługa błędów walidacji z Django (np. "Ten login jest już zajęty")
         const data = err.response.data;
+        // Spłaszczamy obiekt błędów do jednego stringa
         const firstError = Object.values(data).flat()[0];
         errorMsg.value = typeof firstError === 'string' ? firstError : "Błędne dane formularza.";
       } else {
         errorMsg.value = "Wystąpił błąd serwera. Spróbuj później.";
       }
     } else if (err.message) {
+      // Błędy frontendowe (np. niezgodność haseł)
       errorMsg.value = err.message;
     } else {
       errorMsg.value = "Błąd połączenia. Sprawdź internet.";
