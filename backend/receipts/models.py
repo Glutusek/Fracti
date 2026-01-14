@@ -112,7 +112,12 @@ class Product(MapItem):
 
     name = models.CharField(_("Nazwa produktu"), max_length=255)
     description = models.TextField(_("Opis"), blank=True, null=True)
-
+    quantity = models.DecimalField(
+        _("Ilość"),
+        max_digits=10,
+        decimal_places=3,
+        default=1
+    )
     price = models.DecimalField(
         _("Cena"),
         max_digits=10,
@@ -125,7 +130,7 @@ class Product(MapItem):
     category = models.CharField(_("Kategoria"), max_length=20, choices=CategoryChoices.choices, default=CategoryChoices.OTHER)
 
     def __str__(self):
-        return f"{self.name} ({self.price})"
+        return f"{self.name} ({self.quantity} x {self.price})"
     
     class Meta:
         verbose_name = _("Produkt")

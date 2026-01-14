@@ -173,17 +173,18 @@
           <div class="img-container" :style="{ width: ocrResult.image_dim.width + 'px', height: ocrResult.image_dim.height + 'px' }">
              <img :src="croppedImageUrl || ''" class="overlay-bg" alt="Przycięty paragon" />
 
-             <div
-               v-for="(item, idx) in ocrResult.items"
-               :key="idx"
-               class="ocr-box"
-               :class="{ 'selected': selectedOcrIndices.has(idx) }"
-               v-if="item.box"
-               :style="getBoxStyle(item.box)"
-               @click="toggleOcrItem(idx)"
-             >
-               <div class="tooltip">{{ item.name }} ({{ item.price }} zł)</div>
-             </div>
+             <template v-for="(item, idx) in ocrResult.items" :key="idx">
+               <div
+                 class="ocr-box"
+                 :class="{ 'selected': selectedOcrIndices.has(idx) }"
+                 v-if="item.box"
+                 :style="getBoxStyle(item.box)"
+                 @click="toggleOcrItem(idx)"
+               >
+                 <div class="tooltip">{{ item.name }} ({{ item.price }} zł)</div>
+               </div>
+             </template>
+
           </div>
        </div>
 
@@ -299,14 +300,12 @@ import 'leaflet/dist/leaflet.css';
 const router = useRouter();
 
 // --- STATE ---
-// 1. Settlement & Users
 const settlements = ref<Settlement[]>([]);
 const selectedSettlementId = ref<string | number | null>(null);
 const settlementMembers = ref<User[]>([]);
 const showNewSettlementForm = ref(false);
 const newSettlement = ref({ name: '', description: '' });
 
-// 2. OCR / File / Cropper
 const fileInput = ref<HTMLInputElement|null>(null);
 const originalImageUrl = ref<string|null>(null);
 const croppedImageUrl = ref<string|null>(null);
@@ -318,7 +317,6 @@ const ocrResult = ref<any>(null);
 const showOcrOverlay = ref(false);
 const selectedOcrIndices = ref<Set<number>>(new Set());
 
-// 3. Receipt Data Form
 const receiptProducts = ref<any[]>([]);
 const receiptData = ref({
   merchant_name: '',
@@ -329,7 +327,6 @@ const receiptData = ref({
   longitude: null as number | null
 });
 
-// 4. Modals State
 const showProductModal = ref(false);
 const editingProductIndex = ref<number | null>(null);
 const productForm = ref({
@@ -341,13 +338,11 @@ const productForm = ref({
   consumers: [] as number[]
 });
 
-// 5. Confirmation Modal State
 const showConfirmModal = ref(false);
 const confirmMessage = ref('');
 const confirmSubMessage = ref('');
 const pendingDeleteAction = ref<(() => void) | null>(null);
 
-// UI Helpers
 const isUploading = ref(false);
 const errorMessage = ref('');
 const successMessage = ref('');

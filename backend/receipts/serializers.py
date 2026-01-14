@@ -12,14 +12,13 @@ class UserSerializer(serializers.ModelSerializer):
 
 #PRODUCT
 class ProductSerializer(serializers.ModelSerializer):
-    # Pola wirtualne (obliczane w locie), żeby Frontend miał łatwiej
-    # Umożliwiamy odczyt i zapis współrzędnych (mapa)
+
     latitude = serializers.FloatField(required=False, allow_null=True)
     longitude = serializers.FloatField(required=False, allow_null=True)
     consumers = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.all(), required=False)
     class Meta:
         model = Product
-        fields = ['id', 'name', 'description', 'price', 'receipt', 'settlement', 'consumers', 'latitude', 'longitude', 'created_at', 'category']
+        fields = ['id', 'name', 'description', 'price', 'quantity','receipt', 'settlement', 'consumers', 'latitude', 'longitude', 'created_at', 'category']
 
     def get_latitude(self, obj):
         # Wyciągamy Y (Szerokość) z obiektu Point, jeśli istnieje
@@ -31,7 +30,6 @@ class ProductSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        # Nadpisujemy pola latitude/longitude z obiektu Point
         data['latitude'] = instance.location.y if instance.location else None
         data['longitude'] = instance.location.x if instance.location else None
         return data
@@ -40,10 +38,8 @@ class ProductSerializer(serializers.ModelSerializer):
         lat = validated_data.pop('latitude', None)
         lon = validated_data.pop('longitude', None)
 
-        # Tworzymy instancję produktu
         instance = super().create(validated_data)
 
-        # Ustawiamy lokalizację jeśli podano współrzędne
         if lat is not None and lon is not None:
             instance.location = Point(lon, lat)
             instance.save()
@@ -63,7 +59,6 @@ class ProductSerializer(serializers.ModelSerializer):
 
 #RECEIPT
 class ReceiptSerializer(serializers.ModelSerializer):
-    # Zagnieżdżamy produkty, żeby jednym zapytaniem pobrać paragon I JEGO pozycje
     products = ProductSerializer(many=True, read_only=True)
 
     latitude = serializers.FloatField(required=False, allow_null=True)

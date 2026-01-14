@@ -81,10 +81,10 @@ class OcrPipeline:
                         "type": "object",
                         "properties": {
                             "item_name": {"type": "string"},
-                            "item_price": {"type": "number"},
-                            "item_quantity": {"type": "number"}
+                            "item_price": {"type": "number", "description": "Final total price..."},
+                            "item_quantity": {"type": "number", "description": "Quantity of items detected"}
                         },
-                        "required": ["item_name", "item_price"]
+                        "required": ["item_name", "item_price", "item_quantity"]
                     }
                 }
             },
