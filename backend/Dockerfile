@@ -8,6 +8,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # binutils, libproj-dev, gdal-bin -> wymagane przez PostGIS/GeoDjango
 # libgl1, libglib2.0-0 -> wymagane przez OpenCV
 RUN apt-get update && apt-get install -y \
+    build-essential \
+    python3-dev \
     binutils \
     libproj-dev \
     gdal-bin \
@@ -16,6 +18,8 @@ RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     tesseract-ocr-pol \
     && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir torch==2.4.1 torchvision==0.19.1 --index-url https://download.pytorch.org/whl/cpu
 
 WORKDIR /app
 

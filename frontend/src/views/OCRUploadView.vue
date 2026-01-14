@@ -106,10 +106,21 @@
 
           <div v-else class="products-list">
              <div v-for="(prod, idx) in receiptProducts" :key="idx" class="product-row">
+
+                <div class="qty-badge" v-if="prod.quantity > 1 && isInteger(prod.quantity)">
+                  {{ parseInt(prod.quantity) }}x
+                </div>
+
                 <div class="prod-info">
-                   <div class="prod-name">{{ prod.name }}</div>
+                   <div class="prod-name">
+                     {{ prod.name }}
+                     <span v-if="!isInteger(prod.quantity)" class="weight-label">
+                       ({{ prod.quantity }} kg/l)
+                     </span>
+                   </div>
                    <div class="prod-cat">{{ getCategoryLabel(prod.category) }} • 👥 {{ prod.consumers.length }}</div>
                 </div>
+
                 <div class="prod-price">{{ prod.price.toFixed(2) }} zł</div>
                 <div class="prod-actions">
                    <button @click="openProductModal(idx)" class="btn-mini edit">✏️</button>
@@ -167,6 +178,7 @@
                :key="idx"
                class="ocr-box"
                :class="{ 'selected': selectedOcrIndices.has(idx) }"
+               v-if="item.box"
                :style="getBoxStyle(item.box)"
                @click="toggleOcrItem(idx)"
              >
@@ -199,17 +211,39 @@
                 <label>Nazwa</label>
                 <input v-model="productForm.name" required />
              </div>
+
              <div class="form-row">
                 <div class="form-group half">
-                   <label>Cena (zł)</label>
-                   <input type="number" step="0.01" v-model="productForm.price" required />
+                   <label>Cena (Całość)</label>
+                   <input
+                     type="number"
+                     step="0.01"
+                     v-model="productForm.price"
+                     @input="handlePriceChange"
+                     required
+                   />
                 </div>
                 <div class="form-group half">
-                   <label>Kategoria</label>
-                   <select v-model="productForm.category">
-                      <option v-for="c in categories" :key="c.value" :value="c.value">{{ c.label }}</option>
-                   </select>
+                   <label>Ilość</label>
+                   <input
+                     type="number"
+                     step="0.001"
+                     v-model="productForm.quantity"
+                     @input="handleQuantityChange"
+                     required
+                   />
                 </div>
+             </div>
+
+             <div class="hint-text" style="margin-top: -10px; margin-bottom: 10px; font-size: 0.8rem; color: #9ca3af;">
+               Cena jedn.: {{ (productForm.unitPrice || 0).toFixed(2) }} zł
+             </div>
+
+             <div class="form-group">
+                <label>Kategoria</label>
+                <select v-model="productForm.category">
+                   <option v-for="c in categories" :key="c.value" :value="c.value">{{ c.label }}</option>
+                </select>
              </div>
 
              <div class="form-group">
@@ -275,7 +309,7 @@ const newSettlement = ref({ name: '', description: '' });
 // 2. OCR / File / Cropper
 const fileInput = ref<HTMLInputElement|null>(null);
 const originalImageUrl = ref<string|null>(null);
-const croppedImageUrl = ref<string|null>(null); // Do wyświetlania pod overlayem
+const croppedImageUrl = ref<string|null>(null);
 const showCropperModal = ref(false);
 const cropperRef = ref<any>(null);
 const isAnalyzing = ref(false);
@@ -299,7 +333,12 @@ const receiptData = ref({
 const showProductModal = ref(false);
 const editingProductIndex = ref<number | null>(null);
 const productForm = ref({
-  name: '', price: '', category: Category.FOOD, consumers: [] as number[]
+  name: '',
+  price: '',
+  quantity: 1,
+  unitPrice: 0,
+  category: Category.FOOD,
+  consumers: [] as number[]
 });
 
 // 5. Confirmation Modal State
@@ -330,6 +369,12 @@ onMounted(async () => {
   }
 });
 
+// --- HELPER METHODS ---
+const isInteger = (num: number | string) => {
+  const n = parseFloat(String(num));
+  return Number.isInteger(n);
+};
+
 // --- METHODS: Settlement ---
 const handleSettlementChange = async () => {
   if (selectedSettlementId.value === 'NEW_SETTLEMENT') {
@@ -340,10 +385,7 @@ const handleSettlementChange = async () => {
     try {
       const s = await fractiService.getSettlementDetails(selectedSettlementId.value as string);
       settlementMembers.value = s.members;
-      // Domyślny płatnik
       if (s.members.length > 0) receiptData.value.purchaser = s.members[0].id;
-
-      // Inicjalizacja mapy po pojawieniu się sekcji
       nextTick(() => initMap('map-ocr'));
     } catch (e) { console.error(e); }
   }
@@ -374,11 +416,10 @@ const handleFileSelect = (e: Event) => {
     const reader = new FileReader();
     reader.onload = (ev) => {
       originalImageUrl.value = ev.target?.result as string;
-      showCropperModal.value = true; // Krok 1: Pokaż cropper
+      showCropperModal.value = true;
     };
     reader.readAsDataURL(file);
   }
-  // Reset input
   if (fileInput.value) fileInput.value.value = '';
 };
 
@@ -391,11 +432,8 @@ const applyCropAndAnalyze = () => {
   const { canvas } = cropperRef.value.getResult();
   if (canvas) {
     canvas.toBlob(async (blob: Blob) => {
-      // 1. Zapisz przycięty obraz do wyświetlenia w overlayu
       croppedImageUrl.value = URL.createObjectURL(blob);
       showCropperModal.value = false;
-
-      // 2. Rozpocznij analizę
       await analyzeReceiptImage(blob);
     }, 'image/jpeg');
   }
@@ -408,11 +446,7 @@ const analyzeReceiptImage = async (blob: Blob) => {
   try {
     const formData = new FormData();
     formData.append('image', blob, 'receipt.jpg');
-
-    // Start Task
     const { task_id } = await fractiService.analyzeReceipt(formData);
-
-    // Polling
     await pollResult(task_id);
 
   } catch (e) {
@@ -431,7 +465,6 @@ const pollResult = async (taskId: string) => {
          clearInterval(interval);
          isAnalyzing.value = false;
          ocrResult.value = res.data;
-
          showOcrOverlay.value = true;
        } else if (res.status === 'FAILURE') {
          clearInterval(interval);
@@ -448,12 +481,12 @@ const pollResult = async (taskId: string) => {
        clearInterval(interval);
        isAnalyzing.value = false;
     }
-  }, 1000);
+  }, 10000);
 };
 
 // --- METHODS: Overlay Logic ---
 const getBoxStyle = (box: any) => {
-  if (!ocrResult.value) return {};
+  if (!ocrResult.value || !box) return { display: 'none' };
   const dim = ocrResult.value.image_dim;
   return {
     left: (box.x / dim.width) * 100 + '%',
@@ -478,8 +511,8 @@ const importOcrItems = () => {
     receiptProducts.value.push({
       name: item.name,
       price: item.price,
+      quantity: item.quantity || 1,
       category: Category.FOOD,
-      // Domyślnie wszyscy członkowie płacą
       consumers: settlementMembers.value.map(u => u.id)
     });
   });
@@ -497,28 +530,49 @@ const closeOcrOverlay = () => {
 const openProductModal = (idx: number | null) => {
   editingProductIndex.value = idx;
   if (idx !== null) {
-    // Edit existing
     const p = receiptProducts.value[idx];
+    const qty = p.quantity || 1;
+    const priceVal = parseFloat(p.price);
+
     productForm.value = {
       name: p.name,
       price: p.price.toString(),
+      quantity: qty,
+      unitPrice: priceVal / qty,
       category: p.category,
-      consumers: [...p.consumers] // Kopia tablicy
+      consumers: [...p.consumers]
     };
   } else {
-    // New
     productForm.value = {
-      name: '', price: '', category: Category.FOOD,
-      consumers: settlementMembers.value.map(u => u.id) // Default all
+      name: '', price: '', quantity: 1, unitPrice: 0,
+      category: Category.FOOD,
+      consumers: settlementMembers.value.map(u => u.id)
     };
   }
   showProductModal.value = true;
+};
+
+const handleQuantityChange = () => {
+  const qty = parseFloat(String(productForm.value.quantity));
+  if (productForm.value.unitPrice > 0 && !isNaN(qty)) {
+    const newTotal = productForm.value.unitPrice * qty;
+    productForm.value.price = newTotal.toFixed(2);
+  }
+};
+
+const handlePriceChange = () => {
+  const price = parseFloat(productForm.value.price);
+  const qty = parseFloat(String(productForm.value.quantity)) || 1;
+  if (!isNaN(price)) {
+    productForm.value.unitPrice = price / qty;
+  }
 };
 
 const saveProduct = () => {
   const payload = {
     name: productForm.value.name,
     price: parseFloat(productForm.value.price),
+    quantity: parseFloat(String(productForm.value.quantity)) || 1,
     category: productForm.value.category,
     consumers: productForm.value.consumers
   };
@@ -531,7 +585,6 @@ const saveProduct = () => {
   showProductModal.value = false;
 };
 
-// Confirm Modal Logic
 const openConfirmModal = (title: string, subTitle: string, action: () => void) => {
   confirmMessage.value = title;
   confirmSubMessage.value = subTitle;
@@ -577,7 +630,6 @@ const initMap = (elId: string) => {
   mapInstance.on('click', (e: L.LeafletMouseEvent) => {
     if (markerInstance) markerInstance.setLatLng(e.latlng);
     else markerInstance = L.marker(e.latlng).addTo(mapInstance!);
-
     receiptData.value.latitude = e.latlng.lat;
     receiptData.value.longitude = e.latlng.lng;
   });
@@ -590,27 +642,18 @@ const submitReceipt = async () => {
     return;
   }
 
-  // Automatycznie oblicz total_amount z sumy produktów
   const totalAmount = calculateTotal();
-
   isUploading.value = true;
   try {
     const fd = new FormData();
-    // Tutaj nie wysyłamy obrazka głównego do utworzenia paragonu (backend powinien akceptować null)
-    // Jeśli backend wymaga pliku, musimy wysłać pusty blob lub zmienić endpoint.
-    // Zakładam, że Twój serwis API obsłuży brak 'image' lub wysyłamy croppedImageUrl jako plik
-
     if (croppedImageUrl.value) {
-       // Opcjonalnie: Wyślij cropa jako obraz paragonu
        const resp = await fetch(croppedImageUrl.value);
        const blob = await resp.blob();
        fd.append('image', blob, 'receipt_crop.jpg');
     }
 
     fd.append('merchant_name', receiptData.value.merchant_name);
-    if (receiptData.value.description) {
-      fd.append('description', receiptData.value.description);
-    }
+    if (receiptData.value.description) fd.append('description', receiptData.value.description);
     fd.append('purchase_date', receiptData.value.purchase_date);
     fd.append('total_amount', totalAmount.toString());
     fd.append('category', 'SHOPPING');
@@ -624,14 +667,13 @@ const submitReceipt = async () => {
       fd.append('longitude', receiptData.value.longitude.toString());
     }
 
-    // 1. Utwórz Paragon
     const receipt = await fractiService.createReceipt(fd);
 
-    // 2. Dodaj Pozycje
     for (const prod of receiptProducts.value) {
       await fractiService.addReceiptItem(receipt.id, {
          name: prod.name,
          price: prod.price.toString(),
+         quantity: prod.quantity,
          category: prod.category,
          consumers: prod.consumers,
          settlement: selectedSettlementId.value !== 'PERSONAL' ? String(selectedSettlementId.value) : undefined
@@ -666,18 +708,8 @@ const goBack = () => router.back();
   padding: 2rem;
   font-family: 'Inter', sans-serif;
 }
-
-.ocr-container {
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
+.ocr-container { max-width: 800px; margin: 0 auto; }
+.header { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem; }
 .header h1 {
   font-size: 2rem;
   background: linear-gradient(135deg, #fff 0%, #a78bfa 100%);
@@ -686,117 +718,48 @@ const goBack = () => router.back();
   margin: 0;
 }
 .back-btn {
-  background: rgba(139,92,246,0.1);
-  border: 1px solid rgba(139,92,246,0.3);
-  color: #a78bfa;
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
+  background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.3);
+  color: #a78bfa; padding: 8px 16px; border-radius: 8px; cursor: pointer;
 }
-
-/* CARDS - użyj globalnych styli */
 .section-title {
-  color: #c4b5fd;
-  font-size: 1.1rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin: 0 0 1.5rem 0;
-  border-bottom: 1px solid rgba(139,92,246,0.2);
-  padding-bottom: 0.5rem;
+  color: #c4b5fd; font-size: 1.1rem; text-transform: uppercase;
+  letter-spacing: 1px; margin: 0 0 1.5rem 0;
+  border-bottom: 1px solid rgba(139,92,246,0.2); padding-bottom: 0.5rem;
 }
-
-/* SETTLEMENT */
 .settlement-selector select {
-  width: 100%;
-  padding: 12px;
-  background: #1e1b4b;
-  border: 1px solid #4c1d95;
-  color: white;
-  border-radius: 8px;
-  font-size: 1rem;
+  width: 100%; padding: 12px; background: #1e1b4b;
+  border: 1px solid #4c1d95; color: white; border-radius: 8px; font-size: 1rem;
 }
 .new-settlement-form {
-  margin-top: 1rem;
-  background: rgba(139,92,246,0.1);
-  padding: 1rem;
-  border-radius: 8px;
+  margin-top: 1rem; background: rgba(139,92,246,0.1); padding: 1rem; border-radius: 8px;
 }
-.form-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-/* FORM GRID */
-.form-grid {
-  display: grid; gap: 1rem;
-}
-.form-group label {
-  display: block;
-  margin-bottom: 4px;
-}
-.highlight input {
-  font-size: 1.2rem; font-weight: bold; color: #a78bfa; border-color: #8b5cf6;
-}
-.amount-input-wrapper { display: flex; gap: 10px; }
-.btn-calc {
-  background: rgba(139,92,246,0.2); border: 1px solid #8b5cf6; color: #c4b5fd;
-  border-radius: 8px; cursor: pointer; padding: 0 12px; white-space: nowrap;
-}
-/* Form row i map - użyj globalnych styli */
+.form-actions { display: flex; gap: 10px; margin-top: 10px; }
+.form-grid { display: grid; gap: 1rem; }
+.form-group label { display: block; margin-bottom: 4px; }
+.form-row { display: flex; gap: 1rem; }
+.form-group.half { flex: 1; }
 .mini-map { height: 150px; margin-top: 5px; }
-
-/* OCR TRIGGER BTN */
-.ocr-trigger-section {
-  margin-bottom: 1.5rem;
-}
+.ocr-trigger-section { margin-bottom: 1.5rem; }
 .ocr-upload-btn {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  background: rgba(139, 92, 246, 0.1);
-  border: 2px dashed rgba(139, 92, 246, 0.4);
-  border-radius: 12px;
-  padding: 1.5rem;
-  cursor: pointer;
-  transition: all 0.3s;
-  text-align: left;
+  width: 100%; display: flex; align-items: center; justify-content: center;
+  gap: 1rem; background: rgba(139, 92, 246, 0.1);
+  border: 2px dashed rgba(139, 92, 246, 0.4); border-radius: 12px;
+  padding: 1.5rem; cursor: pointer; transition: all 0.3s; text-align: left;
 }
-.ocr-upload-btn:hover {
-  background: rgba(139, 92, 246, 0.2);
-  border-color: #8b5cf6;
-}
+.ocr-upload-btn:hover { background: rgba(139, 92, 246, 0.2); border-color: #8b5cf6; }
 .ocr-upload-btn .icon { font-size: 2rem; }
-.ocr-upload-btn .text-content { display: flex; flex-direction: column; }
 .ocr-upload-btn .main-text { font-weight: bold; color: #e5e7eb; font-size: 1.1rem; }
 .ocr-upload-btn .sub-text { font-size: 0.9rem; color: #9ca3af; }
-
-/* PRODUCTS LIST */
 .products-manager {
-  background: rgba(0,0,0,0.2);
-  border-radius: 12px;
-  padding: 1rem;
+  background: rgba(0,0,0,0.2); border-radius: 12px; padding: 1rem;
   border: 1px solid rgba(139,92,246,0.2);
 }
-.pm-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-.btn-text {
-  background: none; border: none; color: #a78bfa; cursor: pointer; text-decoration: underline;
-}
+.pm-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.btn-text { background: none; border: none; color: #a78bfa; cursor: pointer; text-decoration: underline; }
 .products-list { display: flex; flex-direction: column; gap: 8px; }
 .product-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: rgba(139,92,246,0.1);
-  padding: 8px 12px;
-  border-radius: 8px;
+  display: flex; justify-content: space-between; align-items: center;
+  background: rgba(139,92,246,0.1); padding: 8px 12px; border-radius: 8px;
 }
 .prod-info { flex: 1; }
 .prod-name { font-weight: 600; color: #fff; }
@@ -809,55 +772,30 @@ const goBack = () => router.back();
 }
 .btn-mini.edit { background: rgba(59,130,246,0.2); color: #60a5fa; }
 .btn-mini.delete { background: rgba(239,68,68,0.2); color: #f87171; }
-
 .products-total {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 2px solid rgba(139, 92, 246, 0.3);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  margin-top: 1rem; padding-top: 1rem; border-top: 2px solid rgba(139, 92, 246, 0.3);
+  display: flex; justify-content: space-between; align-items: center;
 }
-.total-label {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #c4b5fd;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
+.total-label { font-size: 1.1rem; font-weight: 600; color: #c4b5fd; text-transform: uppercase; letter-spacing: 1px; }
 .total-value {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.5rem; font-weight: 700;
   background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
-
-/* FINAL ACTIONS */
 .final-actions { margin-top: 2rem; }
 .btn-save {
-  width: 100%; padding: 14px;
-  background: #22c55e; color: white; border: none; border-radius: 10px;
-  font-size: 1.2rem; font-weight: bold; cursor: pointer;
-  box-shadow: 0 4px 15px rgba(34,197,94,0.4);
+  width: 100%; padding: 14px; background: #22c55e; color: white;
+  border: none; border-radius: 10px; font-size: 1.2rem; font-weight: bold;
+  cursor: pointer; box-shadow: 0 4px 15px rgba(34,197,94,0.4);
 }
 .btn-save:hover { background: #16a34a; }
 .btn-save:disabled { opacity: 0.6; cursor: wait; }
-
-/* MODALS - użyj globalnych styli z App.vue */
-
-/* CONFIRM MODAL - nadpisania */
 .center-text { margin-bottom: 2rem; }
 .full-confirm {
   flex: 1; display: flex; justify-content: center; align-items: center; gap: 0.5rem;
   background: rgba(220, 38, 38, 0.2) !important; border: 1px solid #ef4444 !important;
 }
-.full-confirm:hover {
-  background: #dc2626 !important; color: white !important;
-}
-
-/* OCR OVERLAY */
+.full-confirm:hover { background: #dc2626 !important; color: white !important; }
 .ocr-overlay {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 3000;
   background: rgba(0,0,0,0.95); display: flex; flex-direction: column;
@@ -876,99 +814,49 @@ const goBack = () => router.back();
   position: absolute; border: 2px solid yellow; background: rgba(255,255,0,0.15);
   cursor: pointer; transition: all 0.2s;
 }
-.ocr-box.selected {
-  border-color: #22c55e; background: rgba(34,197,94,0.3);
-}
+.ocr-box.selected { border-color: #22c55e; background: rgba(34,197,94,0.3); }
 .tooltip {
   position: absolute; bottom: 100%; left: 0; background: black; color: white;
   font-size: 0.7rem; padding: 2px 4px; pointer-events: none;
 }
-/* UTILS - użyj globalnych styli */
 .close-overlay { background: none; border: none; color: white; font-size: 2rem; cursor: pointer; }
-.btn-link { background: none; border: none; color: #a78bfa; text-decoration: underline; cursor: pointer; }
-/* --- OCR FOOTER STYLING --- */
-
 .ocr-footer {
-  width: 100%;
-  padding: 1.5rem 2rem;
-  background: rgba(15, 23, 42, 0.95); /* Ciemniejsze tło */
-  border-top: 1px solid rgba(139, 92, 246, 0.3);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  backdrop-filter: blur(10px);
+  width: 100%; padding: 1.5rem 2rem; background: rgba(15, 23, 42, 0.95);
+  border-top: 1px solid rgba(139, 92, 246, 0.3); display: flex;
+  justify-content: space-between; align-items: center; backdrop-filter: blur(10px);
 }
-
-.ocr-footer-actions {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-}
-
-.selection-summary {
-  color: #e5e7eb;
-  font-size: 1rem;
-}
-
-.selection-summary strong {
-  color: #22c55e; /* Zielony licznik */
-  font-size: 1.1rem;
-}
-
-/* Przycisk "Zaznacz wszystkie" - Styl Ghost */
+.ocr-footer-actions { display: flex; gap: 1rem; align-items: center; }
+.selection-summary { color: #e5e7eb; font-size: 1rem; }
+.selection-summary strong { color: #22c55e; font-size: 1.1rem; }
 .btn-secondary-outline {
-  background: transparent;
-  border: 1px solid rgba(167, 139, 250, 0.3);
-  color: #c4b5fd;
-  padding: 10px 18px;
-  border-radius: 10px;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  background: transparent; border: 1px solid rgba(167, 139, 250, 0.3);
+  color: #c4b5fd; padding: 10px 18px; border-radius: 10px; font-size: 0.95rem;
+  cursor: pointer; transition: all 0.3s ease;
 }
-
 .btn-secondary-outline:hover {
-  border-color: #a78bfa;
-  background: rgba(139, 92, 246, 0.1);
-  color: white;
+  border-color: #a78bfa; background: rgba(139, 92, 246, 0.1); color: white;
   transform: translateY(-1px);
 }
-
-/* Przycisk "Importuj" - Styl Premium Glow */
 .btn-import-glow {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 1rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  letter-spacing: 0.5px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); color: white;
+  border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600;
+  font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 8px;
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
 .btn-import-glow:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.5); /* Mocniejszy blask */
-  filter: brightness(1.1);
+  transform: translateY(-2px); box-shadow: 0 8px 25px rgba(139, 92, 246, 0.5); filter: brightness(1.1);
 }
-
-.btn-import-glow:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 2px 10px rgba(139, 92, 246, 0.3);
-}
-
 .btn-import-glow:disabled {
-  background: #374151; /* Szary */
-  color: #9ca3af;
-  cursor: not-allowed;
-  box-shadow: none;
-  transform: none;
-  opacity: 0.7;
+  background: #374151; color: #9ca3af; cursor: not-allowed; box-shadow: none; transform: none; opacity: 0.7;
+}
+
+/* NOWE STYLE DLA ILOŚCI */
+.qty-badge {
+  background: rgba(139, 92, 246, 0.3); color: #c4b5fd; font-weight: bold;
+  padding: 4px 8px; border-radius: 6px; margin-right: 10px;
+  font-size: 0.9rem; border: 1px solid rgba(139, 92, 246, 0.5);
+}
+.weight-label {
+  font-size: 0.85rem; color: #9ca3af; font-weight: normal; margin-left: 6px;
 }
 </style>

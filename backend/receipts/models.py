@@ -112,6 +112,7 @@ class Product(MapItem):
 
     name = models.CharField(_("Nazwa produktu"), max_length=255)
     description = models.TextField(_("Opis"), blank=True, null=True)
+
     price = models.DecimalField(
         _("Cena"),
         max_digits=10,

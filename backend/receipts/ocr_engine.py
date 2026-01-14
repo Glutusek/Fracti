@@ -1,152 +1,166 @@
+import os
 import cv2
+import json
+import easyocr
 import numpy as np
-import pytesseract
-from pytesseract import Output
-import re
+from receipt_ocr.processors import ReceiptProcessor
+from receipt_ocr.providers import OpenAIProvider
 
 
 class OcrPipeline:
     def __init__(self, image_path):
         self.image_path = image_path
-        self.image = cv2.imread(image_path)
-        if self.image is None:
-            raise ValueError(f"Nie można wczytać obrazu: {image_path}")
 
-        # Pobieramy oryginalne wymiary
-        self.height, self.width, _ = self.image.shape
+        # Wczytujemy obraz tylko do odczytu wymiarów
+        img = cv2.imread(image_path)
+        if img is None:
+            raise ValueError(f"Nie można wczytać obrazu: {image_path}")
+        self.height, self.width, _ = img.shape
+
+        # --- KONFIGURACJA GEMINI ---
+        # Pobieramy klucze, które ustawiłeś w .env
+        api_key = os.getenv("OPENAI_API_KEY")
+        base_url = os.getenv("OPENAI_BASE_URL")
+
+        if not api_key:
+            # Fallback lub błąd, jeśli zapomnisz o .env
+            raise ValueError("Brak klucza API. Ustaw OPENAI_API_KEY w pliku .env")
+
+        # Konfigurujemy providera, aby 'udawał' OpenAI, ale łączył się z Google
+        self.provider = OpenAIProvider(api_key=api_key, base_url=base_url)
+        self.processor = ReceiptProcessor(self.provider)
+
+        # --- KONFIGURACJA EASYOCR ---
+        # Inicjalizujemy czytnik dla języka polskiego i angielskiego
+        # gpu=False dla bezpieczeństwa (chyba że masz skonfigurowaną NVIDIA w Dockerze)
+        self.reader = easyocr.Reader(['pl', 'en'], gpu=False)
 
     def run(self):
-        # 1. Preprocessing (Skalowanie + Binaryzacja)
-        processed_img = self._preprocess()
-        debug_path = self.image_path + "_debug.jpg"
-        cv2.imwrite(debug_path, processed_img)
-        print(f"--- [DEBUG OCR] Zapisano podgląd: {debug_path} ---")
-        # 2. Ekstrakcja Danych
-        ocr_data = self._extract_data(processed_img)
+        """Główna metoda uruchamiana przez Celery"""
 
-        # 3. Parsing (Wyciąganie produktów)
-        return self._parse_data_with_coords(ocr_data)
+        # 1. MÓZG: Zapytaj Gemini co jest na paragonie
+        print(f"--- [OCR] Wysyłanie do Gemini ({os.getenv('OPENAI_MODEL')})... ---")
+        llm_items = self._get_llm_data()
+        print(f"--- [OCR] Gemini znalazł {len(llm_items)} pozycji. ---")
 
-    def _preprocess(self):
-        # 1. Skalowanie (2x większy obraz - to zostawiamy, bo jest super)
-        scaled = cv2.resize(self.image, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+        # 2. OCZY: Użyj EasyOCR do znalezienia gdzie jest tekst
+        print("--- [OCR] Skanowanie pozycji (EasyOCR)... ---")
+        raw_boxes = self._get_easyocr_boxes()
 
-        # 2. Skala szarości
-        gray = cv2.cvtColor(scaled, cv2.COLOR_BGR2GRAY)
+        # 3. SYNTEZA: Połącz wiedzę Gemini z ramkami EasyOCR
+        final_items = []
+        for item in llm_items:
+            price = item.get("item_price", 0.0)
+            name = item.get("item_name", "Nieznany")
+            qty = item.get("item_quantity", 1)
 
-        # --- NOWOŚĆ 1: Lekkie rozmycie przed binaryzacją ---
-        # To pomaga "zlać" kropki z drukarki igłowej w jedną całość
-        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+            # Szukamy ramki pasującej do ceny
+            box = self._find_box_by_price(price, raw_boxes)
 
-        # 3. Binaryzacja (Thresholding)
-
-        binary = cv2.adaptiveThreshold(
-            blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 21, 10
-        )
-
-        kernel = np.ones((2, 2), np.uint8)
-
-        binary = cv2.erode(binary, kernel, iterations=1)
-
-        return binary
-
-    def _extract_data(self, processed_image):
-
-        custom_config = r'--oem 3 --psm 6 -l pol+eng'
-        return pytesseract.image_to_data(
-            processed_image,
-            config=custom_config,
-            output_type=Output.DICT
-        )
-
-    def _parse_data_with_coords(self, data):
-        n_boxes = len(data['text'])
-        lines_map = {}
-
-        # Skalowanie powrotne współrzędnych
-
-        SCALE_FACTOR = 2.0
-
-        for i in range(n_boxes):
-            if int(data['conf'][i]) > 30 and data['text'][i].strip():
-
-                y_coord = int(data['top'][i]) // 20 * 20
-
-                line_id = (data['block_num'][i], y_coord)
-
-                if line_id not in lines_map:
-                    lines_map[line_id] = []
-
-                lines_map[line_id].append({
-                    "text": data['text'][i],
-                    "left": int(data['left'][i] / SCALE_FACTOR),
-                    "top": int(data['top'][i] / SCALE_FACTOR),
-                    "width": int(data['width'][i] / SCALE_FACTOR),
-                    "height": int(data['height'][i] / SCALE_FACTOR)
-                })
-
-        parsed_items = []
-        total_amount = 0.0
-
-
-        price_pattern = re.compile(r'(\d+[.,]\d{2})')
-
-        ignore_words = ['SUMA', 'RAZEM', 'PODATEK', 'VAT', 'PTU', 'SPRZEDAŻ', 'KARTA', 'RESZTA']
-
-        for line_words in lines_map.values():
-            # Sortujemy słowa po X (left), żeby tekst był po kolei
-            line_words.sort(key=lambda x: x['left'])
-            full_text = " ".join([w['text'] for w in line_words])
-
-
-            # print(f"Analiza linii: '{full_text}'")
-
-            # Filtrujemy nagłówki
-            if any(ign in full_text.upper() for ign in ignore_words):
-                continue
-
-            matches = price_pattern.findall(full_text)
-            if matches:
-
-                price_str = matches[-1].replace(',', '.')
-
-                try:
-                    price = float(price_str)
-
-                    # Nazwa to wszystko PRZED znalezioną ceną
-                    # Musimy znaleźć indeks wystąpienia tej ceny w tekście
-                    last_price_index = full_text.rfind(matches[-1])
-                    name = full_text[:last_price_index].strip()
-
-                    # Czyszczenie nazwy (usuwanie np. "1.000*" jeśli weszło w nazwę)
-                    # Usuwamy "cyfra + gwiazdka" lub "cyfra + x"
-                    name = re.sub(r'\d+[.,]?\d*\s*[x*]', '', name).strip()
-                    name = re.sub(r'^\d+[\.\)\s]+', '', name)  # Usuń numerację na początku
-
-                    if len(name) > 2 and price > 0:
-                        # Obliczamy bounding box
-                        min_x = min(w['left'] for w in line_words)
-                        min_y = min(w['top'] for w in line_words)
-                        max_x = max(w['left'] + w['width'] for w in line_words)
-                        max_y = max(w['top'] + w['height'] for w in line_words)
-
-                        parsed_items.append({
-                            "name": name,
-                            "price": price,
-                            "quantity": 1,
-                            "box": {
-                                "x": min_x,
-                                "y": min_y,
-                                "w": max_x - min_x,
-                                "h": max_y - min_y
-                            }
-                        })
-                        total_amount += price
-                except ValueError:
-                    continue
+            final_items.append({
+                "name": name,
+                "price": price,
+                "quantity": qty,
+                "box": box  # Jeśli None, frontend po prostu nie wyświetli ramki
+            })
 
         return {
             "image_dim": {"width": self.width, "height": self.height},
-            "items": parsed_items,
-            "total_amount": round(total_amount, 2),
+            "items": final_items,
+            "total_amount": sum(x['price'] for x in final_items)
         }
+
+    def _get_llm_data(self):
+        """Definiuje schemat JSON i wysyła zapytanie do modelu"""
+        json_schema = {
+            "type": "object",
+            "properties": {
+                "line_items": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "item_name": {"type": "string"},
+                            "item_price": {"type": "number"},
+                            "item_quantity": {"type": "number"}
+                        },
+                        "required": ["item_name", "item_price"]
+                    }
+                }
+            },
+            "required": ["line_items"]
+        }
+
+        try:
+            # Wywołanie biblioteki receipt-ocr
+            result = self.processor.process_receipt(
+                self.image_path,
+                json_schema=json_schema,
+                model=os.getenv("OPENAI_MODEL", "gemini-2.5-flash-lite"),
+                response_format_type="json_schema"
+            )
+
+            # Obsługa różnych typów odpowiedzi (string vs dict)
+            if isinstance(result, str):
+                data = json.loads(result)
+            else:
+                data = result
+
+            return data.get("line_items", [])
+        except Exception as e:
+            print(f"--- [BŁĄD GEMINI] {e} ---")
+            return []
+
+    def _get_easyocr_boxes(self):
+        """Zwraca surowe ramki wszystkich napisów na obrazku"""
+        results = self.reader.readtext(self.image_path)
+        boxes = []
+        for (bbox, text, prob) in results:
+            if prob > 0.3:  # Ignoruj bardzo niepewne odczyty
+                (tl, tr, br, bl) = bbox
+                # Konwersja formatu EasyOCR na x, y, w, h
+                x = int(tl[0])
+                y = int(tl[1])
+                w = int(tr[0] - tl[0])
+                h = int(bl[1] - tl[1])
+
+                boxes.append({
+                    "text": text,
+                    "x": x, "y": y, "w": w, "h": h
+                })
+        return boxes
+
+    def _find_box_by_price(self, price, raw_boxes):
+        """Algorytm dopasowania ceny do ramki"""
+        # Wzorce ceny: 12.99, 12,99, 12 (jeśli pełna liczba)
+        price_patterns = [
+            f"{price:.2f}",
+            f"{price}".replace('.', ','),
+        ]
+        # Sama końcówka (grosze), np. "99" - często OCR widzi ją osobno
+        minor_part = f"{price:.2f}".split('.')[1]
+
+        best_box = None
+
+        for box in raw_boxes:
+            clean_text = box['text'].replace(' ', '').replace(',', '.').lower()
+
+            # 1. Szukaj pełnej ceny
+            if any(p in clean_text for p in price_patterns):
+                best_box = box
+                break
+
+            # 2. Szukaj samych groszy (backup), jeśli tekst to cyfry i jest krótki
+            if minor_part in clean_text and len(clean_text) < 5 and clean_text[0].isdigit():
+                best_box = box
+                # Nie przerywamy (break), szukamy dalej lepszego dopasowania
+
+        if best_box:
+            # Rozciągamy ramkę w lewo, aby objęła nazwę produktu
+            return {
+                "x": max(0, best_box['x'] - 450),  # Margines w lewo (dostosuj wg uznania)
+                "y": best_box['y'] - 5,
+                "w": best_box['w'] + 450,
+                "h": best_box['h'] + 10
+            }
+        return None
