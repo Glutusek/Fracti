@@ -122,7 +122,7 @@ class Product(MapItem):
         _("Cena"),
         max_digits=10,
         decimal_places=2,
-        validators=[MinValueValidator(Decimal('0.00'))]
+        #validators=[MinValueValidator(Decimal('0.00'))]
     )
     receipt = models.ForeignKey(Receipt, verbose_name=_("Paragon"), on_delete=models.SET_NULL, related_name='products', null=True, blank=True)
     settlement = models.ForeignKey(Settlement, on_delete=models.CASCADE, related_name='products', null=True, blank=True, verbose_name=_("Przypisane rozliczenie"))

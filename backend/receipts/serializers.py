@@ -16,6 +16,8 @@ class ProductSerializer(serializers.ModelSerializer):
     latitude = serializers.FloatField(required=False, allow_null=True)
     longitude = serializers.FloatField(required=False, allow_null=True)
     consumers = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.all(), required=False)
+    settlement = serializers.PrimaryKeyRelatedField(queryset=Settlement.objects.all(), required=False, allow_null=True)
+
     class Meta:
         model = Product
         fields = ['id', 'name', 'description', 'price', 'quantity','receipt', 'settlement', 'consumers', 'latitude', 'longitude', 'created_at', 'category']
@@ -37,6 +39,7 @@ class ProductSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         lat = validated_data.pop('latitude', None)
         lon = validated_data.pop('longitude', None)
+        consumers = validated_data.pop('consumers', [])
 
         instance = super().create(validated_data)
 
@@ -44,18 +47,30 @@ class ProductSerializer(serializers.ModelSerializer):
             instance.location = Point(lon, lat)
             instance.save()
 
+        # Dodajemy konsumentów
+        if consumers:
+            instance.consumers.set(consumers)
+
         return instance
 
     def update(self, instance, validated_data):
         lat = validated_data.pop('latitude', None)
         lon = validated_data.pop('longitude', None)
+        consumers = validated_data.pop('consumers', None)
+
         if lat is not None and lon is not None:
             instance.location = Point(lon, lat)
         elif lat is None and lon is None and 'latitude' in self.initial_data and 'longitude' in self.initial_data:
             # Jeśli przesłano jawnie null, wyczyść lokalizację
             instance.location = None
 
-        return super().update(instance, validated_data)
+        instance = super().update(instance, validated_data)
+
+        # Aktualizujemy konsumentów jeśli zostali przekazani
+        if consumers is not None:
+            instance.consumers.set(consumers)
+
+        return instance
 
 #RECEIPT
 class ReceiptSerializer(serializers.ModelSerializer):

@@ -37,17 +37,18 @@ export interface Product {
   name: string;
   description?: string | null;
   price: string;
+
   category: CategoryType;
   consumers: number[];
   settlement?: string | null;
-  receipt?: number | null;
+  receipt?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   created_at: string;
 }
 
 export interface Receipt {
-  id: number;
+  id: string;
   merchant_name: string;
   description?: string | null;
   total_amount: string;
@@ -151,7 +152,7 @@ class FractiApiService {
 
   // --- POZYCJE PARAGONU ---
 
-  async addReceiptItem(receiptId: number, data: Partial<Product>): Promise<Product> {
+  async addReceiptItem(receiptId: string, data: Partial<Product>): Promise<Product> {
     const response = await apiClient.post<Product>('/products/', {
       ...data,
       receipt: receiptId

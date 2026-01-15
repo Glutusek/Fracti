@@ -639,24 +639,33 @@ const submitReceipt = async () => {
 
   const totalAmount = calculateTotal();
   isUploading.value = true;
+
   try {
     const fd = new FormData();
+    // 1. Obsługa zdjęcia (Crop)
     if (croppedImageUrl.value) {
        const resp = await fetch(croppedImageUrl.value);
        const blob = await resp.blob();
        fd.append('image', blob, 'receipt_crop.jpg');
     }
 
+    // 2. Dane podstawowe paragonu
     fd.append('merchant_name', receiptData.value.merchant_name);
     if (receiptData.value.description) fd.append('description', receiptData.value.description);
     fd.append('purchase_date', receiptData.value.purchase_date);
     fd.append('total_amount', totalAmount.toString());
     fd.append('category', 'SHOPPING');
 
-    if (receiptData.value.purchaser) fd.append('purchaser', receiptData.value.purchaser.toString());
-    if (selectedSettlementId.value && selectedSettlementId.value !== 'PERSONAL') {
-      fd.append('settlement', selectedSettlementId.value.toString());
+    // 3. Obsługa ID Użytkownika (Purchaser)
+    if (receiptData.value.purchaser) {
+        fd.append('purchaser', receiptData.value.purchaser.toString());
+    } else {
     }
+    if (selectedSettlementId.value && selectedSettlementId.value !== 'PERSONAL' && selectedSettlementId.value !== 'NEW_SETTLEMENT') {
+      fd.append('settlement', String(selectedSettlementId.value));
+    }
+
+    // 5. Lokalizacja
     if (receiptData.value.latitude && receiptData.value.longitude) {
       fd.append('latitude', receiptData.value.latitude.toString());
       fd.append('longitude', receiptData.value.longitude.toString());
@@ -665,14 +674,33 @@ const submitReceipt = async () => {
     const receipt = await fractiService.createReceipt(fd);
 
     for (const prod of receiptProducts.value) {
-      await fractiService.addReceiptItem(receipt.id, {
+
+
+      const safePrice = parseFloat(String(prod.price)).toFixed(2);
+
+      const safeQuantity = parseFloat(String(prod.quantity || 1)).toFixed(3);
+
+      const safeConsumers = Array.isArray(prod.consumers) ? prod.consumers : [];
+
+      let safeSettlement = undefined;
+      if (selectedSettlementId.value && selectedSettlementId.value !== 'PERSONAL' && selectedSettlementId.value !== 'NEW_SETTLEMENT') {
+          safeSettlement = String(selectedSettlementId.value);
+      }
+
+      // Payload do wysyłki
+      const itemPayload = {
          name: prod.name,
-         price: prod.price.toString(),
-         quantity: prod.quantity,
-         category: prod.category,
-         consumers: prod.consumers,
-         settlement: selectedSettlementId.value !== 'PERSONAL' ? String(selectedSettlementId.value) : undefined
-      });
+         price: safePrice,
+         quantity: safeQuantity,
+         category: prod.category || 'FOOD',
+         consumers: safeConsumers,
+         settlement: safeSettlement
+      };
+
+      // Debug: Zobacz w konsoli przeglądarki co dokładnie leci, jeśli znowu będzie błąd
+      console.log("Wysyłanie produktu:", itemPayload);
+
+      await fractiService.addReceiptItem(receipt.id, itemPayload);
     }
 
     successMessage.value = "Paragon zapisany pomyślnie!";
@@ -684,9 +712,15 @@ const submitReceipt = async () => {
       }
     }, 1500);
 
-  } catch (e) {
-    console.error(e);
-    errorMessage.value = "Błąd zapisu paragonu.";
+  } catch (e: any) {
+    console.error("Błąd zapisu:", e);
+    // Wyświetl szczegóły błędu z backendu jeśli dostępne
+    if (e.response && e.response.data) {
+        console.error("Detale błędu:", e.response.data);
+        errorMessage.value = `Błąd zapisu: ${JSON.stringify(e.response.data)}`;
+    } else {
+        errorMessage.value = "Błąd zapisu paragonu.";
+    }
   } finally {
     isUploading.value = false;
   }
