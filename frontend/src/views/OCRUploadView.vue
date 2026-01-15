@@ -459,8 +459,25 @@ const pollResult = async (taskId: string) => {
        if (res.status === 'SUCCESS') {
          clearInterval(interval);
          isAnalyzing.value = false;
-         ocrResult.value = res.data;
-         showOcrOverlay.value = true;
+         const items = res.data.items || [];
+
+         if (items.length === 0) {
+             errorMessage.value = "OCR zakończony, ale nie znaleziono żadnych produktów.";
+             return;
+         }
+
+         items.forEach((item: any) => {
+            receiptProducts.value.push({
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity || 1,
+              category: Category.FOOD,
+              consumers: settlementMembers.value.map(u => u.id)
+            });
+         });
+
+         successMessage.value = `Sukces! Dodano ${items.length} pozycji. Sprawdź i popraw w razie potrzeby.`;
+         setTimeout(() => successMessage.value = '', 4000);
        } else if (res.status === 'FAILURE') {
          clearInterval(interval);
          isAnalyzing.value = false;
