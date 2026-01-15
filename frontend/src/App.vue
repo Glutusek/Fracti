@@ -66,8 +66,6 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   border-radius: 4px;
 }
 
-/* ===== WSPÓLNE STYLE DLA CAŁEJ APLIKACJI ===== */
-
 /* Gradient text */
 .gradient-text {
   background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #a855f7 100%);

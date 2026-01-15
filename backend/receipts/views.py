@@ -37,6 +37,35 @@ class SettlementViewSet(viewsets.ModelViewSet):
         settlement = serializer.save()
         settlement.members.add(self.request.user)
 
+    @action(detail=False, methods=['post'], url_path='join')
+    def join_group(self, request):
+        code = request.data.get('join_code')
+
+        if not code:
+            return Response(
+                {"error": "Kod dołączenia jest wymagany"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            settlement = Settlement.objects.get(join_code__iexact=code)
+        except Settlement.DoesNotExist:
+            return Response(
+                {"error": "Nieprawidłowy kod grupy"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if request.user in settlement.members.all():
+            return Response(
+                {"message": "Już jesteś członkiem tej grupy", "id": settlement.id},
+                status=status.HTTP_200_OK
+            )
+
+        settlement.members.add(request.user)
+
+        serializer = self.get_serializer(settlement)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class ReceiptViewSet(viewsets.ModelViewSet):
     """

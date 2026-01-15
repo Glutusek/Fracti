@@ -4,6 +4,8 @@ from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from decimal import Decimal
 from django.core.validators import MinValueValidator
+import random
+import string
 
 
 class CategoryChoices(models.TextChoices):
@@ -26,6 +28,9 @@ class MapItem(models.Model):
     class Meta:
         abstract = True
 
+def generate_join_code():
+    chars = string.ascii_uppercase + string.digits
+    return ''.join(random.choices(chars, k=6))
 
 # --- NOWOŚĆ: MODEL ROZLICZENIA (GRUPY) ---
 class Settlement(models.Model):
@@ -42,8 +47,12 @@ class Settlement(models.Model):
         verbose_name=_("Członkowie")
     )
 
-    # Token do zapraszania znajomych (Bezpieczeństwo)
-    join_code = models.UUIDField(default=uuid.uuid4, editable=False)
+    join_code = models.CharField(
+        max_length=6,
+        default=generate_join_code,
+        unique=True,
+        editable=False
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
