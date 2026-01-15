@@ -896,7 +896,6 @@ const goBack = () => router.back();
   background: #374151; color: #9ca3af; cursor: not-allowed; box-shadow: none; transform: none; opacity: 0.7;
 }
 
-/* NOWE STYLE DLA ILOŚCI */
 .qty-badge {
   background: rgba(139, 92, 246, 0.3); color: #c4b5fd; font-weight: bold;
   padding: 4px 8px; border-radius: 6px; margin-right: 10px;
@@ -904,5 +903,96 @@ const goBack = () => router.back();
 }
 .weight-label {
   font-size: 0.85rem; color: #9ca3af; font-weight: normal; margin-left: 6px;
+}
+.modal-content button {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  background: transparent;
+  color: #c4b5fd;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.modal-content button:hover {
+  background: rgba(139, 92, 246, 0.1);
+  border-color: #a78bfa;
+  color: white;
+}
+
+.modal-content button.primary {
+  background: #22c55e;
+  border-color: #22c55e;
+  color: white;
+  font-weight: 600;
+}
+
+.modal-content button.primary:hover {
+  background: #16a34a;
+  border-color: #16a34a;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.modal-content button.danger-btn {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+
+.modal-content button.danger-btn:hover {
+  background: #ef4444;
+  color: white;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+.modal-actions.space-between {
+  justify-content: space-between;
+}
+.btn-secondary {
+  background: transparent;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  color: #c4b5fd;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.btn-secondary:hover {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: #a78bfa;
+  color: white;
+}
+.btn-primary {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  border: none;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+  box-shadow: 0 2px 10px rgba(139, 92, 246, 0.2);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+}
+button.small {
+  padding: 8px 16px;
+  font-size: 0.85rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
 }
 </style>

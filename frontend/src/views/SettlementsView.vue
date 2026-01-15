@@ -710,4 +710,56 @@ onMounted(() => {
   background: #dc2626 !important;
   color: white !important;
 }
+.modal-content input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 1.5rem;
+  background: #0f172a; /* Ciemne tło */
+  border: 1px solid rgba(139, 92, 246, 0.3); /* Fioletowa ramka */
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.modal-content input:focus {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.modal-actions button {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  background: transparent;
+  color: #c4b5fd;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.modal-actions button:hover {
+  background: rgba(139, 92, 246, 0.1);
+  color: white;
+  border-color: #a78bfa;
+}
+
+.modal-actions button.primary {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  border: none;
+  color: white;
+  font-weight: 600;
+}
+
+.modal-actions button.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+}
 </style>
