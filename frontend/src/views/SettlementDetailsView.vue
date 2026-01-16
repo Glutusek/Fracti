@@ -101,20 +101,38 @@
         <div class="users-section">
           <h3>Uczestnicy ({{ settlement?.members?.length || 0 }})</h3>
           <div class="users-list">
-            <div v-for="member in settlement?.members" :key="member.id" class="user-card">
-              <div class="user-avatar">{{ (member.first_name || member.username).charAt(0).toUpperCase() }}</div>
-              <div class="user-info">
-                <div class="user-name">{{ member.first_name ? member.first_name : member.username }}</div>
-                <div class="user-balance">
-                  <span class="paid">Zapłacił: {{ formatMoney(getUserPaid(member.id)) }} zł</span>
-                  <span class="owes" :class="getUserBalance(member.id) >= 0 ? 'positive' : 'negative'">
-                    {{ getUserBalance(member.id) >= 0 ? 'Zwrot: ' : 'Do oddania: ' }}
-                    {{ formatMoney(Math.abs(getUserBalance(member.id))) }} zł
-                  </span>
+              <div v-for="member in settlement?.members" :key="member.id" class="user-card">
+
+                <div class="user-avatar">
+                  {{ (member.first_name || member.username).charAt(0).toUpperCase() }}
                 </div>
+
+                <div class="user-info">
+                  <div class="user-name">
+                    {{ member.first_name ? member.first_name : member.username }}
+                    <span v-if="member.id === settlement?.owner_id" title="Właściciel grupy" style="margin-left:5px; cursor:help">👑</span>
+                  </div>
+
+                  <div class="user-balance">
+                    <span class="paid">Zapłacił: {{ formatMoney(getUserPaid(member.id)) }} zł</span>
+                    <span class="owes" :class="getUserBalance(member.id) >= 0 ? 'positive' : 'negative'">
+                      {{ getUserBalance(member.id) >= 0 ? 'Zwrot: ' : 'Do oddania: ' }}
+                      {{ formatMoney(Math.abs(getUserBalance(member.id))) }} zł
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  v-if="member.id !== settlement?.owner_id"
+                  @click="tryRemoveMember(member)"
+                  class="remove-user-btn"
+                  title="Usuń z grupy"
+                >
+                  ⛔
+                </button>
+
               </div>
             </div>
-          </div>
             <div class="user-actions-row">
               <button @click="showAddUserModal = true" class="add-user-btn">
                 🔗 Zaproś kodem
@@ -682,6 +700,36 @@ const createGuestUser = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const tryRemoveMember = (member: any) => {
+  const balance = getUserBalance(member.id);
+
+  if (Math.abs(balance) > 0.02) {
+    showToast(`Nie można usunąć. Użytkownik musi być rozliczony (saldo 0 zł). Obecnie: ${formatMoney(balance)} zł`, 'error');
+    return;
+  }
+
+  const name = member.first_name || member.username;
+
+  openConfirmModal(
+    'Usunąć uczestnika?',
+    `Czy na pewno chcesz usunąć "${name}" z grupy?`,
+    async () => {
+      try {
+        if (!settlement.value) return;
+
+        await fractiService.removeMember(settlement.value.id, member.id);
+
+        await loadSettlement(); // Odśwież listę po usunięciu
+        showToast(`Użytkownik ${name} został usunięty`, 'success');
+      } catch (e: any) {
+        console.error(e);
+        const errorMsg = e.response?.data?.error || 'Błąd podczas usuwania użytkownika';
+        showToast(errorMsg, 'error');
+      }
+    }
+  );
 };
 
 const toDatetimeLocal = (dateString: string | null | undefined): string => {
@@ -1894,5 +1942,27 @@ user-actions-row {
 }
 .add-user-btn:hover {
   background: rgba(139, 92, 246, 0.2);
+}
+.remove-user-btn {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  margin-left: 10px;
+}
+
+.remove-user-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+  color: #fff;
+  transform: scale(1.05);
 }
 </style>

@@ -123,17 +123,15 @@ class ReceiptSerializer(serializers.ModelSerializer):
 
 #SETTELMENTS
 class SettlementSerializer(serializers.ModelSerializer):
-    # Pokażemy od razu listę paragonów wewnątrz grupy
     receipts = ReceiptSerializer(many=True, read_only=True)
-
+    owner_id = serializers.ReadOnlyField(source='owner.id')
     loose_products = serializers.SerializerMethodField()
-
     members = UserSerializer(many=True, read_only=True)
     total_expenses = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
 
     class Meta:
         model = Settlement
-        fields = ['id', 'name', 'description', 'join_code', 'members','receipts', 'loose_products', 'total_expenses', 'created_at']
+        fields = ['id', 'name', 'description', 'join_code', 'members','receipts', 'loose_products', 'total_expenses', 'created_at', 'owner_id']
 
     def create(self, validated_data):
         # join_code jest automatycznie generowane przez model (uuid.uuid4)

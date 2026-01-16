@@ -32,7 +32,7 @@ def generate_join_code():
     chars = string.ascii_uppercase + string.digits
     return ''.join(random.choices(chars, k=6))
 
-# --- NOWOŚĆ: MODEL ROZLICZENIA (GRUPY) ---
+# --- MODEL ROZLICZENIA (GRUPY) ---
 class Settlement(models.Model):
 
 
@@ -40,13 +40,19 @@ class Settlement(models.Model):
     name = models.CharField(_("Nazwa rozliczenia"), max_length=255)
     description = models.TextField(_("Opis"), blank=True)
 
-    # Kto należy do tego rozliczenia? (Many-to-Many: User może być w wielu grupach)
     members = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         related_name='settlements',
         verbose_name=_("Członkowie")
     )
-
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='owned_settlements',
+        on_delete=models.CASCADE,
+        verbose_name=_("Właściciel"),
+        null=True,
+        blank=True
+    )
     join_code = models.CharField(
         max_length=6,
         default=generate_join_code,
@@ -77,6 +83,7 @@ class Settlement(models.Model):
 class Receipt(MapItem):
     merchant_name = models.CharField(_("Nazwa sklepu"), max_length=255)
     description = models.TextField(_("Opis"), blank=True, null=True)
+
     purchase_date = models.DateTimeField(_("Data zakupu"), null=True, blank=True)
     total_amount = models.DecimalField(
         _("Kwota całkowita"),
@@ -96,13 +103,13 @@ class Receipt(MapItem):
         null=True, blank=True
     )
 
-    # NOWOŚĆ: Do którego rozliczenia to należy?
+
     settlement = models.ForeignKey(
         Settlement,
         verbose_name=_("Rozliczenie"),
-        on_delete=models.CASCADE,  # Jak usuniesz grupę, paragony też znikną (lub SET_NULL)
+        on_delete=models.CASCADE,
         related_name='receipts',
-        null=True,  # Paragon może być prywatny (bez grupy)
+        null=True,
         blank=True
     )
     category = models.CharField(_("Kategoria"), max_length=20, choices=CategoryChoices.choices, default=CategoryChoices.OTHER)
@@ -116,7 +123,7 @@ class Receipt(MapItem):
         return f"{self.merchant_name} - {self.total_amount} PLN"
 
 
-# --- MODEL PRODUKTU (Bez zmian, ale przypominam) ---
+# --- MODEL PRODUKTU  ---
 class Product(MapItem):
 
     name = models.CharField(_("Nazwa produktu"), max_length=255)

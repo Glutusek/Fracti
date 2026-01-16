@@ -33,8 +33,9 @@ class SettlementViewSet(viewsets.ModelViewSet):
         return Settlement.objects.filter(members=self.request.user)
 
     def perform_create(self, serializer):
-        # Przy tworzeniu grupy, automatycznie dodaj twórcę jako członka
-        settlement = serializer.save()
+
+        settlement = serializer.save(owner=self.request.user)
+
         settlement.members.add(self.request.user)
 
     @action(detail=False, methods=['post'], url_path='join')
@@ -66,7 +67,26 @@ class SettlementViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(settlement)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=['post'], url_path='remove-member')
+    def remove_member(self, request, pk=None):
+        settlement = self.get_object()
+        user_id_to_remove = request.data.get('user_id')
 
+        is_owner = settlement.owner == request.user
+        is_self_removal = str(request.user.id) == str(user_id_to_remove)
+
+        if not (is_owner or is_self_removal):
+            return Response({"error": "Tylko właściciel może usuwać innych."}, status=status.HTTP_403_FORBIDDEN)
+
+        if settlement.owner.id == user_id_to_remove:
+            return Response({"error": "Nie można usunąć właściciela grupy."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user_to_remove = User.objects.get(id=user_id_to_remove)
+            settlement.members.remove(user_to_remove)
+            return Response({"status": "Użytkownik usunięty"}, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({"error": "Użytkownik nie istnieje"}, status=status.HTTP_404_NOT_FOUND)
 class ReceiptViewSet(viewsets.ModelViewSet):
     """
     Widok obsługujący Paragony.

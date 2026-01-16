@@ -74,6 +74,7 @@ export interface Settlement {
   loose_products: Product[];
   created_at: string;
   updated_at?: string;
+  owner_id?: number;
 }
 
 // ==========================================
@@ -111,6 +112,12 @@ class FractiApiService {
   async joinSettlement(code: string): Promise<Settlement> {
     const response = await apiClient.post<Settlement>('/settlements/join/', { join_code: code });
     return response.data;
+  }
+
+  async removeMember(settlementId: string, userId: number): Promise<void> {
+    await apiClient.post(`/settlements/${settlementId}/remove-member/`, {
+      user_id: userId
+    });
   }
 
   // --- PARAGONY ---
