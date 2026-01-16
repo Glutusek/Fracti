@@ -62,7 +62,9 @@
                <label>Płatnik</label>
                <select v-model="receiptData.purchaser">
                  <option :value="null" disabled>Kto płacił?</option>
-                 <option v-for="m in settlementMembers" :key="m.id" :value="m.id">{{ m.username }}</option>
+                 <option v-for="m in settlementMembers" :key="m.id" :value="m.id">
+                   {{ (m.first_name && m.first_name.trim() !== '') ? m.first_name : m.username }}
+                 </option>
                </select>
              </div>
            </div>
@@ -248,11 +250,11 @@
              </div>
 
              <div class="form-group">
-                <label>Konsumenci (kto płaci za tę część?)</label>
+                <label>Konsumenci </label>
                 <div class="checkbox-group">
                    <label v-for="member in settlementMembers" :key="member.id">
                       <input type="checkbox" :value="member.id" v-model="productForm.consumers" />
-                      {{ member.username }}
+                      {{ (member.first_name && member.first_name.trim() !== '') ? member.first_name : member.username }}
                    </label>
                 </div>
                 <p v-if="settlementMembers.length === 0" class="hint-error">Brak członków w grupie.</p>

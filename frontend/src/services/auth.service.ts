@@ -11,7 +11,7 @@ export default {
     return apiClient.post('/auth/register/', data);
   },
 
-  // Pobranie profilu (opcjonalnie, przyda się później)
+  // Pobranie profilu
   getProfile() {
     return apiClient.get('/auth/me/');
   },

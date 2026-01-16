@@ -102,7 +102,7 @@
           <h3>Uczestnicy ({{ settlement?.members?.length || 0 }})</h3>
           <div class="users-list">
             <div v-for="member in settlement?.members" :key="member.id" class="user-card">
-              <div class="user-avatar">{{ member.username.charAt(0).toUpperCase() }}</div>
+              <div class="user-avatar">{{ (member.first_name || member.username).charAt(0).toUpperCase() }}</div>
               <div class="user-info">
                 <div class="user-name">{{ member.first_name ? member.first_name : member.username }}</div>
                 <div class="user-balance">
@@ -165,7 +165,7 @@
             <select v-model="newProduct.payer" required>
               <option :value="null" disabled>Wybierz płatnika</option>
               <option v-for="member in settlement?.members" :key="member.id" :value="member.id">
-                {{ member.username }}
+                {{ (member.first_name && member.first_name.trim() !== '') ? member.first_name : member.username }}
               </option>
             </select>
           </div>
@@ -175,7 +175,7 @@
             <div class="checkbox-group">
               <label v-for="member in settlement?.members" :key="member.id">
                 <input type="checkbox" :value="member.id" v-model="newProduct.consumers" />
-                {{ member.username }}
+                {{ (member.first_name && member.first_name.trim() !== '') ? member.first_name : member.username }}
               </label>
             </div>
           </div>
@@ -241,7 +241,7 @@
             <select v-model="editingProduct.purchaser">
               <option :value="null" disabled>Wybierz płatnika</option>
               <option v-for="member in settlement?.members" :key="member.id" :value="member.id">
-                {{ member.username }}
+                {{ (member.first_name && member.first_name.trim() !== '') ? member.first_name : member.username }}
               </option>
             </select>
           </div>
@@ -251,7 +251,7 @@
             <div class="checkbox-group">
               <label v-for="member in settlement?.members" :key="member.id">
                 <input type="checkbox" :value="member.id" v-model="editingProduct.consumers" />
-                {{ member.username }}
+                {{ (member.first_name && member.first_name.trim() !== '') ? member.first_name : member.username }}
               </label>
             </div>
           </div>
@@ -299,7 +299,9 @@
           <div class="form-group">
             <label>Płatnik</label>
             <select v-model="editingReceipt.purchaser">
-              <option v-for="member in settlement?.members" :key="member.id" :value="member.id">{{ member.username }}</option>
+              <option v-for="member in settlement?.members" :key="member.id" :value="member.id">
+                {{ (member.first_name && member.first_name.trim() !== '') ? member.first_name : member.username }}
+              </option>
             </select>
           </div>
 
@@ -374,11 +376,11 @@
           </div>
 
           <div class="form-group">
-            <label>Kto to zjadł?</label>
+            <label>Konsumenci</label>
             <div class="checkbox-group">
               <label v-for="member in settlement?.members" :key="member.id">
                 <input type="checkbox" :value="member.id" v-model="receiptItemForm.consumers" />
-                {{ member.username }}
+                {{ (member.first_name && member.first_name.trim() !== '') ? member.first_name : member.username }}
               </label>
             </div>
           </div>

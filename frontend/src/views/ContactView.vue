@@ -31,15 +31,14 @@
 
             <div class="form-group">
               <label for="message">Wiadomość</label>
-              <textarea id="message" v-model="form.message" rows="5" placeholder="W czym możemy pomóc?"
-                        required></textarea>
+              <textarea id="message" v-model="form.message" rows="5" placeholder="W czym możemy pomóc?" required></textarea>
             </div>
 
-            <button type="submit" class="submit-button">
-              Wyślij wiadomość
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                    d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/>
+            <button type="submit" class="submit-button" :disabled="isSending">
+              <span v-if="!isSending">Wyślij wiadomość</span>
+              <span v-else>Wysyłanie...</span>
+              <svg v-if="!isSending" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/>
               </svg>
             </button>
             <p v-if="errorMessage" class="error-text" style="color:#f87171;margin-top:8px">{{ errorMessage }}</p>
@@ -47,7 +46,8 @@
         </div>
 
         <div class="info-column">
-          <div class="contact-card info-card">
+
+          <a href="mailto:kontakt@fracti.app" class="contact-card info-card link-card">
             <div class="icon-box">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
@@ -57,37 +57,36 @@
             <div>
               <h4>Email</h4>
               <p>kontakt@fracti.app</p>
-              <p class="sub-text">Odpowiadamy w ciągu 24h</p>
+              <p class="sub-text">Kliknij, aby napisać</p>
             </div>
-          </div>
+          </a>
 
-          <div class="contact-card info-card">
+          <a href="https://x.com/GeminiApp" target="_blank" rel="noopener noreferrer" class="contact-card info-card link-card">
             <div class="icon-box">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path
-                    d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/>
               </svg>
             </div>
             <div>
-              <h4>Twitter / X</h4>
+              <h4>X</h4>
               <p>@FractiApp</p>
               <p class="sub-text">Śledź aktualizacje</p>
             </div>
-          </div>
+          </a>
 
-          <div class="contact-card info-card">
+          <a href="https://github.com/Glutusek/Fracti" target="_blank" rel="noopener noreferrer" class="contact-card info-card link-card">
             <div class="icon-box">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path
-                    d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
               </svg>
             </div>
             <div>
               <h4>GitHub</h4>
               <p>Glutusek/Fracti</p>
-              <p class="sub-text">Zgłoś błąd w kodzie</p>
+              <p class="sub-text">Zobacz kod źródłowy</p>
             </div>
-          </div>
+          </a>
+
         </div>
       </div>
     </div>
@@ -115,6 +114,7 @@
 </template>
 
 <script setup lang="ts">
+// Skrypt pozostaje bez zmian
 import { reactive, ref } from 'vue';
 import contactService from '@/services/contact.service';
 
@@ -148,11 +148,10 @@ const sendMessage = async () => {
     showSuccessModal.value = true;
     form.name = '';
     form.email = '';
-      form.subject = '';
-      form.message = '';
+    form.subject = '';
+    form.message = '';
   } catch (err) {
     console.error('Contact send error', err);
-    // Spróbuj wydobyć komunikat z odpowiedzi serwera (np. walidacja pól)
     const resp = (err as any)?.response;
     if (resp && resp.data) {
       const data = resp.data;
@@ -175,14 +174,30 @@ const sendMessage = async () => {
     }
   } finally {
     isSending.value = false;
-    // cooldown to prevent rapid resubmits (in ms)
     cooldownUntil.value = Date.now() + 3000;
   }
 };
 </script>
 
 <style scoped>
-/* Specyficzne style dla Contact */
+/* Istniejące style pozostają bez zmian, dodajemy tylko .link-card */
+
+/* ... (wszystkie poprzednie style) ... */
+
+/* NOWY STYL: Reset stylów dla linków-kart */
+.link-card {
+  text-decoration: none; /* Usuwa podkreślenie linku */
+  color: inherit;       /* Dziedziczy kolor tekstu */
+  cursor: pointer;      /* Pokazuje rączkę */
+}
+
+/* Zachowujemy hover z oryginału dla spójności */
+.info-card:hover {
+  transform: translateX(5px);
+  background: rgba(139, 92, 246, 0.1);
+}
+
+/* Reszta stylów bez zmian */
 .header-section {
   text-align: center;
   margin-bottom: 4rem;
@@ -197,7 +212,6 @@ const sendMessage = async () => {
   margin: 0 auto;
 }
 
-/* Grid Layout */
 .contact-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -210,7 +224,6 @@ const sendMessage = async () => {
   }
 }
 
-/* Karty */
 .contact-card {
   background: rgba(139, 92, 246, 0.05);
   border: 1px solid rgba(139, 92, 246, 0.2);
@@ -219,7 +232,6 @@ const sendMessage = async () => {
   backdrop-filter: blur(10px);
 }
 
-/* Formularz */
 .form-card h3 {
   font-size: 1.5rem;
   margin-bottom: 1.5rem;
@@ -252,7 +264,6 @@ const sendMessage = async () => {
   box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4);
 }
 
-/* Info Cards */
 .info-column {
   display: flex;
   flex-direction: column;
@@ -264,12 +275,7 @@ const sendMessage = async () => {
   align-items: center;
   gap: 1rem;
   padding: 1.5rem;
-  transition: transform 0.3s;
-}
-
-.info-card:hover {
-  transform: translateX(5px);
-  background: rgba(139, 92, 246, 0.1);
+  transition: transform 0.3s, background-color 0.3s; /* Dodano transition background */
 }
 
 .icon-box {
@@ -301,7 +307,6 @@ const sendMessage = async () => {
   margin-top: 0.2rem;
 }
 
-/* Tło - specyficzne orby dla Contact */
 .orb-1 {
   width: 400px;
   height: 400px;
@@ -318,7 +323,6 @@ const sendMessage = async () => {
   left: -50px;
 }
 
-/* Modal Success - specyficzny dla Contact */
 .modal-overlay {
   z-index: 9999;
   padding: 1rem;
@@ -334,7 +338,7 @@ const sendMessage = async () => {
 .success-icon {
   width: 70px;
   height: 70px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%); /* Zielony gradient sukcesu */
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
