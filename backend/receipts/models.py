@@ -136,6 +136,14 @@ class Product(MapItem):
     receipt = models.ForeignKey(Receipt, verbose_name=_("Paragon"), on_delete=models.SET_NULL, related_name='products', null=True, blank=True)
     settlement = models.ForeignKey(Settlement, on_delete=models.CASCADE, related_name='products', null=True, blank=True, verbose_name=_("Przypisane rozliczenie"))
     consumers = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='consumed_products', blank=True, verbose_name=_("Konsumenci"))
+    purchaser = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name=_("Kupujący"),
+        on_delete=models.CASCADE,
+        related_name='purchased_products',
+        null=True,
+        blank=True
+    )
     category = models.CharField(_("Kategoria"), max_length=20, choices=CategoryChoices.choices, default=CategoryChoices.OTHER)
 
     def __str__(self):

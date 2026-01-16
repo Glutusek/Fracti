@@ -237,6 +237,16 @@
           </div>
 
           <div class="form-group">
+            <label>Płatnik</label>
+            <select v-model="editingProduct.purchaser">
+              <option :value="null" disabled>Wybierz płatnika</option>
+              <option v-for="member in settlement?.members" :key="member.id" :value="member.id">
+                {{ member.username }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
             <label>Konsumenci</label>
             <div class="checkbox-group">
               <label v-for="member in settlement?.members" :key="member.id">
@@ -526,7 +536,7 @@ const combinedTimeline = computed(() => {
       date: product.created_at,
       latitude: product.latitude ?? null,
       longitude: product.longitude ?? null,
-      payerId: product.consumers[0] || 0 // First consumer as payer
+      payerId: product.purchaser || 0
     });
   });
 
@@ -579,16 +589,14 @@ const getUserPaid = (userId: number): number => {
 
   let total = 0;
 
-  // Sum from receipts
   settlement.value.receipts?.forEach(receipt => {
     if (receipt.purchaser === userId) {
       total += parseFloat(receipt.total_amount || '0');
     }
   });
 
-  // Sum from loose products (where user is first consumer/payer)
   settlement.value.loose_products?.forEach(product => {
-    if (product.consumers[0] === userId) {
+    if (product.purchaser === userId) {
       total += parseFloat(product.price || '0');
     }
   });
@@ -596,12 +604,44 @@ const getUserPaid = (userId: number): number => {
   return total;
 };
 
+const getUserExpenses = (userId: number): number => {
+  if (!settlement.value) return 0;
+
+  let total = 0;
+
+  settlement.value.receipts?.forEach(receipt => {
+    if (!receipt.products || receipt.products.length === 0) {
+      const receiptCost = parseFloat(receipt.total_amount || '0');
+      const membersCount = settlement.value?.members?.length || 1;
+      total += receiptCost / membersCount;
+    } else {
+      receipt.products?.forEach(product => {
+        if (product.consumers?.includes(userId)) {
+          const consumersCount = product.consumers?.length || 1;
+          const productCost = parseFloat(product.price || '0');
+          total += parseFloat((productCost / consumersCount).toFixed(2));
+        }
+      });
+    }
+  });
+
+  // Loose products - sumuj te, które konsumował
+  settlement.value.loose_products?.forEach(product => {
+    if (product.consumers?.includes(userId)) {
+      const consumersCount = product.consumers?.length || 1;
+      const productCost = parseFloat(product.price || '0');
+      // Zaokrąglij do 2 miejsc po przecinku
+      total += parseFloat((productCost / consumersCount).toFixed(2));
+    }
+  });
+
+  return parseFloat(total.toFixed(2));
+};
+
 const getUserBalance = (userId: number): number => {
-  // Simplified calculation - should be more complex in production
+  // Balance = co zapłacił - ile powinien zapłacić
   const paid = getUserPaid(userId);
-  const totalExpenses = parseFloat(settlement.value?.total_expenses || '0');
-  const membersCount = settlement.value?.members?.length || 1;
-  const shouldPay = totalExpenses / membersCount;
+  const shouldPay = getUserExpenses(userId);
 
   return paid - shouldPay;
 };
@@ -785,6 +825,7 @@ const createLooseProduct = async () => {
       price: newProduct.value.price,
       category: newProduct.value.category,
       consumers: newProduct.value.consumers,
+      purchaser: newProduct.value.payer,
       latitude: newProduct.value.latitude,
       longitude: newProduct.value.longitude,
       settlement: settlement.value?.id
@@ -808,6 +849,7 @@ const updateProduct = async () => {
       price: editingProduct.value.price,
       category: editingProduct.value.category,
       consumers: editingProduct.value.consumers,
+      purchaser: editingProduct.value.purchaser,
       latitude: editingProduct.value.latitude,
       longitude: editingProduct.value.longitude
     });
@@ -926,12 +968,12 @@ const openReceiptItemModal = (item: Product | null, receiptId: number) => {
       consumers: [...item.consumers]
     };
   } else {
-    // Nowa pozycja - domyślnie wszyscy uczestnicy
+    // Nowa pozycja - bez domyślnych konsumentów
     receiptItemForm.value = {
       name: '',
       price: '',
       category: Category.FOOD,
-      consumers: settlement.value?.members?.map(m => m.id) || []
+      consumers: []
     };
   }
   showReceiptItemModal.value = true;

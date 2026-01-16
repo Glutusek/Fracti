@@ -380,7 +380,7 @@ const handleSettlementChange = async () => {
     try {
       const s = await fractiService.getSettlementDetails(selectedSettlementId.value as string);
       settlementMembers.value = s.members;
-      if (s.members.length > 0) receiptData.value.purchaser = s.members[0].id;
+      receiptData.value.purchaser = null;
       nextTick(() => initMap('map-ocr'));
     } catch (e) { console.error(e); }
   }
@@ -472,7 +472,7 @@ const pollResult = async (taskId: string) => {
               price: item.price,
               quantity: item.quantity || 1,
               category: Category.FOOD,
-              consumers: settlementMembers.value.map(u => u.id)
+              consumers: [] // Nie przypisuj automatycznie - użytkownik musi wybrać
             });
          });
 
@@ -558,7 +558,7 @@ const openProductModal = (idx: number | null) => {
     productForm.value = {
       name: '', price: '', quantity: 1, unitPrice: 0,
       category: Category.FOOD,
-      consumers: settlementMembers.value.map(u => u.id)
+      consumers: [] // Nie przypisuj automatycznie - użytkownik musi wybrać
     };
   }
   showProductModal.value = true;

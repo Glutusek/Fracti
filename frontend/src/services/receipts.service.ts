@@ -40,6 +40,7 @@ export interface Product {
 
   category: CategoryType;
   consumers: number[];
+  purchaser?: number | null;
   settlement?: string | null;
   receipt?: string | null;
   latitude?: number | null;
