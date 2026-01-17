@@ -74,11 +74,18 @@ const router = createRouter({
 router.beforeEach((to, _, next) => {
   const authStore = useAuthStore();
 
-  if (to.meta.requiresAuth && !authStore.isLoggedIn) {
-    next({
-      name: 'auth',
-      query: { redirect: to.fullPath }
-    });
+  if (to.path === '/auth' && authStore.isLoggedIn) {
+    next({ name: 'home' });
+  }
+  else if (to.meta.requiresAuth && !authStore.isLoggedIn) {
+    if (to.path === '/auth') {
+      next();
+    } else {
+      next({
+        name: 'auth',
+        query: { redirect: to.fullPath }
+      });
+    }
   } else {
     next();
   }

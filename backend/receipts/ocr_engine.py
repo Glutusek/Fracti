@@ -1,7 +1,6 @@
 import os
 import cv2
 import json
-import easyocr
 import numpy as np
 from receipt_ocr.processors import ReceiptProcessor
 from receipt_ocr.providers import OpenAIProvider
@@ -30,38 +29,24 @@ class OcrPipeline:
         self.provider = OpenAIProvider(api_key=api_key, base_url=base_url)
         self.processor = ReceiptProcessor(self.provider)
 
-        # --- KONFIGURACJA EASYOCR ---
-        # Inicjalizujemy czytnik dla języka polskiego i angielskiego
-        # gpu=False dla bezpieczeństwa (chyba że masz skonfigurowaną NVIDIA w Dockerze)
-        self.reader = easyocr.Reader(['pl', 'en'], gpu=False)
-
     def run(self):
         """Główna metoda uruchamiana przez Celery"""
 
-        # 1. MÓZG: Zapytaj Gemini co jest na paragonie
         print(f"--- [OCR] Wysyłanie do Gemini ({os.getenv('OPENAI_MODEL')})... ---")
         llm_items = self._get_llm_data()
         print(f"--- [OCR] Gemini znalazł {len(llm_items)} pozycji. ---")
 
-        # 2. OCZY: Użyj EasyOCR do znalezienia gdzie jest tekst
-        print("--- [OCR] Skanowanie pozycji (EasyOCR)... ---")
-        raw_boxes = self._get_easyocr_boxes()
-
-        # 3. SYNTEZA: Połącz wiedzę Gemini z ramkami EasyOCR
         final_items = []
         for item in llm_items:
             price = item.get("item_price", 0.0)
             name = item.get("item_name", "Nieznany")
             qty = item.get("item_quantity", 1)
 
-            # Szukamy ramki pasującej do ceny
-            box = self._find_box_by_price(price, raw_boxes)
-
             final_items.append({
                 "name": name,
                 "price": price,
                 "quantity": qty,
-                "box": box  # Jeśli None, frontend po prostu nie wyświetli ramki
+                "box": None
             })
 
         return {
@@ -110,25 +95,6 @@ class OcrPipeline:
         except Exception as e:
             print(f"--- [BŁĄD GEMINI] {e} ---")
             return []
-
-    def _get_easyocr_boxes(self):
-        """Zwraca surowe ramki wszystkich napisów na obrazku"""
-        results = self.reader.readtext(self.image_path)
-        boxes = []
-        for (bbox, text, prob) in results:
-            if prob > 0.3:  # Ignoruj bardzo niepewne odczyty
-                (tl, tr, br, bl) = bbox
-                # Konwersja formatu EasyOCR na x, y, w, h
-                x = int(tl[0])
-                y = int(tl[1])
-                w = int(tr[0] - tl[0])
-                h = int(bl[1] - tl[1])
-
-                boxes.append({
-                    "text": text,
-                    "x": x, "y": y, "w": w, "h": h
-                })
-        return boxes
 
     def _find_box_by_price(self, price, raw_boxes):
         """Algorytm dopasowania ceny do ramki"""

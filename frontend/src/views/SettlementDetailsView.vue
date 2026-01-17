@@ -115,10 +115,6 @@
 
                   <div class="user-balance">
                     <span class="paid">Zapłacił: {{ formatMoney(getUserPaid(member.id)) }} zł</span>
-                    <span class="owes" :class="getUserBalance(member.id) >= 0 ? 'positive' : 'negative'">
-                      {{ getUserBalance(member.id) >= 0 ? 'Zwrot: ' : 'Do oddania: ' }}
-                      {{ formatMoney(Math.abs(getUserBalance(member.id))) }} zł
-                    </span>
                   </div>
                 </div>
 
@@ -133,6 +129,26 @@
 
               </div>
             </div>
+
+            <!-- Sekcja zobowiązań netto -->
+            <div v-if="calculateNetDebts().length > 0" class="debts-section">
+              <h3>Rozliczenia</h3>
+              <div class="debts-list">
+                <div v-for="(debt, index) in calculateNetDebts()" :key="index" class="debt-item">
+                  <div class="debt-info">
+                    <span class="debt-from">{{ debt.fromName }}</span>
+                    <span class="debt-arrow">→ oddaje →</span>
+                    <span class="debt-to">{{ debt.toName }}</span>
+                  </div>
+                  <div class="debt-amount">{{ formatMoney(debt.amount) }} zł</div>
+                </div>
+              </div>
+            </div>
+            <div v-else class="debts-section">
+              <h3>Rozliczenia</h3>
+              <div class="empty-state">✓ Wszyscy są rozliczeni!</div>
+            </div>
+
             <div class="user-actions-row">
               <button @click="showAddUserModal = true" class="add-user-btn">
                 🔗 Zaproś kodem
@@ -666,6 +682,69 @@ const getUserBalance = (userId: number): number => {
   return paid - shouldPay;
 };
 
+// Oblicz zobowiązania netto między parami osób
+const calculateNetDebts = (): Array<{from: number, to: number, amount: number, fromName: string, toName: string}> => {
+  if (!settlement.value) return [];
+
+  // Najpierw oblicz wszystkie bilanse
+  const balances: { [key: number]: number } = {};
+  
+  settlement.value.members?.forEach(member => {
+    balances[member.id] = getUserBalance(member.id);
+  });
+
+  // Algorytm uproszczenia długów: łącz długi między parami
+  const debts: Array<{from: number, to: number, amount: number, fromName: string, toName: string}> = [];
+  const members = settlement.value.members || [];
+
+  // Przejdź przez każdą parę
+  for (let i = 0; i < members.length; i++) {
+    for (let j = i + 1; j < members.length; j++) {
+      const memberA = members[i];
+      const memberB = members[j];
+      
+      const balanceA = balances[memberA.id];
+      const balanceB = balances[memberB.id];
+      
+      // Jeśli A ma ujemny bilans (komuś jest winny) i B ma dodatni (jemu ktoś jest winny)
+      // To możemy bezpośrednio przesunąć długi
+      if (balanceA < 0 && balanceB > 0) {
+        // A jest winny B
+        const amount = Math.min(Math.abs(balanceA), balanceB);
+        if (amount > 0.01) {
+          debts.push({
+            from: memberA.id,
+            to: memberB.id,
+            amount: parseFloat(amount.toFixed(2)),
+            fromName: memberA.first_name || memberA.username,
+            toName: memberB.first_name || memberB.username
+          });
+          
+          balances[memberA.id] += amount;
+          balances[memberB.id] -= amount;
+        }
+      } else if (balanceA > 0 && balanceB < 0) {
+        // B jest winny A
+        const amount = Math.min(balanceA, Math.abs(balanceB));
+        if (amount > 0.01) {
+          debts.push({
+            from: memberB.id,
+            to: memberA.id,
+            amount: parseFloat(amount.toFixed(2)),
+            fromName: memberB.first_name || memberB.username,
+            toName: memberA.first_name || memberA.username
+          });
+          
+          balances[memberA.id] -= amount;
+          balances[memberB.id] += amount;
+        }
+      }
+    }
+  }
+
+  return debts;
+};
+
 const formatMoney = (val: string | number | undefined): string => {
   if (!val) return '0.00';
   return Number(val).toFixed(2);
@@ -703,10 +782,13 @@ const createGuestUser = async () => {
 };
 
 const tryRemoveMember = (member: any) => {
-  const balance = getUserBalance(member.id);
+  // Sprawdź czy użytkownik ma jakiekolwiek zobowiązania w liście długów
+  const debts = calculateNetDebts();
+  const userHasDebts = debts.some(debt => debt.from === member.id || debt.to === member.id);
 
-  if (Math.abs(balance) > 0.02) {
-    showToast(`Nie można usunąć. Użytkownik musi być rozliczony (saldo 0 zł). Obecnie: ${formatMoney(balance)} zł`, 'error');
+  if (userHasDebts) {
+    const name = member.first_name || member.username;
+    showToast(`Nie można usunąć. Użytkownik "${name}" musi być rozliczony.`, 'error');
     return;
   }
 
@@ -1514,6 +1596,79 @@ onMounted(() => {
 
 .user-balance .negative {
   color: #f87171;
+}
+
+/* Sekcja zobowiązań */
+.debts-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.debts-section h3 {
+  color: #a78bfa;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.debts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.debt-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: rgba(99, 102, 241, 0.05);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.debt-item:hover {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.debt-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.debt-from {
+  font-weight: 600;
+  color: #f87171;
+}
+
+.debt-arrow {
+  color: #9ca3af;
+  font-size: 0.8rem;
+}
+
+.debt-to {
+  font-weight: 600;
+  color: #4ade80;
+}
+
+.debt-amount {
+  font-weight: 700;
+  color: #fbbf24;
+  font-size: 1rem;
+  white-space: nowrap;
+  margin-left: 1rem;
+}
+
+.empty-state {
+  padding: 1rem;
+  text-align: center;
+  color: #4ade80;
+  font-weight: 600;
 }
 
 .add-user-btn {
