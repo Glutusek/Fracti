@@ -471,6 +471,20 @@
     </div>
 </div>
   </div>
+
+  <div v-if="showErrorModal" class="modal-overlay z-max" @click="showErrorModal = false">
+      <div class="modal-content small alert-box" @click.stop>
+        <div class="alert-icon error">⛔</div>
+        <h2>{{ errorTitle }}</h2>
+        <p class="info-text center-text">{{ errorBody }}</p>
+
+        <div class="modal-actions center">
+          <button type="button" class="primary" @click="showErrorModal = false">
+            Rozumiem
+          </button>
+        </div>
+      </div>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -498,6 +512,9 @@ const confirmMessage = ref('');
 const confirmSubMessage = ref('');
 const showAddGuestModal = ref(false);
 const guestName = ref('');
+const showErrorModal = ref(false);
+const errorTitle = ref('');
+const errorBody = ref('');
 // Map instances
 let mapInstance: L.Map | null = null;
 let markerInstance: L.Marker | null = null;
@@ -604,7 +621,14 @@ const openOnMap = (item: { type: string; id: number; }) => {
 };
 
 const addReceipt = () => {
-  router.push('/ocr-upload');
+  if (settlement.value?.id) {
+    router.push({
+      path: '/ocr-upload',
+      query: { settlementId: settlement.value.id }
+    });
+  } else {
+    router.push('/ocr-upload');
+  }
 };
 
 const toggleReceipt = (id: number) => {
@@ -876,21 +900,20 @@ const initMap = (elementId: string, lat: number | null, lng: number | null, onUp
 const openAddProductModal = async () => {
   newProduct.value = {
     name: '',
+    description: '',
     price: '',
     category: Category.FOOD,
     payer: null,
-    consumers: [],
+    consumers: settlement.value?.members?.map(m => m.id) || [],
     latitude: null,
     longitude: null
   };
   showAddProductModal.value = true;
 
-  // Czekamy aż modal się wyrenderuje, żeby DIV mapy istniał
   await nextTick();
   initMap('map-add', null, null, (lat, lng) => {
     newProduct.value.latitude = lat;
     newProduct.value.longitude = lng;
-
   });
 };
 
@@ -947,7 +970,11 @@ const copyCode = async () => {
 const createLooseProduct = async () => {
   try {
     if (!newProduct.value.payer) {
-      alert('Wybierz płatnika');
+      openErrorModal('Brak płatnika', 'Musisz wybrać osobę, która zapłaciła za ten produkt.');
+      return;
+    }
+    if (newProduct.value.consumers.length === 0) {
+      openErrorModal('Brak konsumentów', 'Musisz zaznaczyć przynajmniej jedną osobę, która korzysta z tego produktu.');
       return;
     }
 
@@ -968,12 +995,22 @@ const createLooseProduct = async () => {
     showToast('Dodano produkt', 'success');
   } catch (error) {
     console.error('Błąd dodawania produktu:', error);
-    alert('Nie udało się dodać produktu');
+    openErrorModal('Błąd', 'Nie udało się dodać produktu. Spróbuj ponownie.');
   }
 };
 
 const updateProduct = async () => {
   if (!editingProduct.value) return;
+
+  if (!editingProduct.value.purchaser) {
+    openErrorModal('Brak płatnika', 'Produkt musi mieć przypisanego płatnika.');
+    return;
+  }
+  if (!editingProduct.value.consumers || editingProduct.value.consumers.length === 0) {
+     openErrorModal('Brak konsumentów', 'Produkt musi mieć przypisanego co najmniej jednego konsumenta.');
+     return;
+  }
+
   try {
     await fractiService.updateProduct(editingProduct.value.id, {
       name: editingProduct.value.name,
@@ -989,7 +1026,7 @@ const updateProduct = async () => {
     showEditProductModal.value = false;
   } catch (e) {
     console.error('Błąd aktualizacji produktu:', e);
-    alert('Nie udało się zaktualizować produktu');
+    openErrorModal('Błąd', 'Nie udało się zaktualizować produktu.');
   }
 };
 
@@ -1114,6 +1151,11 @@ const openReceiptItemModal = (item: Product | null, receiptId: number) => {
 const saveReceiptItem = async () => {
   if (!currentReceiptId.value) return;
 
+  if (receiptItemForm.value.consumers.length === 0) {
+    openErrorModal('Brak konsumentów', 'Pozycja na paragonie musi być przypisana do kogoś.');
+    return;
+  }
+
   try {
     const payload = {
       name: receiptItemForm.value.name,
@@ -1195,6 +1237,12 @@ const loadSettlement = async () => {
 onMounted(() => {
   loadSettlement();
 });
+
+const openErrorModal = (title: string, body: string) => {
+  errorTitle.value = title;
+  errorBody.value = body;
+  showErrorModal.value = true;
+};
 </script>
 
 <style scoped>
@@ -2453,5 +2501,13 @@ user-actions-row {
   border-color: #ef4444;
   color: #fff;
   transform: scale(1.05);
+}
+.alert-icon.error {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+.modal-actions.center {
+  justify-content: center;
 }
 </style>
