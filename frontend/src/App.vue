@@ -2,6 +2,33 @@
 import { RouterView } from 'vue-router'
 import Navbar from "@/components/Navbar.vue";
 import Footer from "@/components/Footer.vue";
+import { onMounted, onUnmounted } from 'vue';
+import { useAuthStore } from '@/stores/auth';
+import authService from '@/services/auth.service';
+const authStore = useAuthStore();
+let sessionCheckInterval: any = null;
+
+const checkSessionStatus = async () => {
+  if (authStore.accessToken) {
+    try {
+      await authService.getProfile();
+    } catch (e) {
+    }
+  }
+};
+
+onMounted(() => {
+
+  sessionCheckInterval = setInterval(checkSessionStatus, 60000);
+});
+
+onUnmounted(() => {
+  // Posprzątaj po sobie przy zamykaniu komponentu
+  if (sessionCheckInterval) {
+    clearInterval(sessionCheckInterval);
+  }
+});
+
 </script>
 
 <template>
