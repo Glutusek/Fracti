@@ -298,7 +298,7 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue';
-import { useRouter, onBeforeRouteLeave } from 'vue-router';
+import { useRouter, useRoute,onBeforeRouteLeave } from 'vue-router';
 import fractiService, { type Settlement, type User, Category, CATEGORY_LABELS } from '@/services/receipts.service';
 import { Cropper } from 'vue-advanced-cropper';
 import 'vue-advanced-cropper/dist/style.css';
@@ -306,6 +306,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 const router = useRouter();
+const route = useRoute();
 
 // --- STATE ---
 const settlements = ref<Settlement[]>([]);
@@ -422,6 +423,17 @@ const canEditForm = computed(() => {
 onMounted(async () => {
   try {
     settlements.value = await fractiService.getSettlements();
+
+    const preselectedId = route.query.settlementId as string;
+
+    if (preselectedId) {
+      const exists = settlements.value.some(s => s.id === preselectedId);
+
+      if (exists) {
+        selectedSettlementId.value = preselectedId;
+        await handleSettlementChange();
+      }
+    }
   } catch (e) {
     console.error(e);
   }
@@ -535,7 +547,7 @@ const pollResult = async (taskId: string) => {
               price: item.price,
               quantity: item.quantity || 1,
               category: Category.FOOD,
-              consumers: [] // Nie przypisuj automatycznie - użytkownik musi wybrać
+              consumers: settlementMembers.value.map(u => u.id)
             });
          });
 

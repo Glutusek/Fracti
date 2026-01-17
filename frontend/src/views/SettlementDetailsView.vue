@@ -695,7 +695,14 @@ const openOnMap = (item: { type: string; id: number; }) => {
 };
 
 const addReceipt = () => {
-  router.push('/ocr-upload');
+  if (settlement.value?.id) {
+    router.push({
+      path: '/ocr-upload',
+      query: { settlementId: settlement.value.id }
+    });
+  } else {
+    router.push('/ocr-upload');
+  }
 };
 
 const toggleReceipt = (id: number) => {
