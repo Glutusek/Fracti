@@ -38,14 +38,10 @@
         <h2 class="section-title">2. Dane Paragonu</h2>
 
         <div class="form-grid">
-           <div class="form-group">
+           <div class="form-group" :class="{ 'has-error': formErrors.merchant_name }" data-validation-error="merchant_name">
              <label>Sklep</label>
-             <input
-               ref="merchantInput"
-               v-model="receiptData.merchant_name"
-               placeholder="Nazwa sklepu"
-               required
-             />
+             <input v-model="receiptData.merchant_name" placeholder="Nazwa sklepu" />
+             <span v-if="formErrors.merchant_name" class="error-text">{{ formErrors.merchant_name }}</span>
            </div>
 
             <div class="form-group">
@@ -63,7 +59,7 @@
                <label>Data</label>
                <input type="date" v-model="receiptData.purchase_date" />
              </div>
-             <div class="form-group half">
+             <div class="form-group half" :class="{ 'has-error': formErrors.purchaser }" data-validation-error="purchaser">
                <label>Płatnik</label>
                <select v-model="receiptData.purchaser">
                  <option :value="null" disabled>Kto płacił?</option>
@@ -71,6 +67,7 @@
                    {{ (m.first_name && m.first_name.trim() !== '') ? m.first_name : m.username }}
                  </option>
                </select>
+               <span v-if="formErrors.purchaser" class="error-text">{{ formErrors.purchaser }}</span>
              </div>
            </div>
 
@@ -95,7 +92,6 @@
                 <span class="icon">📸</span>
                 <div class="text-content">
                     <span class="main-text" v-if="!isAnalyzing">Wczytaj pozycje ze zdjęcia</span>
-
                     <span class="main-text" v-else>Analizowanie... ({{ pollingAttempts }})</span>
                     <span class="sub-text">Automatycznie odczytaj produkty i ceny</span>
                 </div>
@@ -113,7 +109,7 @@
           </div>
 
           <div v-else class="products-list">
-             <div v-for="(prod, idx) in receiptProducts" :key="idx" class="product-row">
+             <div v-for="(prod, idx) in receiptProducts" :key="idx" class="product-row" :class="{ 'has-error': formErrors.products?.[idx] }" :data-validation-error="`product-${idx}`">
 
                 <div class="qty-badge" v-if="prod.quantity > 1 && isInteger(prod.quantity)">
                   {{ parseInt(prod.quantity) }}x
@@ -127,6 +123,9 @@
                      </span>
                    </div>
                    <div class="prod-cat">{{ getCategoryLabel(prod.category) }} • 👥 {{ prod.consumers.length }}</div>
+                   <div v-if="formErrors.products?.[idx]" class="error-text error-small">
+                     ⚠️ {{ formErrors.products[idx] }}
+                   </div>
                 </div>
 
                 <div class="prod-price">{{ prod.price.toFixed(2) }} zł</div>
@@ -255,7 +254,7 @@
                 </select>
              </div>
 
-             <div class="form-group">
+             <div class="form-group" :class="{ 'has-error': productFormErrors.consumers }">
                 <label>Konsumenci </label>
                 <div class="checkbox-group">
                    <label v-for="member in settlementMembers" :key="member.id">
@@ -264,6 +263,7 @@
                    </label>
                 </div>
                 <p v-if="settlementMembers.length === 0" class="hint-error">Brak członków w grupie.</p>
+                <p v-if="productFormErrors.consumers" class="error-text">{{ productFormErrors.consumers }}</p>
              </div>
 
              <div class="modal-actions">
@@ -294,25 +294,11 @@
     <div v-if="errorMessage" class="toast error">{{ errorMessage }}</div>
     <div v-if="successMessage" class="toast success">{{ successMessage }}</div>
   </div>
-
-  <div v-if="showErrorModal" class="modal-overlay z-max" @click="showErrorModal = false">
-      <div class="modal-content small alert-box" @click.stop>
-        <div class="alert-icon error">⛔</div>
-        <h2>{{ errorTitle }}</h2>
-        <p class="info-text center-text">{{ errorBody }}</p>
-
-        <div class="modal-actions center">
-          <button type="button" class="primary" @click="showErrorModal = false">
-            Rozumiem
-          </button>
-        </div>
-      </div>
-    </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue';
-import { useRouter, useRoute,onBeforeRouteLeave } from 'vue-router';
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue';
+import { useRouter, onBeforeRouteLeave } from 'vue-router';
 import fractiService, { type Settlement, type User, Category, CATEGORY_LABELS } from '@/services/receipts.service';
 import { Cropper } from 'vue-advanced-cropper';
 import 'vue-advanced-cropper/dist/style.css';
@@ -320,7 +306,6 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 const router = useRouter();
-const route = useRoute();
 
 // --- STATE ---
 const settlements = ref<Settlement[]>([]);
@@ -339,11 +324,6 @@ const pollingAttempts = ref(0);
 const ocrResult = ref<any>(null);
 const showOcrOverlay = ref(false);
 const selectedOcrIndices = ref<Set<number>>(new Set());
-
-const showErrorModal = ref(false);
-const errorTitle = ref('');
-const errorBody = ref('');
-const merchantInput = ref<HTMLInputElement | null>(null);
 
 const receiptProducts = ref<any[]>([]);
 const receiptData = ref({
@@ -374,9 +354,64 @@ const confirmButtonText = ref('🗑️ Tak, usuń');
 const isUploading = ref(false);
 const errorMessage = ref('');
 const successMessage = ref('');
+
+const formErrors = ref<{
+  merchant_name?: string;
+  purchaser?: string;
+  products?: Record<number, string>;
+}>({});
+const productFormErrors = ref<{
+  consumers?: string;
+}>({});
 const categories = fractiService.getCategoriesOptionList();
 let mapInstance: L.Map | null = null;
 let markerInstance: L.Marker | null = null;
+
+// --- WATCHERS: Auto-clear errors when fields are corrected ---
+watch(
+  () => receiptData.value.merchant_name,
+  (newVal) => {
+    // Jeśli pole Sklep jest teraz wypełnione, usuń błąd
+    if (newVal && newVal.trim() !== '' && formErrors.value.merchant_name) {
+      formErrors.value.merchant_name = undefined;
+    }
+  }
+);
+
+watch(
+  () => receiptData.value.purchaser,
+  (newVal) => {
+    // Jeśli płatnik został wybrany, usuń błąd
+    if (newVal !== null && newVal !== undefined && formErrors.value.purchaser) {
+      formErrors.value.purchaser = undefined;
+    }
+  }
+);
+
+watch(
+  () => receiptProducts.value,
+  (newProducts) => {
+    // Sprawdź każdy produkt - jeśli ma konsumentów, usuń jego błąd
+    if (formErrors.value.products) {
+      newProducts.forEach((prod, idx) => {
+        if (prod.consumers && prod.consumers.length > 0) {
+          delete formErrors.value.products![idx];
+        }
+      });
+    }
+  },
+  { deep: true }
+);
+
+watch(
+  () => productForm.value.consumers,
+  (newConsumers) => {
+    // W modal produktu - jeśli wybrano konsumenta, usuń błąd
+    if (newConsumers && newConsumers.length > 0 && productFormErrors.value.consumers) {
+      productFormErrors.value.consumers = undefined;
+    }
+  }
+);
 
 // --- COMPUTED ---
 const canEditForm = computed(() => {
@@ -387,17 +422,6 @@ const canEditForm = computed(() => {
 onMounted(async () => {
   try {
     settlements.value = await fractiService.getSettlements();
-
-    const preselectedId = route.query.settlementId as string;
-
-    if (preselectedId) {
-      const exists = settlements.value.some(s => s.id === preselectedId);
-
-      if (exists) {
-        selectedSettlementId.value = preselectedId;
-        await handleSettlementChange();
-      }
-    }
   } catch (e) {
     console.error(e);
   }
@@ -511,7 +535,7 @@ const pollResult = async (taskId: string) => {
               price: item.price,
               quantity: item.quantity || 1,
               category: Category.FOOD,
-              consumers: settlementMembers.value.map(u => u.id)
+              consumers: [] // Nie przypisuj automatycznie - użytkownik musi wybrać
             });
          });
 
@@ -577,18 +601,13 @@ const closeOcrOverlay = () => {
   showOcrOverlay.value = false;
 };
 
-// METHODS: Product Management
+// --- METHODS: Product Management (CRUD) ---
 const openProductModal = (idx: number | null) => {
   editingProductIndex.value = idx;
-
   if (idx !== null) {
     const p = receiptProducts.value[idx];
     const qty = p.quantity || 1;
     const priceVal = parseFloat(p.price);
-
-    const defaultConsumers = (p.consumers && p.consumers.length > 0)
-      ? [...p.consumers]
-      : settlementMembers.value.map(u => u.id);
 
     productForm.value = {
       name: p.name,
@@ -596,16 +615,13 @@ const openProductModal = (idx: number | null) => {
       quantity: qty,
       unitPrice: priceVal / qty,
       category: p.category,
-      consumers: defaultConsumers
+      consumers: [...p.consumers]
     };
   } else {
     productForm.value = {
-      name: '',
-      price: '',
-      quantity: 1,
-      unitPrice: 0,
+      name: '', price: '', quantity: 1, unitPrice: 0,
       category: Category.FOOD,
-      consumers: settlementMembers.value.map(u => u.id)
+      consumers: [] // Nie przypisuj automatycznie - użytkownik musi wybrać
     };
   }
   showProductModal.value = true;
@@ -628,8 +644,9 @@ const handlePriceChange = () => {
 };
 
 const saveProduct = () => {
+  productFormErrors.value = {};
   if (productForm.value.consumers.length === 0) {
-    openErrorModal('Brak konsumentów', 'Produkt musi mieć przypisanego co najmniej jednego konsumenta (osobę, która za niego płaci/korzysta).');
+    productFormErrors.value.consumers = 'Wybierz co najmniej jednego konsumenta';
     return;
   }
 
@@ -701,18 +718,39 @@ const initMap = (elId: string) => {
 };
 
 const submitReceipt = async () => {
+  formErrors.value = {};
+  let hasErrors = false;
 
   if (!receiptData.value.merchant_name || receiptData.value.merchant_name.trim() === '') {
-    if (merchantInput.value) {
-      merchantInput.value.reportValidity();
-    } else {
-      openErrorModal('Brak nazwy sklepu', 'Proszę wpisać nazwę sklepu.');
-    }
-    return;
+    formErrors.value.merchant_name = 'Pole "Sklep" jest wymagane';
+    hasErrors = true;
   }
 
   if (!receiptData.value.purchaser) {
-    openErrorModal('Brak płatnika', 'Musisz wybrać osobę, która zapłaciła za ten paragon (pole "Płatnik").');
+    formErrors.value.purchaser = 'Pole "Płatnik" jest wymagane';
+    hasErrors = true;
+  }
+
+  formErrors.value.products = {};
+  for (let i = 0; i < receiptProducts.value.length; i++) {
+    const prod = receiptProducts.value[i];
+    if (!prod.consumers || prod.consumers.length === 0) {
+      formErrors.value.products[i] = `Produkt "${prod.name}" nie ma wybranych konsumentów`;
+      hasErrors = true;
+    }
+  }
+
+  // Jeśli są błędy, zaznacz pola i przescrolluj do pierwszego
+  if (hasErrors) {
+    errorMessage.value = 'Uzupełnij wszystkie wymagane pola';
+    setTimeout(() => errorMessage.value = '', 4000);
+    
+    // Przescrolluj do pierwszego błędu
+    await nextTick();
+    const firstErrorElement = document.querySelector('[data-validation-error]');
+    if (firstErrorElement) {
+      firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
     return;
   }
 
@@ -721,7 +759,6 @@ const submitReceipt = async () => {
 
   try {
     const fd = new FormData();
-
     if (croppedImageUrl.value) {
        const resp = await fetch(croppedImageUrl.value);
        const blob = await resp.blob();
@@ -734,10 +771,9 @@ const submitReceipt = async () => {
     fd.append('total_amount', totalAmount.toString());
     fd.append('category', 'SHOPPING');
 
-    // --- Płatnik (Już zwalidowany wyżej) ---
-    fd.append('purchaser', receiptData.value.purchaser.toString());
-
-    // --- Settlement ---
+    if (receiptData.value.purchaser) {
+        fd.append('purchaser', receiptData.value.purchaser.toString());
+    }
     if (selectedSettlementId.value && selectedSettlementId.value !== 'PERSONAL' && selectedSettlementId.value !== 'NEW_SETTLEMENT') {
       fd.append('settlement', String(selectedSettlementId.value));
     }
@@ -750,8 +786,12 @@ const submitReceipt = async () => {
     const receipt = await fractiService.createReceipt(fd);
 
     for (const prod of receiptProducts.value) {
+
+
       const safePrice = parseFloat(String(prod.price)).toFixed(2);
+
       const safeQuantity = parseFloat(String(prod.quantity || 1)).toFixed(3);
+
       const safeConsumers = Array.isArray(prod.consumers) ? prod.consumers : [];
 
       let safeSettlement = undefined;
@@ -759,6 +799,7 @@ const submitReceipt = async () => {
           safeSettlement = String(selectedSettlementId.value);
       }
 
+      // Payload do wysyłki
       const itemPayload = {
          name: prod.name,
          price: safePrice,
@@ -767,6 +808,9 @@ const submitReceipt = async () => {
          consumers: safeConsumers,
          settlement: safeSettlement
       };
+
+      // Debug: Zobacz w konsoli przeglądarki co dokładnie leci, jeśli znowu będzie błąd
+      console.log("Wysyłanie produktu:", itemPayload);
 
       await fractiService.addReceiptItem(receipt.id, itemPayload);
     }
@@ -782,22 +826,16 @@ const submitReceipt = async () => {
 
   } catch (e: any) {
     console.error("Błąd zapisu:", e);
+    // Wyświetl szczegóły błędu z backendu jeśli dostępne
     if (e.response && e.response.data) {
         console.error("Detale błędu:", e.response.data);
-        // Jeśli backend zwróci konkretny błąd, pokaż go w modalu zamiast toasta
-        openErrorModal('Błąd zapisu', `Serwer odrzucił dane: ${JSON.stringify(e.response.data)}`);
+        errorMessage.value = `Błąd zapisu: ${JSON.stringify(e.response.data)}`;
     } else {
         errorMessage.value = "Błąd zapisu paragonu.";
     }
   } finally {
     isUploading.value = false;
   }
-};
-
-const openErrorModal = (title: string, body: string) => {
-  errorTitle.value = title;
-  errorBody.value = body;
-  showErrorModal.value = true;
 };
 
 const goBack = () => router.back();
@@ -1092,12 +1130,68 @@ button.small {
   gap: 10px;
   margin-top: 10px;
 }
-.alert-icon.error {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+
+.form-group.has-error input,
+.form-group.has-error select,
+.form-group.has-error textarea {
+  border-color: #ef4444 !important;
+  border-width: 2px !important;
+  background-color: rgba(239, 68, 68, 0.05);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  transition: all 0.2s ease;
 }
-.modal-actions.center {
-  justify-content: center;
+
+.form-group.has-error input:focus,
+.form-group.has-error select:focus,
+.form-group.has-error textarea:focus {
+  outline: none;
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
+}
+
+.error-text {
+  display: block;
+  color: #ef4444;
+  font-size: 0.85rem;
+  margin-top: 4px;
+  font-weight: 500;
+  animation: slideDown 0.3s ease-out;
+}
+
+.error-text.error-small {
+  font-size: 0.8rem;
+  margin-top: 2px;
+  color: #fca5a5;
+}
+
+.product-row.has-error {
+  border: 2px solid #ef4444 !important;
+  background: rgba(239, 68, 68, 0.08) !important;
+  border-radius: 8px;
+  padding: 10px 12px !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
+  transition: all 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.checkbox-group.has-error {
+  border: 2px solid #ef4444;
+  border-radius: 8px;
+  padding: 12px;
+  background-color: rgba(239, 68, 68, 0.05);
+}
+
+.form-group.has-error label {
+  color: #fca5a5;
 }
 </style>
