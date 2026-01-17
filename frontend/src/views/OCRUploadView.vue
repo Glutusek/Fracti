@@ -279,7 +279,7 @@
             Anuluj
           </button>
           <button type="button" class="danger-btn full-confirm" @click="handleConfirmDelete">
-            🗑️ Tak, usuń
+            {{ confirmButtonText || '🗑️ Tak, usuń' }}
           </button>
         </div>
       </div>
@@ -291,8 +291,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue';
+import { useRouter, onBeforeRouteLeave } from 'vue-router';
 import fractiService, { type Settlement, type User, Category, CATEGORY_LABELS } from '@/services/receipts.service';
 import { Cropper } from 'vue-advanced-cropper';
 import 'vue-advanced-cropper/dist/style.css';
@@ -344,7 +344,7 @@ const showConfirmModal = ref(false);
 const confirmMessage = ref('');
 const confirmSubMessage = ref('');
 const pendingDeleteAction = ref<(() => void) | null>(null);
-
+const confirmButtonText = ref('🗑️ Tak, usuń');
 const isUploading = ref(false);
 const errorMessage = ref('');
 const successMessage = ref('');
@@ -613,6 +613,7 @@ const handleConfirmDelete = () => {
 };
 
 const confirmRemoveProduct = (idx: number) => {
+  confirmButtonText.value = '🗑️ Tak, usuń';
   openConfirmModal(
     'Usunąć pozycję?',
     `Czy na pewno chcesz usunąć "${receiptProducts.value[idx].name}"?`,
@@ -746,6 +747,46 @@ const submitReceipt = async () => {
 };
 
 const goBack = () => router.back();
+
+onBeforeRouteLeave((to, _, next) => {
+  if (isAnalyzing.value || isUploading.value) {
+
+    next(false);
+
+    confirmMessage.value = 'Przerwać działanie?';
+    confirmSubMessage.value = 'Trwa przetwarzanie paragonu. Jeśli wyjdziesz teraz, utracisz postępy.';
+    confirmButtonText.value = '🚪 Tak, wyjdź';
+
+    pendingDeleteAction.value = () => {
+      isAnalyzing.value = false;
+      isUploading.value = false;
+
+      router.push(to);
+    };
+
+    showConfirmModal.value = true;
+
+  } else {
+
+    next();
+  }
+});
+
+const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+  if (isAnalyzing.value || isUploading.value) {
+    e.preventDefault();
+    e.returnValue = '';
+    return '';
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('beforeunload', handleBeforeUnload);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload);
+});
 </script>
 
 <style scoped>
