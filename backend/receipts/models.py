@@ -159,3 +159,41 @@ class Product(MapItem):
     class Meta:
         verbose_name = _("Produkt")
         verbose_name_plural = _("Produkty")
+
+
+class DebtSettlement(models.Model):
+    """Model przechowujący informacje o wykonanych transakcjach rozliczeniowych"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    settlement = models.ForeignKey(
+        Settlement,
+        on_delete=models.CASCADE,
+        related_name='debt_settlements',
+        verbose_name=_("Rozliczenie")
+    )
+    from_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='debts_from_user',
+        verbose_name=_("Od użytkownika")
+    )
+    to_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='debts_to_user',
+        verbose_name=_("Do użytkownika")
+    )
+    amount = models.DecimalField(
+        _("Kwota"),
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))]
+    )
+    settled_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Data wykonania"))
+    
+    def __str__(self):
+        return f"{self.from_user} → {self.to_user}: {self.amount} PLN"
+    
+    class Meta:
+        verbose_name = _("Wykonane rozliczenie")
+        verbose_name_plural = _("Wykonane rozliczenia")
+        ordering = ['-settled_at']

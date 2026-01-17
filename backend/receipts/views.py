@@ -16,8 +16,8 @@ from celery.result import AsyncResult
 from .tasks import process_receipt_task
 
 # Importujemy nasze modele i serializery
-from .models import Receipt, Product, Settlement
-from .serializers import ReceiptSerializer, ProductSerializer, SettlementSerializer
+from .models import Receipt, Product, Settlement, DebtSettlement
+from .serializers import ReceiptSerializer, ProductSerializer, SettlementSerializer, DebtSettlementSerializer
 # Importujemy permissions (jeśli masz ten plik, jeśli nie - usuń tę linię)
 # from .permissions import IsSettlementMember
 
@@ -87,6 +87,60 @@ class SettlementViewSet(viewsets.ModelViewSet):
             return Response({"status": "Użytkownik usunięty"}, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response({"error": "Użytkownik nie istnieje"}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['post'], url_path='settle-debt')
+    def settle_debt(self, request, pk=None):
+        """
+        Endpoint do zatwierdzenia/wykonania rozliczenia.
+        Tworzy zapis w DebtSettlement i odpowiadająco aktualizuje kwoty.
+        """
+        settlement = self.get_object()
+        from_user_id = request.data.get('from_user')
+        to_user_id = request.data.get('to_user')
+        amount = request.data.get('amount')
+
+        if not all([from_user_id, to_user_id, amount]):
+            return Response(
+                {"error": "Wymagane pola: from_user, to_user, amount"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            from_user = User.objects.get(id=from_user_id)
+            to_user = User.objects.get(id=to_user_id)
+        except User.DoesNotExist:
+            return Response(
+                {"error": "Użytkownik nie istnieje"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        debt_settlement = DebtSettlement.objects.create(
+            settlement=settlement,
+            from_user=from_user,
+            to_user=to_user,
+            amount=amount
+        )
+
+        serializer = DebtSettlementSerializer(debt_settlement)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['delete'], url_path='settle-debt/(?P<debt_id>[^/.]+)')
+    def undo_settle_debt(self, request, pk=None, debt_id=None):
+        """
+        Endpoint do cofnięcia/usunięcia wykonanego rozliczenia.
+        """
+        settlement = self.get_object()
+        
+        try:
+            debt_settlement = DebtSettlement.objects.get(id=debt_id, settlement=settlement)
+            debt_settlement.delete()
+            return Response({"status": "Rozliczenie cofnięte"}, status=status.HTTP_200_OK)
+        except DebtSettlement.DoesNotExist:
+            return Response(
+                {"error": "Rozliczenie nie znalezione"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
 class ReceiptViewSet(viewsets.ModelViewSet):
     """
     Widok obsługujący Paragony.

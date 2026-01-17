@@ -132,21 +132,74 @@
 
             <!-- Sekcja zobowiązań netto -->
             <div v-if="calculateNetDebts().length > 0" class="debts-section">
-              <h3>Rozliczenia</h3>
+              <h3>💰 Rozliczenia</h3>
               <div class="debts-list">
                 <div v-for="(debt, index) in calculateNetDebts()" :key="index" class="debt-item">
-                  <div class="debt-info">
-                    <span class="debt-from">{{ debt.fromName }}</span>
-                    <span class="debt-arrow">→ oddaje →</span>
-                    <span class="debt-to">{{ debt.toName }}</span>
+                  <div class="debt-from-user">
+                    <div class="user-avatar-small">{{ debt.fromName.charAt(0).toUpperCase() }}</div>
+                    <div class="debt-name">{{ debt.fromName }}</div>
                   </div>
-                  <div class="debt-amount">{{ formatMoney(debt.amount) }} zł</div>
+                  
+                  <div class="debt-center">
+                    <div class="arrow-icon">→</div>
+                    <div class="action-label">oddaje</div>
+                  </div>
+                  
+                  <div class="debt-to-user">
+                    <div class="debt-name">{{ debt.toName }}</div>
+                    <div class="user-avatar-small">{{ debt.toName.charAt(0).toUpperCase() }}</div>
+                  </div>
+                  
+                  <div class="debt-amount-box">
+                    <div class="debt-amount">{{ formatMoney(debt.amount) }}</div>
+                    <div class="debt-currency">zł</div>
+                  </div>
+                  
+                  <button class="settle-btn" @click="settleDebtTransaction(debt)" title="Potwierdź rozliczenie">
+                    ✓
+                  </button>
                 </div>
               </div>
             </div>
             <div v-else class="debts-section">
-              <h3>Rozliczenia</h3>
+              <h3>💰 Rozliczenia</h3>
               <div class="empty-state">✓ Wszyscy są rozliczeni!</div>
+            </div>
+
+            <!-- Sekcja wykonanych rozliczeń -->
+            <div v-if="settlement?.debt_settlements && settlement.debt_settlements.length > 0" class="settled-debts-section">
+              <h3>✅ Wykonane rozliczenia</h3>
+              <div class="settled-debts-list">
+                <div v-for="debt in settlement.debt_settlements" :key="debt.id" class="settled-debt-item">
+                  <div class="settled-debt-from-user">
+                    <div class="user-avatar-small">{{ debt.from_user_name?.charAt(0).toUpperCase() }}</div>
+                    <div class="settled-debt-name">{{ debt.from_user_name }}</div>
+                  </div>
+                  
+                  <div class="settled-debt-center">
+                    <div class="arrow-icon">→</div>
+                    <div class="action-label">oddał</div>
+                  </div>
+                  
+                  <div class="settled-debt-to-user">
+                    <div class="settled-debt-name">{{ debt.to_user_name }}</div>
+                    <div class="user-avatar-small">{{ debt.to_user_name?.charAt(0).toUpperCase() }}</div>
+                  </div>
+                  
+                  <div class="settled-debt-amount-box">
+                    <div class="settled-debt-amount">{{ formatMoney(debt.amount) }}</div>
+                    <div class="settled-debt-currency">zł</div>
+                  </div>
+
+                  <div class="settled-debt-date">
+                    {{ formatDate(debt.settled_at) }}
+                  </div>
+                  
+                  <button class="undo-settle-btn" @click="undoSettleDebtTransaction(debt)" title="Cofnij rozliczenie">
+                    ↶
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div class="user-actions-row">
@@ -194,17 +247,18 @@
             </div>
           </div>
 
-          <div class="form-group">
+          <div class="form-group" :class="{ 'has-error': addProductFormErrors.payer }">
             <label>Płatnik</label>
-            <select v-model="newProduct.payer" required>
+            <select v-model="newProduct.payer">
               <option :value="null" disabled>Wybierz płatnika</option>
               <option v-for="member in settlement?.members" :key="member.id" :value="member.id">
                 {{ (member.first_name && member.first_name.trim() !== '') ? member.first_name : member.username }}
               </option>
             </select>
+            <span v-if="addProductFormErrors.payer" class="error-text">{{ addProductFormErrors.payer }}</span>
           </div>
 
-          <div class="form-group">
+          <div class="form-group" :class="{ 'has-error': addProductFormErrors.consumers }">
             <label>Konsumenci</label>
             <div class="checkbox-group">
               <label v-for="member in settlement?.members" :key="member.id">
@@ -212,6 +266,7 @@
                 {{ (member.first_name && member.first_name.trim() !== '') ? member.first_name : member.username }}
               </label>
             </div>
+            <span v-if="addProductFormErrors.consumers" class="error-text">{{ addProductFormErrors.consumers }}</span>
           </div>
           <div class="modal-actions">
             <button type="button" @click="showAddProductModal = false">Anuluj</button>
@@ -282,12 +337,13 @@
 
           <div class="form-group">
             <label>Konsumenci</label>
-            <div class="checkbox-group">
+            <div class="checkbox-group" :class="{ 'has-error': editProductFormErrors.consumers }">
               <label v-for="member in settlement?.members" :key="member.id">
                 <input type="checkbox" :value="member.id" v-model="editingProduct.consumers" />
                 {{ (member.first_name && member.first_name.trim() !== '') ? member.first_name : member.username }}
               </label>
             </div>
+            <span v-if="editProductFormErrors.consumers" class="error-text">{{ editProductFormErrors.consumers }}</span>
           </div>
 
           <div class="modal-actions space-between">
@@ -474,7 +530,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import fractiService, { type Settlement, type Receipt, type Product, CATEGORY_LABELS, Category } from '@/services/receipts.service';
 import L from 'leaflet';
@@ -525,7 +581,42 @@ const receiptItemForm = ref({
   consumers: [] as number[]
 });
 
+const addProductFormErrors = ref<{
+  payer?: string;
+  consumers?: string;
+}>({});
+const editProductFormErrors = ref<{
+  consumers?: string;
+}>({});
+
 const categories = fractiService.getCategoriesOptionList();
+
+watch(
+  () => newProduct.value.payer,
+  (newVal) => {
+    if (newVal !== null && newVal !== undefined && addProductFormErrors.value.payer) {
+      addProductFormErrors.value.payer = undefined;
+    }
+  }
+);
+
+watch(
+  () => newProduct.value.consumers,
+  (newConsumers) => {
+    if (newConsumers && newConsumers.length > 0 && addProductFormErrors.value.consumers) {
+      addProductFormErrors.value.consumers = undefined;
+    }
+  }
+);
+
+watch(
+  () => editingProduct.value?.consumers,
+  (newConsumers) => {
+    if (newConsumers && newConsumers.length > 0 && editProductFormErrors.value.consumers) {
+      editProductFormErrors.value.consumers = undefined;
+    }
+  }
+);
 
 // Computed
 const calculatedReceiptTotal = computed(() => {
@@ -686,6 +777,13 @@ const getUserBalance = (userId: number): number => {
 const calculateNetDebts = (): Array<{from: number, to: number, amount: number, fromName: string, toName: string}> => {
   if (!settlement.value) return [];
 
+  // Zbierz wszystkie już rozliczone długi
+  const settledDebts = new Set<string>();
+  settlement.value.debt_settlements?.forEach(ds => {
+    const key = `${ds.from_user}-${ds.to_user}-${ds.amount}`;
+    settledDebts.add(key);
+  });
+
   // Najpierw oblicz wszystkie bilanse
   const balances: { [key: number]: number } = {};
   
@@ -712,13 +810,18 @@ const calculateNetDebts = (): Array<{from: number, to: number, amount: number, f
         // A jest winny B
         const amount = Math.min(Math.abs(balanceA), balanceB);
         if (amount > 0.01) {
-          debts.push({
-            from: memberA.id,
-            to: memberB.id,
-            amount: parseFloat(amount.toFixed(2)),
-            fromName: memberA.first_name || memberA.username,
-            toName: memberB.first_name || memberB.username
-          });
+          const debtKey = `${memberA.id}-${memberB.id}-${amount.toFixed(2)}`;
+          
+          // Sprawdź czy ten dług nie został już rozliczony
+          if (!settledDebts.has(debtKey)) {
+            debts.push({
+              from: memberA.id,
+              to: memberB.id,
+              amount: parseFloat(amount.toFixed(2)),
+              fromName: memberA.first_name || memberA.username,
+              toName: memberB.first_name || memberB.username
+            });
+          }
           
           balances[memberA.id] += amount;
           balances[memberB.id] -= amount;
@@ -727,13 +830,18 @@ const calculateNetDebts = (): Array<{from: number, to: number, amount: number, f
         // B jest winny A
         const amount = Math.min(balanceA, Math.abs(balanceB));
         if (amount > 0.01) {
-          debts.push({
-            from: memberB.id,
-            to: memberA.id,
-            amount: parseFloat(amount.toFixed(2)),
-            fromName: memberB.first_name || memberB.username,
-            toName: memberA.first_name || memberA.username
-          });
+          const debtKey = `${memberB.id}-${memberA.id}-${amount.toFixed(2)}`;
+          
+          // Sprawdź czy ten dług nie został już rozliczony
+          if (!settledDebts.has(debtKey)) {
+            debts.push({
+              from: memberB.id,
+              to: memberA.id,
+              amount: parseFloat(amount.toFixed(2)),
+              fromName: memberB.first_name || memberB.username,
+              toName: memberA.first_name || memberA.username
+            });
+          }
           
           balances[memberA.id] -= amount;
           balances[memberB.id] += amount;
@@ -778,6 +886,39 @@ const createGuestUser = async () => {
     showToast('Błąd dodawania użytkownika', 'error');
   } finally {
     loading.value = false;
+  }
+};
+
+const settleDebtTransaction = async (debt: any) => {
+  if (!settlement.value) return;
+
+  try {
+    await fractiService.settleDebt(
+      settlement.value.id,
+      debt.from,
+      debt.to,
+      debt.amount
+    );
+    
+    showToast(`Rozliczenie potwierdzone! ${debt.fromName} oddał ${debt.toName} ${debt.amount} zł`, 'success');
+    await loadSettlement();
+  } catch (e) {
+    console.error('Błąd przy zatwierdzaniu rozliczenia:', e);
+    showToast('Nie udało się potwierdzić rozliczenia', 'error');
+  }
+};
+
+const undoSettleDebtTransaction = async (debt: any) => {
+  if (!settlement.value) return;
+
+  try {
+    await fractiService.undoSettleDebt(settlement.value.id, debt.id);
+    
+    showToast(`Cofnięto rozliczenie: ${debt.from_user_name} → ${debt.to_user_name}`, 'success');
+    await loadSettlement();
+  } catch (e) {
+    console.error('Błąd przy cofaniu rozliczenia:', e);
+    showToast('Nie udało się cofnąć rozliczenia', 'error');
   }
 };
 
@@ -883,6 +1024,7 @@ const openAddProductModal = async () => {
     latitude: null,
     longitude: null
   };
+  addProductFormErrors.value = {};
   showAddProductModal.value = true;
 
   // Czekamy aż modal się wyrenderuje, żeby DIV mapy istniał
@@ -919,6 +1061,7 @@ const editItem = async (item: any) => {
 
 const editProduct = async (product: Product) => {
   editingProduct.value = { ...product }; // Kopia
+  editProductFormErrors.value = {};
   showEditProductModal.value = true;
 
   await nextTick();
@@ -945,12 +1088,24 @@ const copyCode = async () => {
 };
 
 const createLooseProduct = async () => {
-  try {
-    if (!newProduct.value.payer) {
-      alert('Wybierz płatnika');
-      return;
-    }
+  addProductFormErrors.value = {};
+  let hasErrors = false;
 
+  if (!newProduct.value.payer) {
+    addProductFormErrors.value.payer = 'Pole "Płatnik" jest wymagane';
+    hasErrors = true;
+  }
+
+  if (!newProduct.value.consumers || newProduct.value.consumers.length === 0) {
+    addProductFormErrors.value.consumers = 'Wybierz co najmniej jednego konsumenta';
+    hasErrors = true;
+  }
+
+  if (hasErrors) {
+    return;
+  }
+
+  try {
     await fractiService.addLooseProduct({
       name: newProduct.value.name,
       description: newProduct.value.description,
@@ -965,6 +1120,17 @@ const createLooseProduct = async () => {
 
     await loadSettlement();
     showAddProductModal.value = false;
+    addProductFormErrors.value = {};
+    newProduct.value = {
+      name: '',
+      description: '',
+      price: '',
+      category: Category.FOOD,
+      payer: null,
+      consumers: [],
+      latitude: null,
+      longitude: null
+    };
     showToast('Dodano produkt', 'success');
   } catch (error) {
     console.error('Błąd dodawania produktu:', error);
@@ -974,6 +1140,21 @@ const createLooseProduct = async () => {
 
 const updateProduct = async () => {
   if (!editingProduct.value) return;
+  
+  // Czyszczenie poprzednich błędów
+  editProductFormErrors.value = {};
+  let hasErrors = false;
+
+  // Walidacja konsumentów
+  if (!editingProduct.value.consumers || editingProduct.value.consumers.length === 0) {
+    editProductFormErrors.value.consumers = 'Wybierz co najmniej jednego konsumenta';
+    hasErrors = true;
+  }
+
+  if (hasErrors) {
+    return;
+  }
+
   try {
     await fractiService.updateProduct(editingProduct.value.id, {
       name: editingProduct.value.name,
@@ -987,6 +1168,7 @@ const updateProduct = async () => {
     });
     await loadSettlement();
     showEditProductModal.value = false;
+    editProductFormErrors.value = {};
   } catch (e) {
     console.error('Błąd aktualizacji produktu:', e);
     alert('Nie udało się zaktualizować produktu');
@@ -1601,67 +1783,146 @@ onMounted(() => {
 /* Sekcja zobowiązań */
 .debts-section {
   margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(139, 92, 246, 0.2);
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.05) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 12px;
 }
 
 .debts-section h3 {
-  color: #a78bfa;
-  font-size: 1.2rem;
-  margin-bottom: 1rem;
+  color: #c4b5fd;
+  font-size: 1.3rem;
+  margin-bottom: 1.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .debts-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .debt-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem;
-  background: rgba(99, 102, 241, 0.05);
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  border-radius: 8px;
-  transition: all 0.2s;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  grid-template-rows: auto auto;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.6) 0%, rgba(15, 23, 42, 0.4) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.debt-item > .debt-amount-box {
+  grid-column: 1 / 2;
+}
+
+.debt-item > .settle-btn {
+  grid-column: 2 / 4;
 }
 
 .debt-item:hover {
-  background: rgba(99, 102, 241, 0.1);
-  border-color: rgba(99, 102, 241, 0.3);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(15, 23, 42, 0.6) 100%);
+  border-color: rgba(139, 92, 246, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.2);
 }
 
-.debt-info {
-  flex: 1;
+.debt-from-user {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.debt-to-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-direction: row-reverse;
+}
+
+.user-avatar-small {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
   font-size: 0.9rem;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
 }
 
-.debt-from {
+.debt-name {
   font-weight: 600;
-  color: #f87171;
+  font-size: 0.95rem;
+  color: #e5e7eb;
+  min-width: 80px;
 }
 
-.debt-arrow {
+.debt-from-user .debt-name {
+  color: #fca5a5;
+}
+
+.debt-to-user .debt-name {
+  color: #86efac;
+}
+
+.debt-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-self: center;
+  gap: 2px;
+}
+
+.arrow-icon {
+  font-size: 1.2rem;
   color: #9ca3af;
-  font-size: 0.8rem;
+  font-weight: bold;
 }
 
-.debt-to {
+.action-label {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   font-weight: 600;
-  color: #4ade80;
+}
+
+.debt-amount-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(251, 146, 60, 0.15) 100%);
+  padding: 1rem;
+  border-radius: 10px;
+  border: 2px solid rgba(245, 158, 11, 0.4);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+  transition: all 0.2s ease;
+  cursor: default;
+  min-height: 50px;
 }
 
 .debt-amount {
-  font-weight: 700;
+  font-weight: 800;
   color: #fbbf24;
-  font-size: 1rem;
-  white-space: nowrap;
-  margin-left: 1rem;
+  font-size: 1.4rem;
+}
+
+.debt-currency {
+  font-weight: 600;
+  color: #fcd34d;
+  font-size: 0.95rem;
 }
 
 .empty-state {
@@ -1902,25 +2163,67 @@ onMounted(() => {
 
   .debts-section {
     margin-top: 1rem;
-    padding-top: 1rem;
+    padding: 1rem;
+  }
+
+  .debts-section h3 {
+    font-size: 1.1rem;
   }
 
   .debt-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-    padding: 0.5rem;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    padding: 0.75rem;
   }
 
-  .debt-info {
+  .debt-from-user,
+  .debt-to-user {
     width: 100%;
-    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+
+  .debt-center {
+    flex-direction: row;
+    gap: 0.5rem;
+    width: 100%;
+    justify-content: center;
+    padding: 0.5rem 0;
+    border-top: 1px solid rgba(139, 92, 246, 0.2);
+    border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+  }
+
+  .action-label {
+    display: none;
+  }
+
+  .arrow-icon {
+    font-size: 1rem;
+  }
+
+  .user-avatar-small {
+    width: 32px;
+    height: 32px;
     font-size: 0.85rem;
   }
 
+  .debt-name {
+    font-size: 0.9rem;
+    min-width: 60px;
+  }
+
+  .debt-amount-box {
+    width: 100%;
+    justify-content: center;
+    gap: 6px;
+    padding: 0.6rem;
+  }
+
   .debt-amount {
-    margin-left: 0;
-    align-self: flex-end;
+    font-size: 1.2rem;
+  }
+
+  .debt-currency {
+    font-size: 0.85rem;
   }
 
   .product-item {
@@ -2051,6 +2354,52 @@ onMounted(() => {
 
   .product-name {
     font-size: 0.9rem;
+  }
+
+  .debt-item {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    padding: 0.6rem;
+  }
+
+  .debt-from-user,
+  .debt-to-user {
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .user-avatar-small {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+
+  .debt-name {
+    font-size: 0.85rem;
+    min-width: 50px;
+  }
+
+  .debt-center {
+    flex-direction: row;
+    gap: 0.3rem;
+    padding: 0.4rem 0;
+  }
+
+  .arrow-icon {
+    font-size: 0.9rem;
+  }
+
+  .debt-amount-box {
+    width: 100%;
+    padding: 0.5rem;
+  }
+
+  .debt-amount {
+    font-size: 1.1rem;
+  }
+
+  .debt-currency {
+    font-size: 0.8rem;
   }
 
   .modal-content {
@@ -2453,5 +2802,235 @@ user-actions-row {
   border-color: #ef4444;
   color: #fff;
   transform: scale(1.05);
+}
+
+.form-group.has-error input,
+.form-group.has-error select,
+.form-group.has-error textarea {
+  border-color: #ef4444 !important;
+  border-width: 2px !important;
+  background-color: rgba(239, 68, 68, 0.05);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  transition: all 0.2s ease;
+}
+
+.form-group.has-error input:focus,
+.form-group.has-error select:focus,
+.form-group.has-error textarea:focus {
+  outline: none;
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
+}
+
+.error-text {
+  display: block;
+  color: #ef4444;
+  font-size: 0.85rem;
+  margin-top: 4px;
+  font-weight: 500;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.form-group.has-error label {
+  color: #fca5a5;
+}
+
+.checkbox-group.has-error {
+  border: 2px solid #ef4444;
+  border-radius: 8px;
+  padding: 12px;
+  background-color: rgba(239, 68, 68, 0.05);
+}
+
+.settle-btn {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(34, 197, 94, 0.2));
+  border: 2px solid rgba(34, 197, 94, 0.5);
+  color: #86efac;
+  padding: 1rem;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  transition: all 0.2s ease;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2);
+  min-height: 50px;
+}
+
+.settle-btn:hover {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.45), rgba(34, 197, 94, 0.35));
+  border-color: #22c55e;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.4);
+}
+
+.settle-btn:active {
+  transform: scale(0.95);
+}
+
+.settled-debts-section {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(74, 222, 128, 0.05) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 12px;
+}
+
+.settled-debts-section h3 {
+  color: #86efac;
+  font-size: 1.3rem;
+  margin-bottom: 1.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.settled-debts-list {
+  display: grid;
+  gap: 12px;
+}
+
+.settled-debt-item {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  grid-template-rows: auto auto;
+  gap: 0.75rem;
+  padding: 12px;
+  background: rgba(34, 197, 94, 0.05);
+  border: 1px solid rgba(34, 197, 94, 0.15);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.settled-debt-item > .settled-debt-date {
+  grid-column: 1 / 2;
+  grid-row: 2;
+}
+
+.settled-debt-item > .settled-debt-amount-box {
+  grid-column: 2 / 3;
+  grid-row: 2;
+}
+
+.settled-debt-item > .undo-settle-btn {
+  grid-column: 3 / 4;
+  grid-row: 2;
+}
+
+.settled-debt-item:hover {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.settled-debt-from-user,
+.settled-debt-to-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settled-debt-from-user {
+  justify-content: flex-start;
+}
+
+.settled-debt-to-user {
+  justify-content: flex-end;
+}
+
+.settled-debt-name {
+  font-size: 0.9rem;
+  color: #d1d5db;
+  font-weight: 500;
+}
+
+.settled-debt-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.settled-debt-amount-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(74, 222, 128, 0.15) 100%);
+  padding: 1rem;
+  border-radius: 10px;
+  border: 2px solid rgba(34, 197, 94, 0.3);
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2);
+  min-height: 50px;
+}
+
+.settled-debt-amount {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #86efac;
+}
+
+.settled-debt-currency {
+  font-size: 0.75rem;
+  color: #6ee7b7;
+  font-weight: 500;
+}
+
+.settled-debt-date {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  text-align: center;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(99, 102, 241, 0.1) 100%);
+  padding: 1rem;
+  border-radius: 10px;
+  border: 2px solid rgba(139, 92, 246, 0.3);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.15);
+  min-height: 50px;
+  font-weight: 600;
+}
+
+.undo-settle-btn {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(239, 68, 68, 0.2));
+  border: 2px solid rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  padding: 1rem;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  transition: all 0.2s ease;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
+  min-height: 50px;
+}
+
+.undo-settle-btn:hover {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.45), rgba(239, 68, 68, 0.35));
+  border-color: #ef4444;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
+}
+
+.undo-settle-btn:active {
+  transform: scale(0.95);
 }
 </style>

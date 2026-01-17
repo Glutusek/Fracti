@@ -201,11 +201,25 @@ async analyzeReceipt(formData: FormData): Promise<{task_id: string; status: stri
     }));
   }
   async addGuestUser(settlementId: string, name: string) {
-  const response = await apiClient.post(`settlements/${settlementId}/add-guest/`, {
-    name: name
-  });
-  return response.data;
-}
+    const response = await apiClient.post(`settlements/${settlementId}/add-guest/`, {
+      name: name
+    });
+    return response.data;
+  }
+
+  async settleDebt(settlementId: string, fromUserId: number, toUserId: number, amount: number): Promise<any> {
+    const response = await apiClient.post(`/settlements/${settlementId}/settle-debt/`, {
+      from_user: fromUserId,
+      to_user: toUserId,
+      amount: amount
+    });
+    return response.data;
+  }
+
+  async undoSettleDebt(settlementId: string, debtId: string): Promise<any> {
+    const response = await apiClient.delete(`/settlements/${settlementId}/settle-debt/${debtId}/`);
+    return response.data;
+  }
 }
 
 
