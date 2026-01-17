@@ -55,14 +55,42 @@ Wymagane jest posiadanie zainstalowanego **Docker Desktop** oraz **Git**.
 git clone <adres_repozytorium>
 cd fracti
 ```
+### 2. ⚙️ Konfiguracja modelu AI (Gemini)
+Aplikacja korzysta z modelu Gemini 2.5 Flash Lite od Google, ale używa klienta kompatybilnego z OpenAI. Dzięki temu konfiguracja jest prosta, ale wymaga odpowiedniego klucza.
 
-### 2. Uruchomienie środowiska
+Utwórz plik konfiguracyjny: Skopiuj przykładowy plik .env.example i zmień jego nazwę na .env:
+
+```bash
+cp .env.example .env
+```
+Pobierz darmowy klucz API: Wejdź na stronę [Google AI Studio](https://aistudio.google.com/app/api-keys) 
+i wygeneruj nowy klucz API 
+
+**Uzupełnij plik `.env`** Otwórz plik `.env` i wklej swój klucz. Skonfiguruj zmienne dokładnie tak, jak poniżej:
+```ini
+# 🔑 Wklej tutaj swój klucz z Google AI Studio (zaczyna się od "AIza...")
+# UWAGA: Mimo nazwy zmiennej, podajemy tu klucz GOOGLE!
+OPENAI_API_KEY=AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# 🌐 Te wartości zostaw bez zmian (wymagane do połączenia z Google):
+OPENAI_BASE_URL="[https://generativelanguage.googleapis.com/v1beta/openai/](https://generativelanguage.googleapis.com/v1beta/openai/)"
+OPENAI_MODEL=gemini-2.5-flash-lite
+```
+> **Dlaczego `OPENAI_API_KEY`?** >> 
+> Aplikacja korzysta z biblioteki klienckiej zaprojektowanej dla OpenAI, ale przekierowuje zapytania do Google (`OPENAI_BASE_URL`). 
+> Dlatego **musisz** wkleić klucz Gemini w pole `OPENAI_API_KEY`. 
+> Nie zmieniaj nazw zmiennych, w przeciwnym razie aplikacja nie zadziała.
+
+
+ 🛡️ Bezpieczeństwo
+Upewnij się, że plik `.env` znajduje się w Twoim `.gitignore`. Nigdy nie udostępniaj swojego klucza API publicznie!
+### 3. Uruchomienie środowiska
 Budujemy obrazy i uruchamiamy kontenery:
 ```bash
 docker compose up --build
 ```
 
-### 3. Inicjalizacja bazy danych i kont
+### 4. Inicjalizacja bazy danych i kont
 Po uruchomieniu kontenerów (gdy zobaczysz logi startowe Django), wykonaj migracje oraz utwórz administratora:
 ```bash
 # Wygenerowanie migracji (jeśli zmieniano modele)
@@ -75,7 +103,7 @@ docker compose exec backend python manage.py migrate
 docker compose exec backend python manage.py createsuperuser
 ```
 
-### 4. Dostęp do aplikacji
+### 5. Dostęp do aplikacji
 - **Frontend:** [http://localhost:5173](http://localhost:5173)
 - **Backend API:** [http://localhost:8000/api/](http://localhost:8000/api/)
 - **Panel Admina:** [http://localhost:8000/admin/](http://localhost:8000/admin/)
