@@ -114,9 +114,11 @@
 </template>
 
 <script setup lang="ts">
-// Skrypt pozostaje bez zmian
-import { reactive, ref } from 'vue';
+import { reactive, ref, onMounted } from 'vue';
 import contactService from '@/services/contact.service';
+import { useAuthStore } from '@/stores/auth';
+
+const authStore = useAuthStore();
 
 const form = reactive({
   name: '',
@@ -129,6 +131,17 @@ const showSuccessModal = ref(false);
 const isSending = ref(false);
 const errorMessage = ref<string | null>(null);
 const cooldownUntil = ref<number>(0);
+
+onMounted(() => {
+  if (authStore.isLoggedIn) {
+    if (authStore.firstName) {
+      form.name = authStore.firstName;
+    }
+    if (authStore.email) {
+      form.email = authStore.email;
+    }
+  }
+});
 
 const sendMessage = async () => {
   if (isSending.value) return;
