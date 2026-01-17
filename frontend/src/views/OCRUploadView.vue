@@ -38,9 +38,10 @@
         <h2 class="section-title">2. Dane Paragonu</h2>
 
         <div class="form-grid">
-           <div class="form-group">
+           <div class="form-group" :class="{ 'has-error': formErrors.merchant_name }" data-validation-error="merchant_name">
              <label>Sklep</label>
              <input v-model="receiptData.merchant_name" placeholder="Nazwa sklepu" />
+             <span v-if="formErrors.merchant_name" class="error-text">{{ formErrors.merchant_name }}</span>
            </div>
 
             <div class="form-group">
@@ -58,7 +59,7 @@
                <label>Data</label>
                <input type="date" v-model="receiptData.purchase_date" />
              </div>
-             <div class="form-group half">
+             <div class="form-group half" :class="{ 'has-error': formErrors.purchaser }" data-validation-error="purchaser">
                <label>Płatnik</label>
                <select v-model="receiptData.purchaser">
                  <option :value="null" disabled>Kto płacił?</option>
@@ -66,6 +67,7 @@
                    {{ (m.first_name && m.first_name.trim() !== '') ? m.first_name : m.username }}
                  </option>
                </select>
+               <span v-if="formErrors.purchaser" class="error-text">{{ formErrors.purchaser }}</span>
              </div>
            </div>
 
@@ -107,7 +109,7 @@
           </div>
 
           <div v-else class="products-list">
-             <div v-for="(prod, idx) in receiptProducts" :key="idx" class="product-row">
+             <div v-for="(prod, idx) in receiptProducts" :key="idx" class="product-row" :class="{ 'has-error': formErrors.products?.[idx] }" :data-validation-error="`product-${idx}`">
 
                 <div class="qty-badge" v-if="prod.quantity > 1 && isInteger(prod.quantity)">
                   {{ parseInt(prod.quantity) }}x
@@ -121,6 +123,9 @@
                      </span>
                    </div>
                    <div class="prod-cat">{{ getCategoryLabel(prod.category) }} • 👥 {{ prod.consumers.length }}</div>
+                   <div v-if="formErrors.products?.[idx]" class="error-text error-small">
+                     ⚠️ {{ formErrors.products[idx] }}
+                   </div>
                 </div>
 
                 <div class="prod-price">{{ prod.price.toFixed(2) }} zł</div>
@@ -249,7 +254,7 @@
                 </select>
              </div>
 
-             <div class="form-group">
+             <div class="form-group" :class="{ 'has-error': productFormErrors.consumers }">
                 <label>Konsumenci </label>
                 <div class="checkbox-group">
                    <label v-for="member in settlementMembers" :key="member.id">
@@ -258,6 +263,7 @@
                    </label>
                 </div>
                 <p v-if="settlementMembers.length === 0" class="hint-error">Brak członków w grupie.</p>
+                <p v-if="productFormErrors.consumers" class="error-text">{{ productFormErrors.consumers }}</p>
              </div>
 
              <div class="modal-actions">
@@ -291,7 +297,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue';
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter, onBeforeRouteLeave } from 'vue-router';
 import fractiService, { type Settlement, type User, Category, CATEGORY_LABELS } from '@/services/receipts.service';
 import { Cropper } from 'vue-advanced-cropper';
@@ -348,9 +354,64 @@ const confirmButtonText = ref('🗑️ Tak, usuń');
 const isUploading = ref(false);
 const errorMessage = ref('');
 const successMessage = ref('');
+
+const formErrors = ref<{
+  merchant_name?: string;
+  purchaser?: string;
+  products?: Record<number, string>;
+}>({});
+const productFormErrors = ref<{
+  consumers?: string;
+}>({});
 const categories = fractiService.getCategoriesOptionList();
 let mapInstance: L.Map | null = null;
 let markerInstance: L.Marker | null = null;
+
+// --- WATCHERS: Auto-clear errors when fields are corrected ---
+watch(
+  () => receiptData.value.merchant_name,
+  (newVal) => {
+    // Jeśli pole Sklep jest teraz wypełnione, usuń błąd
+    if (newVal && newVal.trim() !== '' && formErrors.value.merchant_name) {
+      formErrors.value.merchant_name = undefined;
+    }
+  }
+);
+
+watch(
+  () => receiptData.value.purchaser,
+  (newVal) => {
+    // Jeśli płatnik został wybrany, usuń błąd
+    if (newVal !== null && newVal !== undefined && formErrors.value.purchaser) {
+      formErrors.value.purchaser = undefined;
+    }
+  }
+);
+
+watch(
+  () => receiptProducts.value,
+  (newProducts) => {
+    // Sprawdź każdy produkt - jeśli ma konsumentów, usuń jego błąd
+    if (formErrors.value.products) {
+      newProducts.forEach((prod, idx) => {
+        if (prod.consumers && prod.consumers.length > 0) {
+          delete formErrors.value.products![idx];
+        }
+      });
+    }
+  },
+  { deep: true }
+);
+
+watch(
+  () => productForm.value.consumers,
+  (newConsumers) => {
+    // W modal produktu - jeśli wybrano konsumenta, usuń błąd
+    if (newConsumers && newConsumers.length > 0 && productFormErrors.value.consumers) {
+      productFormErrors.value.consumers = undefined;
+    }
+  }
+);
 
 // --- COMPUTED ---
 const canEditForm = computed(() => {
@@ -583,6 +644,12 @@ const handlePriceChange = () => {
 };
 
 const saveProduct = () => {
+  productFormErrors.value = {};
+  if (productForm.value.consumers.length === 0) {
+    productFormErrors.value.consumers = 'Wybierz co najmniej jednego konsumenta';
+    return;
+  }
+
   const payload = {
     name: productForm.value.name,
     price: parseFloat(productForm.value.price),
@@ -651,9 +718,39 @@ const initMap = (elId: string) => {
 };
 
 const submitReceipt = async () => {
-  if (!receiptData.value.merchant_name) {
-    errorMessage.value = "Uzupełnij nazwę sklepu!";
-    setTimeout(() => errorMessage.value = '', 3000);
+  formErrors.value = {};
+  let hasErrors = false;
+
+  if (!receiptData.value.merchant_name || receiptData.value.merchant_name.trim() === '') {
+    formErrors.value.merchant_name = 'Pole "Sklep" jest wymagane';
+    hasErrors = true;
+  }
+
+  if (!receiptData.value.purchaser) {
+    formErrors.value.purchaser = 'Pole "Płatnik" jest wymagane';
+    hasErrors = true;
+  }
+
+  formErrors.value.products = {};
+  for (let i = 0; i < receiptProducts.value.length; i++) {
+    const prod = receiptProducts.value[i];
+    if (!prod.consumers || prod.consumers.length === 0) {
+      formErrors.value.products[i] = `Produkt "${prod.name}" nie ma wybranych konsumentów`;
+      hasErrors = true;
+    }
+  }
+
+  // Jeśli są błędy, zaznacz pola i przescrolluj do pierwszego
+  if (hasErrors) {
+    errorMessage.value = 'Uzupełnij wszystkie wymagane pola';
+    setTimeout(() => errorMessage.value = '', 4000);
+    
+    // Przescrolluj do pierwszego błędu
+    await nextTick();
+    const firstErrorElement = document.querySelector('[data-validation-error]');
+    if (firstErrorElement) {
+      firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
     return;
   }
 
@@ -662,30 +759,25 @@ const submitReceipt = async () => {
 
   try {
     const fd = new FormData();
-    // 1. Obsługa zdjęcia (Crop)
     if (croppedImageUrl.value) {
        const resp = await fetch(croppedImageUrl.value);
        const blob = await resp.blob();
        fd.append('image', blob, 'receipt_crop.jpg');
     }
 
-    // 2. Dane podstawowe paragonu
     fd.append('merchant_name', receiptData.value.merchant_name);
     if (receiptData.value.description) fd.append('description', receiptData.value.description);
     fd.append('purchase_date', receiptData.value.purchase_date);
     fd.append('total_amount', totalAmount.toString());
     fd.append('category', 'SHOPPING');
 
-    // 3. Obsługa ID Użytkownika (Purchaser)
     if (receiptData.value.purchaser) {
         fd.append('purchaser', receiptData.value.purchaser.toString());
-    } else {
     }
     if (selectedSettlementId.value && selectedSettlementId.value !== 'PERSONAL' && selectedSettlementId.value !== 'NEW_SETTLEMENT') {
       fd.append('settlement', String(selectedSettlementId.value));
     }
 
-    // 5. Lokalizacja
     if (receiptData.value.latitude && receiptData.value.longitude) {
       fd.append('latitude', receiptData.value.latitude.toString());
       fd.append('longitude', receiptData.value.longitude.toString());
@@ -1037,5 +1129,69 @@ button.small {
   display: flex;
   gap: 10px;
   margin-top: 10px;
+}
+
+.form-group.has-error input,
+.form-group.has-error select,
+.form-group.has-error textarea {
+  border-color: #ef4444 !important;
+  border-width: 2px !important;
+  background-color: rgba(239, 68, 68, 0.05);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  transition: all 0.2s ease;
+}
+
+.form-group.has-error input:focus,
+.form-group.has-error select:focus,
+.form-group.has-error textarea:focus {
+  outline: none;
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
+}
+
+.error-text {
+  display: block;
+  color: #ef4444;
+  font-size: 0.85rem;
+  margin-top: 4px;
+  font-weight: 500;
+  animation: slideDown 0.3s ease-out;
+}
+
+.error-text.error-small {
+  font-size: 0.8rem;
+  margin-top: 2px;
+  color: #fca5a5;
+}
+
+.product-row.has-error {
+  border: 2px solid #ef4444 !important;
+  background: rgba(239, 68, 68, 0.08) !important;
+  border-radius: 8px;
+  padding: 10px 12px !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
+  transition: all 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.checkbox-group.has-error {
+  border: 2px solid #ef4444;
+  border-radius: 8px;
+  padding: 12px;
+  background-color: rgba(239, 68, 68, 0.05);
+}
+
+.form-group.has-error label {
+  color: #fca5a5;
 }
 </style>
