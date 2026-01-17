@@ -176,7 +176,7 @@
           <div class="form-row">
             <div class="form-group half">
               <label>Cena (zł)</label>
-              <input v-model="newProduct.price" type="number" step="0.01" min="0" required />
+              <input v-model="newProduct.price" type="number" step="0.01" required />
             </div>
             <div class="form-group half">
               <label>Kategoria</label>
@@ -399,7 +399,7 @@
           <div class="form-row">
             <div class="form-group half">
               <label>Cena (zł)</label>
-              <input v-model="receiptItemForm.price" type="number" step="0.01" min="0" required />
+              <input v-model="receiptItemForm.price" type="number" step="0.01" required />
             </div>
             <div class="form-group half">
               <label>Kategoria</label>
@@ -1690,7 +1690,9 @@ onMounted(() => {
 }
 
 .modal-content {
-  width: 500px;
+  width: 90vw;
+  max-width: 500px;
+  box-sizing: border-box;
 }
 
 .code-display {
@@ -1764,6 +1766,338 @@ onMounted(() => {
   .right-column {
     border-left: none;
     border-top: 1px solid rgba(139, 92, 246, 0.2);
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .details-container {
+    min-height: 100vh;
+  }
+
+  .header {
+    padding: 1rem;
+    gap: 1rem;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-info h1 {
+    font-size: 1.5rem;
+  }
+
+  .header-info {
+    width: 100%;
+  }
+
+  .content-split {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .left-column,
+  .right-column {
+    flex: 1 1 100%;
+    padding: 1.5rem 1rem;
+  }
+
+  .right-column {
+    border-left: none;
+    border-top: 1px solid rgba(139, 92, 246, 0.2);
+  }
+
+  .timeline-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .timeline-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .item-main {
+    padding: 1rem;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .item-icon {
+    font-size: 1.5rem;
+    width: 40px;
+    height: 40px;
+  }
+
+  .item-info {
+    min-width: 0;
+  }
+
+  .item-name {
+    font-size: 1rem;
+  }
+
+  .item-meta {
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+  }
+
+  .item-right-panel {
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+  }
+
+  .item-amount {
+    margin-right: 0;
+    font-size: 1.1rem;
+  }
+
+  .action-panel {
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .action-btn {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+
+  .users-section {
+    margin-top: 1.5rem;
+  }
+
+  .user-card {
+    padding: 0.75rem;
+    gap: 0.75rem;
+  }
+
+  .user-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+
+  .user-info {
+    min-width: 0;
+  }
+
+  .user-name {
+    font-size: 0.95rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .user-balance {
+    font-size: 0.75rem;
+    gap: 0.15rem;
+  }
+
+  .remove-user-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+    margin-left: auto;
+  }
+
+  .debts-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+  }
+
+  .debt-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  .debt-info {
+    width: 100%;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+  }
+
+  .debt-amount {
+    margin-left: 0;
+    align-self: flex-end;
+  }
+
+  .product-item {
+    flex-wrap: wrap;
+    padding: 0.5rem 0.75rem;
+    margin: 0.25rem;
+  }
+
+  .product-info {
+    width: 100%;
+  }
+
+  .product-name {
+    font-size: 0.95rem;
+  }
+
+  .product-meta {
+    font-size: 0.7rem;
+    gap: 0.25rem;
+  }
+
+  .product-right {
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+  }
+
+  .product-amount {
+    font-size: 1rem;
+  }
+
+  .modal-content {
+    width: 90vw;
+    max-width: 500px;
+    max-height: 85vh;
+    padding: 1.25rem;
+    border-radius: 12px;
+  }
+
+  .modal-map {
+    height: 150px;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .form-group {
+    width: 100%;
+  }
+
+  .form-group.half {
+    flex: 1 1 100%;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  .checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .add-user-btn {
+    margin-top: 0.75rem;
+    padding: 10px;
+    font-size: 0.85rem;
+  }
+
+  .back-btn {
+    padding: 6px 12px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+  .header {
+    padding: 0.75rem;
+  }
+
+  .header-info h1 {
+    font-size: 1.25rem;
+  }
+
+  .left-column,
+  .right-column {
+    padding: 1rem 0.75rem;
+  }
+
+  .timeline-header h2 {
+    font-size: 1rem;
+  }
+
+  .item-main {
+    padding: 0.75rem;
+  }
+
+  .item-name {
+    font-size: 0.95rem;
+  }
+
+  .item-amount {
+    font-size: 1rem;
+  }
+
+  .action-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .user-name {
+    font-size: 0.9rem;
+  }
+
+  .product-item {
+    padding: 0.4rem 0.6rem;
+    margin: 0.15rem;
+  }
+
+  .product-name {
+    font-size: 0.9rem;
+  }
+
+  .modal-content {
+    width: 95vw;
+    max-width: 95vw;
+    padding: 0.75rem;
+    max-height: 80vh;
+    border-radius: 10px;
+  }
+
+  .modal-map {
+    height: 120px;
+  }
+
+  .form-group {
+    margin-bottom: 0.8rem;
+  }
+
+  .form-group label {
+    font-size: 0.85rem;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  textarea,
+  select {
+    padding: 8px 10px;
+    font-size: 14px;
+    max-width: 100%;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .modal-actions button {
+    width: 100%;
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+
+  .checkbox-group label {
+    font-size: 0.85rem;
+    padding: 0.4rem 0;
   }
 }
 select {

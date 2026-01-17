@@ -140,17 +140,22 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
 /* Modal styles */
 .modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
   background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   z-index: 100;
+  overflow: hidden !important;
+  padding: 1rem;
+  box-sizing: border-box;
+  width: 100vw !important;
+  height: 100vh !important;
 }
 
 .modal-overlay.z-high {
@@ -171,8 +176,11 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   width: 90%;
   max-width: 500px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  max-height: 80vh;
+  max-height: 85vh;
   overflow-y: auto;
+  margin: auto;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .modal-content.small {
@@ -516,15 +524,15 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 /* Responsive */
 @media (max-width: 768px) {
   .page-title {
-    font-size: 2.5rem;
+    font-size: 2rem;
   }
 
   .page-subtitle {
-    font-size: 1.1rem;
+    font-size: 1rem;
   }
 
   .section-title {
-    font-size: 2rem;
+    font-size: 1.5rem;
   }
 
   .container {
@@ -533,6 +541,129 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
   .form-row {
     flex-direction: column;
+  }
+
+  /* Modal styles for tablets */
+  .modal-overlay {
+    padding: 0.75rem;
+  }
+
+  .modal-content {
+    width: 100%;
+    max-width: 95vw;
+    padding: 1.25rem;
+    border-radius: 12px;
+  }
+
+  .modal-content.small,
+  .modal-content.large {
+    max-width: 95vw;
+  }
+
+  .modal-content h2,
+  .modal-content h3 {
+    font-size: 1.4rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .form-group {
+    margin-bottom: 1.2rem;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 11px;
+    font-size: 16px;
+  }
+
+  .modal-actions {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .modal-actions button {
+    padding: 10px 16px;
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-title {
+    font-size: 1.5rem;
+  }
+
+  .page-subtitle {
+    font-size: 0.9rem;
+  }
+
+  .section-title {
+    font-size: 1.2rem;
+  }
+
+  .container {
+    padding: 0 0.75rem;
+  }
+
+  button {
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  /* Modal styles for mobile */
+  .modal-overlay {
+    padding: 0.5rem;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+  }
+
+  .modal-content {
+    width: 100%;
+    max-width: calc(100vw - 1rem);
+    padding: 1.5rem;
+    margin: auto;
+    border-radius: 12px;
+  }
+
+  .modal-content.small,
+  .modal-content.large {
+    max-width: calc(100vw - 1rem);
+  }
+
+  .modal-content h2,
+  .modal-content h3 {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 10px;
+    font-size: 16px;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+  }
+
+  .modal-actions button {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 0.9rem;
   }
 }
 ::-webkit-scrollbar {

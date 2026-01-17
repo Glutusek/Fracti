@@ -501,4 +501,149 @@ onMounted(async () => {
 .popup-divider { border: 0; border-top: 1px solid #e5e7eb; margin: 8px 0; }
 .products-preview ul { padding-left: 15px; margin: 5px 0; font-size: 0.85rem; }
 .total { text-align: right; font-weight: bold; margin-top: 8px; }
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .map-layout {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .map-container {
+    height: 50vh;
+    min-height: 400px;
+    width: 100%;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid #374151;
+    max-height: 50vh;
+  }
+
+  .items-list {
+    max-height: calc(50vh - 200px);
+  }
+}
+
+@media (max-width: 768px) {
+  .map-layout {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .map-container {
+    height: 40vh;
+    min-height: 300px;
+    width: 100%;
+    flex: none;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-left: none;
+    border-top: 2px solid #8b5cf6;
+    flex: 1;
+    min-height: 60vh;
+  }
+
+  .sidebar-header {
+    padding: 1rem;
+  }
+
+  .sidebar-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .back-btn {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    margin-bottom: 0.75rem;
+  }
+
+  .filters {
+    gap: 6px;
+  }
+
+  .filter-chip {
+    font-size: 0.75rem;
+    padding: 3px 10px;
+  }
+
+  .items-list {
+    padding: 0.75rem;
+  }
+
+  .item-card {
+    padding: 10px;
+  }
+
+  .item-title {
+    font-size: 0.9rem;
+  }
+
+  .item-meta {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .map-container {
+    height: 35vh;
+    min-height: 250px;
+  }
+
+  .sidebar {
+    min-height: 65vh;
+  }
+
+  .sidebar-header {
+    padding: 0.75rem;
+  }
+
+  .sidebar-header h2 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .back-btn {
+    font-size: 0.7rem;
+    padding: 3px 6px;
+  }
+
+  .filters {
+    gap: 4px;
+  }
+
+  .filter-chip {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+  }
+
+  .items-list {
+    padding: 0.5rem;
+  }
+
+  .item-card {
+    padding: 8px;
+  }
+
+  .card-top {
+    gap: 8px;
+  }
+
+  .item-icon {
+    font-size: 1.2rem;
+  }
+
+  .item-title {
+    font-size: 0.85rem;
+  }
+
+  .item-amount {
+    font-size: 0.9rem;
+  }
+}
 </style>

@@ -381,13 +381,68 @@ const handleSubmit = async () => {
   text-decoration: underline;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
+  .auth-container {
+    padding: 1rem;
+  }
+
   .auth-card {
-    padding: 2rem;
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 95%;
   }
 
   .auth-header h1 {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
+  }
+
+  .form-group input,
+  .form-group textarea {
+    font-size: 16px;
+  }
+
+  .auth-button {
+    padding: 10px 16px;
+    font-size: 0.95rem;
+  }
+
+  .toggle-mode {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-container {
+    padding: 0.5rem;
+  }
+
+  .auth-card {
+    padding: 1.25rem;
+    border-radius: 12px;
+  }
+
+  .auth-header h1 {
+    font-size: 1.25rem;
+  }
+
+  .auth-header p {
+    font-size: 0.9rem;
+  }
+
+  .form-group label {
+    font-size: 0.9rem;
+  }
+
+  .form-group input,
+  .form-group textarea {
+    padding: 8px 10px;
+    font-size: 16px;
+  }
+
+  .auth-button {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    width: 100%;
   }
 }
 </style>

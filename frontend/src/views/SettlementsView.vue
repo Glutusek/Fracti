@@ -713,7 +713,7 @@ onMounted(() => {
 .modal-content input {
   width: 100%;
   padding: 12px;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   background: #0f172a; /* Ciemne tło */
   border: 1px solid rgba(139, 92, 246, 0.3); /* Fioletowa ramka */
   border-radius: 8px;
@@ -721,6 +721,7 @@ onMounted(() => {
   font-size: 1rem;
   outline: none;
   transition: border-color 0.3s, box-shadow 0.3s;
+  box-sizing: border-box;
 }
 
 .modal-content input:focus {
@@ -761,5 +762,227 @@ onMounted(() => {
 .modal-actions button.primary:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .settlements-container {
+    padding: 1.5rem;
+  }
+
+  .header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .header h1 {
+    font-size: 1.75rem;
+  }
+
+  .header-actions {
+    flex-direction: column;
+  }
+
+  .settlement-card {
+    flex-direction: column;
+  }
+
+  .card-main {
+    flex-direction: column;
+  }
+
+  .info-section,
+  .amount-section {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .settlements-container {
+    padding: 1rem;
+  }
+
+  .header {
+    padding: 1rem;
+  }
+
+  .header h1 {
+    font-size: 1.5rem;
+  }
+
+  .header-actions {
+    gap: 0.75rem;
+  }
+
+  .create-btn,
+  .join-btn,
+  .ocr-btn {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+  }
+
+  .settlement-card {
+    flex-direction: column;
+    padding: 1rem;
+  }
+
+  .card-main {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .info-section {
+    width: 100%;
+  }
+
+  .info-section h2 {
+    font-size: 1.2rem;
+  }
+
+  .amount-section {
+    width: 100%;
+    text-align: left;
+    padding: 0.75rem;
+    background: rgba(139, 92, 246, 0.1);
+    border-radius: 8px;
+  }
+
+  .actions-section {
+    width: 100%;
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+
+  .actions-section button {
+    flex: 1;
+    padding: 8px;
+    font-size: 0.8rem;
+  }
+
+  .desc {
+    font-size: 0.9rem;
+  }
+
+  .meta {
+    font-size: 0.8rem;
+    gap: 0.5rem;
+  }
+
+  .card-expanded {
+    flex-direction: column;
+  }
+
+  .members-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-content {
+    width: 90vw;
+    max-width: 400px;
+    padding: 1rem;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
+
+  .modal-content h2 {
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+  }
+
+  .modal-content input {
+    padding: 10px;
+    font-size: 16px;
+    margin-bottom: 1rem;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .modal-actions button {
+    width: 100%;
+    padding: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .settlements-container {
+    padding: 0.75rem;
+  }
+
+  .header {
+    padding: 0.75rem;
+  }
+
+  .header h1 {
+    font-size: 1.25rem;
+  }
+
+  .create-btn,
+  .join-btn,
+  .ocr-btn {
+    padding: 8px 10px;
+    font-size: 0.75rem;
+    width: 100%;
+  }
+
+  .settlement-card {
+    padding: 0.75rem;
+  }
+
+  .info-section h2 {
+    font-size: 1.1rem;
+  }
+
+  .meta {
+    font-size: 0.75rem;
+  }
+
+  .amount-section .value {
+    font-size: 1.1rem;
+  }
+
+  .members-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-content {
+    width: 95vw;
+    max-width: 95vw;
+    padding: 1rem;
+    max-height: 75vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
+
+  .modal-content h2 {
+    font-size: 1.2rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .modal-content input {
+    padding: 10px;
+    margin-bottom: 1rem;
+    font-size: 16px;
+  }
+
+  .modal-actions {
+    margin-top: 1rem;
+  }
+
+  .modal-actions button {
+    font-size: 0.9rem;
+    padding: 10px;
+  }
+
+  button {
+    font-size: 14px;
+  }
+
+  input, textarea {
+    font-size: 16px;
+  }
 }
 </style>
