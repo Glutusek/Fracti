@@ -11,9 +11,10 @@ Projekt realizowany w architekturze mikroserwisowej (Monorepo):
 * **Baza Danych & GIS:** PostgreSQL 16 + PostGIS 3.4 (Geometria).
 * **Asynchroniczność:** Celery 5.4 + Redis 7.4 (Kolejkowanie zadań OCR).
 * **Przetwarzanie Obrazu (OCR):**
-    * **Silnik:** Tesseract OCR (z pakietem języka polskiego).
-    * **Biblioteki:** OpenCV + Pillow (preprocessing), pytesseract (wrapper).
-* **Frontend:** Vue.js 3.5 (Composition API) + Vite + Pinia + TypeScript.
+    * **Biblioteka:** receipt-ocr (wysokopoziomowa abstrakcja dla OCR)
+    * **LLM:** Google Gemini API (via OpenAI-compatible endpoint)
+    * **Preprocessing:** Obsługiwany automatycznie przez receipt-ocr
+* **Frontend:** Vue.js 3.5 (Composition API) + Vue Router + Vite + TypeScript.
 * **Mapy:** Leaflet + OpenStreetMap (Tiles) + Nominatim (Geocoding).
 * **Infrastruktura:** Docker Compose V2.
 
@@ -22,8 +23,28 @@ Projekt realizowany w architekturze mikroserwisowej (Monorepo):
 - **System Rozliczeń (Settlements):** Tworzenie grup, zapraszanie członków za pomocą unikalnych kodów i wspólne zarządzanie wydatkami.
 - **Inteligentne Rozpoznawanie Paragonów:** Automatyczne wyodrębnianie produktów, cen i sprzedawców dzięki OCR.
 - **Podział Kosztów:** Precyzyjne przypisywanie produktów do konkretnych konsumentów w ramach rozliczenia.
+  - Produkty z paragonów
+  - Produkty dodane ręcznie do grupy
+  - Walidacja konsumentów przy dodawaniu i edycji produktów
+- **Rozliczenia (Debt Settlement):** 
+  - Automatyczne obliczanie uproszczonych długów między członkami grupy
+  - Potwierdzanie rozliczeń z możliwością wycofania
+  - Przegląd wykonanych rozliczeń z datą i czasem
 - **Wizualizacja Mapowa:** Śledzenie lokalizacji zakupów na interaktywnej mapie GIS z możliwością filtrowania po rozliczeniach.
 - **Bezpieczeństwo:** Pełna autoryzacja JWT, chroniąca prywatność danych i dostęp do grup.
+
+## 📊 Model Danych
+
+### Kluczowe Modele:
+- **Settlement:** Grupa rozliczeniowa z członkami
+- **Receipt:** Paragon z produktami
+- **Product:** Produkt (z paragonu lub dodany ręcznie) z przypisanymi konsumentami
+- **DebtSettlement:** Zapis potwierdzonego rozliczenia między dwoma użytkownikami
+- **User:** Użytkownik systemu (z JWT)
+
+### Relacje:
+- Produkty usuwane są kaskadowo z paragonami
+- DebtSettlement przechowuje historię rozliczeń z timestampem
 
 ## 🚀 Quick Start (Jak uruchomić)
 
