@@ -140,7 +140,7 @@ class Product(MapItem):
         decimal_places=2,
         #validators=[MinValueValidator(Decimal('0.00'))]
     )
-    receipt = models.ForeignKey(Receipt, verbose_name=_("Paragon"), on_delete=models.SET_NULL, related_name='products', null=True, blank=True)
+    receipt = models.ForeignKey(Receipt, verbose_name=_("Paragon"), on_delete=models.CASCADE, related_name='products', null=True, blank=True)
     settlement = models.ForeignKey(Settlement, on_delete=models.CASCADE, related_name='products', null=True, blank=True, verbose_name=_("Przypisane rozliczenie"))
     consumers = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='consumed_products', blank=True, verbose_name=_("Konsumenci"))
     purchaser = models.ForeignKey(
