@@ -7,6 +7,7 @@ import SettlementDetailsView from '../views/SettlementDetailsView.vue'
 import OCRUploadView from '../views/OCRUploadView.vue'
 import AboutUsView from '../views/AboutUsView.vue'
 import ContactView from '../views/ContactView.vue'
+import LegalView from '../views/LegalView.vue'
 import {useAuthStore} from "@/stores/auth.ts";
 
 const router = createRouter({
@@ -49,6 +50,11 @@ const router = createRouter({
       path: '/contact',
       name: 'contact',
       component: ContactView
+    },
+    {
+      path: '/legal',
+      name: 'legal',
+      component: LegalView
     },
     {
       path: '/map',

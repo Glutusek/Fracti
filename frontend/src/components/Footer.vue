@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { useRouter } from 'vue-router';
 
- const currentYerar = new Date().getFullYear();
+const router = useRouter();
+const currentYerar = new Date().getFullYear();
 </script>
 
 <template>
@@ -16,13 +18,20 @@
             <h4>Kontakt</h4>
             <p>kontakt@fracti.app</p>
           </div>
-          <div class="footer-section">
-            <h4>Social</h4>
-            <div class="social-links">
-              <a href="https://github.com/Glutusek/Fracti/" class="social-link">GitHub</a>
-              <a href="https://x.com/GeminiApp" class="social-link">X.com</a>
-            </div>
+        <div class="footer-section">
+          <h4>Informacje</h4>
+          <div class="footer-links">
+            <button @click="router.push('/legal')" class="footer-link">Regulamin</button>
+            <button @click="router.push('/legal')" class="footer-link">Polityka Prywatności</button>
           </div>
+        </div>
+        <div class="footer-section">
+          <h4>Social</h4>
+          <div class="social-links">
+            <a href="https://github.com/Glutusek/Fracti/" class="social-link">GitHub</a>
+            <a href="https://x.com/GeminiApp" class="social-link">X.com</a>
+          </div>
+        </div>
         </div>
         <div class="footer-bottom">
           <p>&copy; {{currentYerar}} Fracti. Wszystkie prawa zastrzeżone.</p>
@@ -79,6 +88,29 @@
 }
 
 .social-link:hover {
+  color: #8b5cf6;
+}
+
+.footer-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.footer-link {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.2s;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  text-align: left;
+}
+
+.footer-link:hover {
   color: #8b5cf6;
 }
 
