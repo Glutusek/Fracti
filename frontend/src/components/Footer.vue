@@ -46,6 +46,7 @@ const currentYerar = new Date().getFullYear();
 .bg {
   background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
   color: #e5e7eb;
+  flex-shrink: 0;
 }
 .container {
   max-width: 1200px;

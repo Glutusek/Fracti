@@ -145,7 +145,7 @@ const currentYear = new Date().getFullYear();
 
 <style scoped>
 .landing-page {
-  min-height: 100vh;
+  flex: 1;
   background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
   color: #e5e7eb;
 }
@@ -153,7 +153,7 @@ const currentYear = new Date().getFullYear();
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 2rem;
+  padding: 2rem;
 }
 
 /* Hero Section */

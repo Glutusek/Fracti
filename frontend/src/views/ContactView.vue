@@ -1,5 +1,5 @@
 <template>
-  <div class="page-wrapper">
+  <div class="contact-wrapper">
     <div class="container">
       <div class="header-section">
         <h1 class="page-title">
@@ -114,7 +114,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, onMounted } from 'vue';
+import { reactive, ref, onMounted, watch, onUnmounted } from 'vue';
 import contactService from '@/services/contact.service';
 import { useAuthStore } from '@/stores/auth';
 
@@ -190,12 +190,42 @@ const sendMessage = async () => {
     cooldownUntil.value = Date.now() + 3000;
   }
 };
+
+// --- WATCHERS - Kontrola scrollu body'ego gdy modal jest otwarty ---
+watch(
+  [showSuccessModal],
+  () => {
+    if (showSuccessModal.value) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.documentElement.style.overflow = '';
+    }
+  }
+);
+
+onUnmounted(() => {
+  // Resetuj overflow przy opuszczaniu komponentu
+  document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.width = '';
+  document.documentElement.style.overflow = '';
+});
 </script>
 
 <style scoped>
-/* Istniejące style pozostają bez zmian, dodajemy tylko .link-card */
-
-/* ... (wszystkie poprzednie style) ... */
+/* Wrapper */
+.contact-wrapper {
+  flex: 1;
+  background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+  color: #e5e7eb;
+  padding: 2rem;
+}
 
 /* NOWY STYL: Reset stylów dla linków-kart */
 .link-card {

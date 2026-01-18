@@ -1,5 +1,5 @@
 <template>
-  <div class="page-wrapper">
+  <div class="legal-wrapper">
     <div class="container">
       <div class="header-section">
         <h1 class="page-title">
@@ -191,9 +191,9 @@ const activeTab = ref<'terms' | 'privacy'>('terms');
 </script>
 
 <style scoped>
-.page-wrapper {
-  min-height: 100vh;
-  padding: 4rem 0;
+.legal-wrapper {
+  flex: 1;
+  padding: 2rem;
   position: relative;
   background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
   color: #e5e7eb;

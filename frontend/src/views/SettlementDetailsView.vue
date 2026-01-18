@@ -539,7 +539,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from 'vue';
+import { ref, computed, onMounted, nextTick, watch, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import fractiService, { type Settlement, type Receipt, type Product, CATEGORY_LABELS, Category } from '@/services/receipts.service';
 import L from 'leaflet';
@@ -1418,14 +1418,47 @@ const loadSettlement = async () => {
   }
 };
 
+// --- WATCHERS - Kontrola scrollu body'ego gdy modal jest otwarty ---
+const isAnyModalOpen = () => {
+  return showAddProductModal.value || showAddUserModal.value || showEditProductModal.value || 
+         showEditReceiptModal.value || showReceiptItemModal.value || showConfirmModal.value || 
+         showAddGuestModal.value;
+};
+
+watch(
+  [showAddProductModal, showAddUserModal, showEditProductModal, showEditReceiptModal, 
+   showReceiptItemModal, showConfirmModal, showAddGuestModal],
+  () => {
+    if (isAnyModalOpen()) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.documentElement.style.overflow = '';
+    }
+  }
+);
+
 onMounted(() => {
   loadSettlement();
+});
+
+onUnmounted(() => {
+  // Resetuj overflow przy opuszczaniu komponentu
+  document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.width = '';
+  document.documentElement.style.overflow = '';
 });
 </script>
 
 <style scoped>
 .details-container {
-  min-height: 100vh;
+  flex: 1;
   background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
   color: #e5e7eb;
 }
@@ -2076,10 +2109,6 @@ onMounted(() => {
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
-  .details-container {
-    min-height: 100vh;
-  }
-
   .header {
     padding: 1rem;
     gap: 1rem;

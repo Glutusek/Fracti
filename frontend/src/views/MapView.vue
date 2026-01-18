@@ -386,7 +386,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.map-layout { display: flex; height: calc(100vh - 80px); overflow: hidden; }
+.map-layout { display: flex; flex: 1; overflow: hidden; }
 .map-container { flex: 1; position: relative; z-index: 1; }
 
 .sidebar {
@@ -507,7 +507,6 @@ onMounted(async () => {
   .map-layout {
     flex-direction: column;
     height: auto;
-    min-height: 100vh;
   }
 
   .map-container {

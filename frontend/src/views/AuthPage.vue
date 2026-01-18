@@ -213,11 +213,11 @@ const handleSubmit = async () => {
 }
 
 .auth-page {
-  min-height: 100vh;
+  flex: 1;
   background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
 }
 .auth-container {
-  min-height: calc(100vh - 80px);
+  min-height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -179,7 +179,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 // Importujemy Twój serwis API (ten z FractiApiService)
 import fractiService, { type Settlement, CATEGORY_LABELS } from '@/services/receipts.service';
@@ -204,6 +204,25 @@ const pendingDeleteAction = ref<(() => Promise<void>) | null>(null);
 
 // Przechowujemy ID rozwiniętych kafelków (Set jest szybszy niż Array)
 const expandedSet = ref<Set<string>>(new Set());
+
+// --- WATCHERS - Kontrola scrollu body'ego gdy modal jest otwarty ---
+const isAnyModalOpen = () => {
+  return showCreateModal.value || showJoinModal.value || showEditModal.value || showConfirmModal.value;
+};
+
+watch([showCreateModal, showJoinModal, showEditModal, showConfirmModal], () => {
+  if (isAnyModalOpen()) {
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.documentElement.style.overflow = 'hidden';
+  } else {
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+    document.documentElement.style.overflow = '';
+  }
+});
 
 // --- ACTIONS ---
 
@@ -335,12 +354,20 @@ const formatDate = (dateString: string) => {
 onMounted(() => {
   loadSettlements();
 });
+
+onUnmounted(() => {
+  // Resetuj overflow przy opuszczaniu komponentu
+  document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.width = '';
+  document.documentElement.style.overflow = '';
+});
 </script>
 
 <style scoped>
 /* KONTENER GŁÓWNY */
 .settlements-container {
-  min-height: 100vh;
+  flex: 1;
   background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
   padding: 2rem;
   font-family: 'Inter', sans-serif;
@@ -780,7 +807,13 @@ onMounted(() => {
   }
 
   .header-actions {
-    flex-direction: column;
+    flex-direction: row;
+    width: 100%;
+    gap: 0.75rem;
+  }
+
+  .header-actions button {
+    flex: 1;
   }
 
   .settlement-card {
@@ -808,10 +841,6 @@ onMounted(() => {
 
   .header h1 {
     font-size: 1.5rem;
-  }
-
-  .header-actions {
-    gap: 0.75rem;
   }
 
   .create-btn,

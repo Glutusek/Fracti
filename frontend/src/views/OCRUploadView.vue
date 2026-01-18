@@ -884,18 +884,45 @@ const handleBeforeUnload = (e: BeforeUnloadEvent) => {
   }
 };
 
+// --- WATCHERS - Kontrola scrollu body'ego gdy modal jest otwarty ---
+const isAnyModalOpen = () => {
+  return showCropperModal.value || showProductModal.value || showConfirmModal.value;
+};
+
+watch(
+  [showCropperModal, showProductModal, showConfirmModal],
+  () => {
+    if (isAnyModalOpen()) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.documentElement.style.overflow = '';
+    }
+  }
+);
+
 onMounted(() => {
   window.addEventListener('beforeunload', handleBeforeUnload);
 });
 
 onUnmounted(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload);
+  // Resetuj overflow przy opuszczaniu komponentu
+  document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.width = '';
+  document.documentElement.style.overflow = '';
 });
 </script>
 
 <style scoped>
 .ocr-page {
-  min-height: 100vh;
+  flex: 1;
   background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
   color: #e5e7eb;
   padding: 2rem;

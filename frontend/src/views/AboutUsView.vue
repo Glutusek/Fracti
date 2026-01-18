@@ -1,5 +1,5 @@
 <template>
-  <div class="page-wrapper">
+  <div class="about-wrapper">
     <div class="container">
 
       <div class="about-hero">
@@ -67,6 +67,14 @@
 </template>
 
 <style scoped>
+/* Wrapper */
+.about-wrapper {
+  flex: 1;
+  background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+  color: #e5e7eb;
+  padding: 2rem;
+}
+
 /* Specjalne nadpisanie dla AboutUs */
 .container {
   max-width: 1000px;
