@@ -70,7 +70,7 @@
 /* Wrapper */
 .about-wrapper {
   flex: 1;
-  background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+  background: var(--gradient-page-dark);
   color: #e5e7eb;
   padding: 2rem;
 }

@@ -195,8 +195,8 @@ const activeTab = ref<'terms' | 'privacy'>('terms');
   flex: 1;
   padding: 2rem;
   position: relative;
-  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
-  color: #e5e7eb;
+  background: var(--gradient-page-dark);
+  color: var(--text-primary);
 }
 
 .container {
@@ -223,7 +223,7 @@ const activeTab = ref<'terms' | 'privacy'>('terms');
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+  background: var(--gradient-button);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -345,7 +345,7 @@ const activeTab = ref<'terms' | 'privacy'>('terms');
 .orb-1 {
   width: 400px;
   height: 400px;
-  background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+  background: var(--gradient-button);
   top: -100px;
   right: -100px;
 }
@@ -353,7 +353,7 @@ const activeTab = ref<'terms' | 'privacy'>('terms');
 .orb-2 {
   width: 400px;
   height: 400px;
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, var(--color-indigo), #3b82f6);
   bottom: -100px;
   left: -100px;
 }

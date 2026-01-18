@@ -1459,8 +1459,8 @@ onUnmounted(() => {
 <style scoped>
 .details-container {
   flex: 1;
-  background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
-  color: #e5e7eb;
+  background: var(--gradient-page-dark);
+  color: var(--text-primary);
 }
 
 /* Header */
@@ -1494,7 +1494,7 @@ onUnmounted(() => {
 }
 
 .header-info h1 {
-  background: linear-gradient(135deg, #ffffff 0%, #8b5cf6 100%);
+  background: var(--gradient-card);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1511,7 +1511,7 @@ onUnmounted(() => {
 .total-cost .amount {
   font-size: 1.5rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: var(--gradient-button);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1815,7 +1815,7 @@ onUnmounted(() => {
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: var(--gradient-button);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1861,7 +1861,7 @@ onUnmounted(() => {
 .debts-section {
   margin-top: 1.5rem;
   padding: 1.5rem;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.05) 100%);
+  background: var(--gradient-card-ultra-subtle);
   border: 1px solid rgba(139, 92, 246, 0.2);
   border-radius: 12px;
 }
@@ -1889,7 +1889,7 @@ onUnmounted(() => {
   grid-template-rows: auto auto;
   gap: 0.75rem;
   padding: 1rem;
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.6) 0%, rgba(15, 23, 42, 0.4) 100%);
+  background: var(--gradient-overlay-dark);
   border: 1px solid rgba(139, 92, 246, 0.3);
   border-radius: 10px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1905,7 +1905,7 @@ onUnmounted(() => {
 }
 
 .debt-item:hover {
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(15, 23, 42, 0.6) 100%);
+  background: var(--gradient-overlay-darker);
   border-color: rgba(139, 92, 246, 0.5);
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(139, 92, 246, 0.2);
@@ -1928,7 +1928,7 @@ onUnmounted(() => {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: var(--gradient-button);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1980,7 +1980,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(251, 146, 60, 0.15) 100%);
+  background: var(--gradient-warning);
   padding: 1rem;
   border-radius: 10px;
   border: 2px solid rgba(245, 158, 11, 0.4);
@@ -2736,7 +2736,7 @@ select option {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(99, 102, 241, 0.1) 100%);
+  background: var(--gradient-card-subtle);
   border: 1px solid rgba(139, 92, 246, 0.4);
   border-radius: 10px;
   padding: 15px 20px;
@@ -2773,7 +2773,7 @@ select option {
 }
 
 .sync-btn:hover {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: var(--gradient-button);
   color: white;
   border-color: #8b5cf6;
   transform: scale(1.05);
@@ -2927,7 +2927,7 @@ user-actions-row {
 }
 
 .settle-btn {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(34, 197, 94, 0.2));
+  background: var(--gradient-success-light);
   border: 2px solid rgba(34, 197, 94, 0.5);
   color: #86efac;
   padding: 1rem;
@@ -2944,7 +2944,7 @@ user-actions-row {
 }
 
 .settle-btn:hover {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.45), rgba(34, 197, 94, 0.35));
+  background: var(--gradient-success);
   border-color: #22c55e;
   color: #ffffff;
   transform: translateY(-2px);
@@ -2958,7 +2958,7 @@ user-actions-row {
 .settled-debts-section {
   margin-top: 2rem;
   padding: 1.5rem;
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(74, 222, 128, 0.05) 100%);
+  background: var(--gradient-success-ultra-subtle);
   border: 1px solid rgba(34, 197, 94, 0.2);
   border-radius: 12px;
 }
@@ -3041,7 +3041,7 @@ user-actions-row {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(74, 222, 128, 0.15) 100%);
+  background: var(--gradient-success-ultra-subtle);
   padding: 1rem;
   border-radius: 10px;
   border: 2px solid rgba(34, 197, 94, 0.3);
@@ -3079,7 +3079,7 @@ user-actions-row {
 }
 
 .undo-settle-btn {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(239, 68, 68, 0.2));
+  background: var(--gradient-success-light);
   border: 2px solid rgba(239, 68, 68, 0.5);
   color: #fca5a5;
   padding: 1rem;
@@ -3096,7 +3096,7 @@ user-actions-row {
 }
 
 .undo-settle-btn:hover {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.45), rgba(239, 68, 68, 0.35));
+  background: var(--gradient-success);
   border-color: #ef4444;
   color: #ffffff;
   transform: translateY(-2px);

@@ -214,7 +214,7 @@ const handleSubmit = async () => {
 
 .auth-page {
   flex: 1;
-  background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
+  background: var(--gradient-page-dark);
 }
 .auth-container {
   min-height: 100%;
@@ -289,7 +289,7 @@ const handleSubmit = async () => {
   font-size: 2rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
-  background: linear-gradient(135deg, #ffffff 0%, #8b5cf6 100%);
+  background: var(--gradient-card);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -340,7 +340,7 @@ const handleSubmit = async () => {
 
 .submit-button {
   padding: 1rem;
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: var(--gradient-button);
   color: white;
   border: none;
   border-radius: 12px;

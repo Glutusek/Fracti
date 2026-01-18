@@ -146,8 +146,8 @@ const currentYear = new Date().getFullYear();
 <style scoped>
 .landing-page {
   flex: 1;
-  background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
-  color: #e5e7eb;
+  background: var(--gradient-page-dark);
+  color: var(--text-primary);
 }
 
 .container {
@@ -235,7 +235,7 @@ const currentYear = new Date().getFullYear();
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #a855f7 100%);
+  background: var(--gradient-button);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -255,7 +255,7 @@ const currentYear = new Date().getFullYear();
   align-items: center;
   gap: 0.5rem;
   padding: 1rem 2.5rem;
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: var(--gradient-button);
   color: white;
   text-decoration: none;
   border-radius: 12px;
@@ -287,7 +287,7 @@ const currentYear = new Date().getFullYear();
   font-size: 3rem;
   font-weight: 700;
   margin-bottom: 4rem;
-  background: linear-gradient(135deg, #ffffff 0%, #8b5cf6 100%);
+  background: var(--gradient-card);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -318,7 +318,7 @@ const currentYear = new Date().getFullYear();
 .feature-icon {
   width: 64px;
   height: 64px;
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: var(--gradient-button);
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -362,7 +362,7 @@ const currentYear = new Date().getFullYear();
 .step-number {
   width: 60px;
   height: 60px;
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: var(--gradient-button);
   border-radius: 50%;
   display: flex;
   align-items: center;

@@ -1,0 +1,115 @@
+/* ========================================
+   CSS VARIABLES & THEME
+   ======================================== */
+
+:root {
+  /* Gradients - Page Backgrounds */
+  --gradient-primary: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+  --gradient-page-dark: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+
+  /* Gradients - Components */
+  --gradient-button: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  --gradient-card: linear-gradient(135deg, #ffffff 0%, #8b5cf6 100%);
+  --gradient-card-subtle: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(99, 102, 241, 0.1) 100%);
+  --gradient-card-ultra-subtle: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.05) 100%);
+  --gradient-overlay-dark: linear-gradient(135deg, rgba(15, 23, 42, 0.6) 0%, rgba(15, 23, 42, 0.4) 100%);
+  --gradient-overlay-darker: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(15, 23, 42, 0.6) 100%);
+  --gradient-warning: linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(251, 146, 60, 0.15) 100%);
+  --gradient-success-light: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(34, 197, 94, 0.2));
+  --gradient-success: linear-gradient(135deg, rgba(34, 197, 94, 0.45), rgba(34, 197, 94, 0.35));
+  --gradient-success-subtle: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(74, 222, 128, 0.05) 100%);
+  --gradient-success-ultra-subtle: linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(74, 222, 128, 0.15) 100%);
+
+  /* Colors */
+  --text-primary: #e5e7eb;
+  --text-secondary: #9ca3af;
+  --color-purple: #8b5cf6;
+  --color-indigo: #6366f1;
+  --color-green: #22c55e;
+  --color-green-light: #4ade80;
+
+  /* Breakpoints */
+  --bp-lg: 1024px;
+  --bp-md: 768px;
+  --bp-sm: 480px;
+
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 2rem;
+  --spacing-xl: 3rem;
+
+  /* Border Radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+.gradient-bg-primary {
+  background: var(--gradient-primary);
+}
+
+.gradient-bg-page-dark {
+  background: var(--gradient-page-dark);
+}
+
+.gradient-btn {
+  background: var(--gradient-button);
+}
+
+.gradient-card {
+  background: var(--gradient-card);
+}
+
+.gradient-card-subtle {
+  background: var(--gradient-card-subtle);
+}
+
+.gradient-card-ultra-subtle {
+  background: var(--gradient-card-ultra-subtle);
+}
+
+.gradient-warning {
+  background: var(--gradient-warning);
+}
+
+.gradient-success-light {
+  background: var(--gradient-success-light);
+}
+
+.gradient-success {
+  background: var(--gradient-success);
+}
+
+.gradient-success-subtle {
+  background: var(--gradient-success-subtle);
+}
+
+.gradient-success-ultra-subtle {
+  background: var(--gradient-success-ultra-subtle);
+}
+
+/* Flex utilities */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.flex-center { display: flex; align-items: center; justify-content: center; }
+
+/* Text utilities */
+.text-primary { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+
+/* ========================================
+   RESPONSIVE BREAKPOINTS MIXIN REFERENCE
+   ======================================== */
+
+/* Media Query Patterns:
+   Desktop: No query needed (default)
+   Tablet: @media (max-width: 1024px) { ... }
+   Mobile: @media (max-width: 768px) { ... }
+   Small Mobile: @media (max-width: 480px) { ... }
+*/

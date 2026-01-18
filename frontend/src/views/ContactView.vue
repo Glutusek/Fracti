@@ -222,7 +222,7 @@ onUnmounted(() => {
 /* Wrapper */
 .contact-wrapper {
   flex: 1;
-  background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+  background: var(--gradient-page-dark);
   color: #e5e7eb;
   padding: 2rem;
 }
@@ -292,7 +292,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.5rem;
   padding: 1rem;
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: var(--gradient-button);
   color: white;
   border: none;
   border-radius: 12px;
@@ -324,7 +324,7 @@ onUnmounted(() => {
 .icon-box {
   width: 48px;
   height: 48px;
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: var(--gradient-button);
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -406,7 +406,7 @@ onUnmounted(() => {
 .modal-button {
   width: 100%;
   padding: 0.8rem;
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: var(--gradient-button);
   color: white;
   border: none;
   border-radius: 12px;

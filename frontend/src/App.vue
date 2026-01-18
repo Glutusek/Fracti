@@ -107,7 +107,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #a855f7 100%);
+  background: var(--gradient-button);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -145,7 +145,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   font-size: 2.5rem;
   font-weight: 700;
   margin-bottom: 3rem;
-  background: linear-gradient(135deg, #ffffff 0%, #8b5cf6 100%);
+  background: var(--gradient-card);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -254,7 +254,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .modal-actions button.primary {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: var(--gradient-button);
   color: white;
   border: none;
   box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
@@ -345,7 +345,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 /* Button styles */
 .btn-primary,
 .primary {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: var(--gradient-button);
   color: white;
   border: none;
   padding: 12px 24px;

@@ -368,10 +368,10 @@ onUnmounted(() => {
 /* KONTENER GŁÓWNY */
 .settlements-container {
   flex: 1;
-  background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+  background: var(--gradient-page-dark);
   padding: 2rem;
   font-family: 'Inter', sans-serif;
-  color: #e5e7eb;
+  color: var(--text-primary);
 }
 
 .header {
@@ -388,7 +388,7 @@ onUnmounted(() => {
 }
 
 .header h1 {
-  background: linear-gradient(135deg, #ffffff 0%, #8b5cf6 100%);
+  background: var(--gradient-card);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -441,7 +441,7 @@ onUnmounted(() => {
 }
 
 .create-btn {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: var(--gradient-button);
   color: white;
   border: none;
   padding: 12px 24px;
@@ -536,7 +536,7 @@ onUnmounted(() => {
 .amount-section .value {
   font-size: 1.4rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: var(--gradient-button);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -780,7 +780,7 @@ onUnmounted(() => {
 }
 
 .modal-actions button.primary {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: var(--gradient-button);
   border: none;
   color: white;
   font-weight: 600;

@@ -107,7 +107,7 @@ const closeMobileMenu = () => {
 .logo-text {
   font-size: 1.5rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: var(--gradient-button);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -143,7 +143,7 @@ const closeMobileMenu = () => {
   left: 0;
   width: 0;
   height: 2px;
-  background: linear-gradient(90deg, #8b5cf6, #6366f1);
+  background: var(--gradient-button);
   transition: width 0.3s;
 }
 
@@ -153,7 +153,7 @@ const closeMobileMenu = () => {
 
 .login-btn {
   padding: 0.5rem 1.5rem;
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: var(--gradient-button);
   border-radius: 8px;
   -webkit-text-fill-color: white;
   color: white;

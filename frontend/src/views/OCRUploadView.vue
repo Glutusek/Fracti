@@ -923,7 +923,7 @@ onUnmounted(() => {
 <style scoped>
 .ocr-page {
   flex: 1;
-  background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+  background: var(--gradient-page-dark);
   color: #e5e7eb;
   padding: 2rem;
   font-family: 'Inter', sans-serif;
@@ -932,7 +932,7 @@ onUnmounted(() => {
 .header { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem; }
 .header h1 {
   font-size: 2rem;
-  background: linear-gradient(135deg, #fff 0%, #a78bfa 100%);
+  background: var(--gradient-card);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin: 0;
@@ -999,7 +999,7 @@ onUnmounted(() => {
 .total-label { font-size: 1.1rem; font-weight: 600; color: #c4b5fd; text-transform: uppercase; letter-spacing: 1px; }
 .total-value {
   font-size: 1.5rem; font-weight: 700;
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: var(--gradient-button);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
 .final-actions { margin-top: 2rem; }
@@ -1058,7 +1058,7 @@ onUnmounted(() => {
   transform: translateY(-1px);
 }
 .btn-import-glow {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); color: white;
+  background: var(--gradient-button); color: white;
   border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600;
   font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 8px;
   box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1145,7 +1145,7 @@ onUnmounted(() => {
   color: white;
 }
 .btn-primary {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: var(--gradient-button);
   border: none;
   color: white;
   border-radius: 8px;
