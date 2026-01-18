@@ -412,11 +412,20 @@
               v-for="prod in editingReceipt.products"
               :key="prod.id"
               class="receipt-list-item"
+              :class="{ 'has-error': editReceiptErrors[prod.id] }"
             >
               <div class="r-item-info">
                 <div class="r-item-name">{{ prod.name }}</div>
+
+                <div v-if="editReceiptErrors[prod.id]" class="error-text-mini">
+                   ⚠️ {{ editReceiptErrors[prod.id] }}
+                </div>
+
                 <div class="r-item-meta">
-                  {{ formatMoney(prod.price) }} zł • {{ prod.consumers.length }} os.
+                  {{ formatMoney(prod.price) }} zł •
+                  <span :class="{'text-red': !prod.consumers.length}">
+                    {{ prod.consumers.length }} os.
+                  </span>
                 </div>
               </div>
               <div class="r-item-actions">
@@ -588,6 +597,8 @@ const addProductFormErrors = ref<{
 const editProductFormErrors = ref<{
   consumers?: string;
 }>({});
+
+const editReceiptErrors = ref<Record<number, string>>({});
 
 const categories = fractiService.getCategoriesOptionList();
 
@@ -1209,12 +1220,34 @@ const deleteLooseProduct = () => {
 
 const updateReceipt = async () => {
   if (!editingReceipt.value) return;
+
+  editReceiptErrors.value = {};
+  let hasErrors = false;
+
+  if (!editingReceipt.value.merchant_name || editingReceipt.value.merchant_name.trim() === '') {
+    showToast('Podaj nazwę sklepu', 'error');
+    return;
+  }
+
+  if (editingReceipt.value.products) {
+    editingReceipt.value.products.forEach(prod => {
+      if (!prod.consumers || prod.consumers.length === 0) {
+        editReceiptErrors.value[prod.id] = 'Przypisz konsumentów!';
+        hasErrors = true;
+      }
+    });
+  }
+
+  if (hasErrors) {
+    showToast('Uzupełnij brakujących konsumentów na liście', 'error');
+    return;
+  }
+
   try {
     const purchaseDateForApi = editingReceipt.value.purchase_date
       ? new Date(editingReceipt.value.purchase_date).toISOString()
       : undefined;
 
-    // Automatyczne ustawienie total_amount jako suma produktów
     const calculatedTotal = calculatedReceiptTotal.value;
 
     await fractiService.updateReceipt(editingReceipt.value.id, {
@@ -1226,9 +1259,11 @@ const updateReceipt = async () => {
       latitude: editingReceipt.value.latitude,
       longitude: editingReceipt.value.longitude
     });
+
     await loadSettlement();
     showEditReceiptModal.value = false;
     showToast('Zapisano pomyślnie', 'success');
+
     const refreshedReceipt = settlement.value?.receipts?.find(r => r.id === editingReceipt.value?.id);
     if (refreshedReceipt) {
       const srcDate = refreshedReceipt.purchase_date || new Date().toISOString();
@@ -1236,7 +1271,7 @@ const updateReceipt = async () => {
     }
   } catch (e) {
     console.error('Błąd aktualizacji paragonu:', e);
-    alert('Nie udało się zaktualizować paragonu');
+    showToast('Nie udało się zaktualizować paragonu', 'error');
   }
 };
 
@@ -1279,7 +1314,9 @@ const deleteReceipt = async () => {
 const openReceiptItemModal = (item: Product | null, receiptId: number) => {
   currentReceiptId.value = receiptId;
   editingReceiptItem.value = item;
-
+  if (item && editReceiptErrors.value[item.id]) {
+    delete editReceiptErrors.value[item.id];
+  }
   if (item) {
     // Edycja istniejącej pozycji
     receiptItemForm.value = {
