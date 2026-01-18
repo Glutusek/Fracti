@@ -71,8 +71,8 @@
 .about-wrapper {
   flex: 1;
   background: var(--gradient-page-dark);
-  color: #e5e7eb;
-  padding: 2rem;
+  color: var(--text-primary);
+  padding: var(--spacing-lg);
 }
 
 /* Specjalne nadpisanie dla AboutUs */
@@ -155,7 +155,7 @@
   padding: 2.5rem;
   position: relative;
   overflow: hidden;
-  transition: all 0.3s;
+  transition: var(--transition-normal);
 }
 
 .value-card:hover {
@@ -191,7 +191,7 @@
 .orb-center {
   width: 600px;
   height: 600px;
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+  background: var(--gradient-radial-purple-subtle);
   position: absolute;
   top: 50%;
   left: 50%;

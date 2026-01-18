@@ -153,7 +153,7 @@ const currentYear = new Date().getFullYear();
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: var(--spacing-lg);
 }
 
 /* Hero Section */
@@ -184,7 +184,7 @@ const currentYear = new Date().getFullYear();
 .orb-1 {
   width: 500px;
   height: 500px;
-  background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
+  background: var(--gradient-radial-purple);
   top: -200px;
   left: -100px;
 }
@@ -192,7 +192,7 @@ const currentYear = new Date().getFullYear();
 .orb-2 {
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, #6366f1 0%, transparent 70%);
+  background: var(--gradient-radial-indigo);
   bottom: -150px;
   right: -100px;
   animation-delay: -5s;
@@ -201,24 +201,13 @@ const currentYear = new Date().getFullYear();
 .orb-3 {
   width: 300px;
   height: 300px;
-  background: radial-gradient(circle, #a855f7 0%, transparent 70%);
+  background: var(--gradient-radial-magenta);
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   animation-delay: -10s;
 }
 
-@keyframes float {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(50px, -50px) scale(1.1);
-  }
-  66% {
-    transform: translate(-50px, 50px) scale(0.9);
-  }
-}
 
 .hero .container {
   position: relative;
@@ -261,7 +250,7 @@ const currentYear = new Date().getFullYear();
   border-radius: 12px;
   font-weight: 600;
   font-size: 1.1rem;
-  transition: all 0.3s;
+  transition: var(--transition-normal);
   box-shadow: 0 10px 40px rgba(139, 92, 246, 0.3);
 }
 
@@ -304,8 +293,8 @@ const currentYear = new Date().getFullYear();
   background: rgba(139, 92, 246, 0.05);
   border: 1px solid rgba(139, 92, 246, 0.2);
   border-radius: 16px;
-  padding: 2rem;
-  transition: all 0.3s;
+  padding: var(--spacing-lg);
+  transition: var(--transition-normal);
 }
 
 .feature-card:hover {

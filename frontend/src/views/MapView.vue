@@ -415,7 +415,7 @@ onMounted(async () => {
   cursor: pointer;
   font-size: 0.8rem;
   margin-bottom: 1rem;
-  transition: all 0.2s;
+  transition: var(--transition-fast);
   margin-left: 4px;
 }
 .back-btn:hover { background: #374151; color: white; }
@@ -460,7 +460,7 @@ onMounted(async () => {
   padding: 12px;
   margin-bottom: 10px;
   cursor: pointer;
-  transition: transform 0.2s, background 0.2s;
+  transition: var(--transition-fast);
   border: 1px solid transparent;
 }
 .item-card:hover {

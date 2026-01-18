@@ -93,7 +93,7 @@ const closeMobileMenu = () => {
   align-items: center;
   gap: 0.75rem;
   text-decoration: none;
-  transition: transform 0.2s;
+  transition: var(--transition-transform);
 }
 
 .logo-link:hover {
@@ -123,7 +123,7 @@ const closeMobileMenu = () => {
   color: #e5e7eb;
   text-decoration: none;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: var(--transition-fast);
   position: relative;
   background: none;
   border: none;
@@ -133,7 +133,7 @@ const closeMobileMenu = () => {
 }
 
 .nav-link:hover {
-  color: #8b5cf6;
+  color: var(--color-purple);
 }
 
 .nav-link::after {
@@ -144,7 +144,7 @@ const closeMobileMenu = () => {
   width: 0;
   height: 2px;
   background: var(--gradient-button);
-  transition: width 0.3s;
+  transition: var(--transition-normal);
 }
 
 .nav-link:hover::after {
@@ -202,7 +202,7 @@ const closeMobileMenu = () => {
   height: 3px;
   background: #e5e7eb;
   border-radius: 3px;
-  transition: all 0.3s ease;
+  transition: var(--transition-normal);
 }
 
 .hamburger.active span:nth-child(1) {
@@ -233,8 +233,8 @@ const closeMobileMenu = () => {
     flex-direction: column;
     align-items: stretch;
     gap: 0;
-    padding: 2rem;
-    transition: right 0.3s ease;
+    padding: var(--spacing-lg);
+    transition: var(--transition-normal);
     border-left: 1px solid rgba(139, 92, 246, 0.2);
   }
 

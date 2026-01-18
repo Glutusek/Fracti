@@ -224,7 +224,8 @@ onUnmounted(() => {
   flex: 1;
   background: var(--gradient-page-dark);
   color: #e5e7eb;
-  padding: 2rem;
+  padding: var(--spacing-lg);
+  overflow: hidden;
 }
 
 /* NOWY STYL: Reset stylów dla linków-kart */
@@ -271,7 +272,7 @@ onUnmounted(() => {
   background: rgba(139, 92, 246, 0.05);
   border: 1px solid rgba(139, 92, 246, 0.2);
   border-radius: 16px;
-  padding: 2rem;
+  padding: var(--spacing-lg);
   backdrop-filter: blur(10px);
 }
 
@@ -299,7 +300,7 @@ onUnmounted(() => {
   font-weight: 600;
   font-size: 1.1rem;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: var(--transition-normal);
 }
 
 .submit-button:hover {
@@ -316,9 +317,9 @@ onUnmounted(() => {
 .info-card {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--spacing-md);
   padding: 1.5rem;
-  transition: transform 0.3s, background-color 0.3s; /* Dodano transition background */
+  transition: var(--transition-normal); /* Dodano transition background */
 }
 
 .icon-box {
@@ -351,19 +352,40 @@ onUnmounted(() => {
 }
 
 .orb-1 {
+  position: absolute;
   width: 400px;
   height: 400px;
   background: #8b5cf6;
   top: 10%;
   right: -100px;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.3;
+  pointer-events: none;
 }
 
 .orb-2 {
+  position: absolute;
   width: 300px;
   height: 300px;
-  background: #6366f1;
+  background: var(--color-indigo);
   bottom: 10%;
   left: -50px;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.bg-elements {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .modal-overlay {
@@ -381,7 +403,7 @@ onUnmounted(() => {
 .success-icon {
   width: 70px;
   height: 70px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: var(--gradient-section-green);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -412,7 +434,7 @@ onUnmounted(() => {
   border-radius: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: var(--transition-fast);
 }
 
 .modal-button:hover {
@@ -425,14 +447,4 @@ onUnmounted(() => {
   transform: none;
 }
 
-@keyframes popIn {
-  from {
-    opacity: 0;
-    transform: scale(0.8);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
 </style>

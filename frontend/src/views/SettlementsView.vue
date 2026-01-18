@@ -369,7 +369,7 @@ onUnmounted(() => {
 .settlements-container {
   flex: 1;
   background: var(--gradient-page-dark);
-  padding: 2rem;
+  padding: var(--spacing-lg);
   font-family: 'Inter', sans-serif;
   color: var(--text-primary);
 }
@@ -398,7 +398,7 @@ onUnmounted(() => {
 
 .header-actions {
   display: flex;
-  gap: 1rem;
+  gap: var(--spacing-md);
   align-items: center;
 }
 
@@ -410,7 +410,7 @@ onUnmounted(() => {
   border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
-  transition: all 0.3s;
+  transition: var(--transition-normal);
   box-shadow: 0 3px 15px rgba(99, 102, 241, 0.2);
 }
 
@@ -429,7 +429,7 @@ onUnmounted(() => {
   border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
-  transition: all 0.3s;
+  transition: var(--transition-normal);
   box-shadow: 0 3px 15px rgba(168, 85, 247, 0.2);
 }
 
@@ -448,7 +448,7 @@ onUnmounted(() => {
   border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
-  transition: all 0.3s;
+  transition: var(--transition-normal);
   box-shadow: 0 5px 20px rgba(139, 92, 246, 0.3);
 }
 .create-btn:hover {
@@ -470,7 +470,7 @@ onUnmounted(() => {
   border-radius: 16px;
   margin-bottom: 1.5rem;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  transition: all 0.3s;
+  transition: var(--transition-normal);
   overflow: hidden;
 }
 
@@ -502,7 +502,7 @@ onUnmounted(() => {
 }
 .meta {
   font-size: 0.85rem;
-  color: #9ca3af;
+  color: var(--text-secondary);
   display: flex;
   gap: 12px;
   margin-bottom: 6px;
@@ -516,7 +516,7 @@ onUnmounted(() => {
 }
 .desc {
   font-size: 0.9rem;
-  color: #9ca3af;
+  color: var(--text-secondary);
   margin: 0;
   font-style: italic;
 }
@@ -529,7 +529,7 @@ onUnmounted(() => {
 .amount-section .label {
   display: block;
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -562,7 +562,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 5px;
-  transition: all 0.2s;
+  transition: var(--transition-fast);
 }
 .btn-details:hover {
   background: rgba(139, 92, 246, 0.25);
@@ -581,7 +581,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 5px;
-  transition: all 0.2s;
+  transition: var(--transition-fast);
 }
 .btn-map:hover {
   background: rgba(99, 102, 241, 0.3);
@@ -592,21 +592,20 @@ onUnmounted(() => {
 .btn-expand {
   background: transparent;
   border: 1px solid rgba(139, 92, 246, 0.3);
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  padding: 8px 16px;
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.8rem;
-  color: #9ca3af;
-  transition: all 0.3s ease;
+  color: var(--text-secondary);
+  transition: var(--transition-normal);
 }
 .btn-expand:hover {
   background: rgba(139, 92, 246, 0.1);
   border-color: rgba(139, 92, 246, 0.5);
-  color: #e5e7eb;
+  color: var(--text-primary);
 }
 .btn-expand.rotated {
   transform: rotate(180deg);
@@ -644,10 +643,10 @@ onUnmounted(() => {
 }
 .sub-section li:last-child { border-bottom: none; }
 
-.item-name { font-weight: 500; color: #e5e7eb; }
+.item-name { font-weight: 500; color: var(--text-primary); }
 .item-cat {
   font-size: 0.85rem;
-  color: #9ca3af;
+  color: var(--text-secondary);
   margin-left: 10px;
   background: rgba(139, 92, 246, 0.1);
   padding: 2px 8px;
@@ -655,7 +654,7 @@ onUnmounted(() => {
 }
 .item-date {
   font-size: 0.85rem;
-  color: #9ca3af;
+  color: var(--text-secondary);
   margin-left: 6px;
   margin-right: auto;
   background: rgba(139, 92, 246, 0.1);
@@ -671,11 +670,6 @@ onUnmounted(() => {
   padding: 1.5rem;
   background: rgba(139, 92, 246, 0.05);
   border-radius: 8px;
-}
-
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 /* MODAL - nadpisania dla Settlements */
@@ -699,7 +693,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: var(--transition-fast);
   font-size: 1.1rem;
 }
 
@@ -752,7 +746,7 @@ onUnmounted(() => {
 }
 
 .modal-content input:focus {
-  border-color: #8b5cf6;
+  border-color: var(--color-purple);
   box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
 }
 
@@ -770,7 +764,7 @@ onUnmounted(() => {
   color: #c4b5fd;
   cursor: pointer;
   font-size: 0.95rem;
-  transition: all 0.2s;
+  transition: var(--transition-fast);
 }
 
 .modal-actions button:hover {
@@ -799,7 +793,7 @@ onUnmounted(() => {
 
   .header {
     flex-direction: column;
-    gap: 1rem;
+    gap: var(--spacing-md);
   }
 
   .header h1 {
@@ -878,14 +872,15 @@ onUnmounted(() => {
 
   .actions-section {
     width: 100%;
-    flex-direction: row;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
   }
 
   .actions-section button {
-    flex: 1;
-    padding: 8px;
+    padding: 8px 12px;
     font-size: 0.8rem;
+    width: 100%;
   }
 
   .desc {

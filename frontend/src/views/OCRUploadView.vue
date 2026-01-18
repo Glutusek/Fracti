@@ -925,7 +925,7 @@ onUnmounted(() => {
   flex: 1;
   background: var(--gradient-page-dark);
   color: #e5e7eb;
-  padding: 2rem;
+  padding: var(--spacing-lg);
   font-family: 'Inter', sans-serif;
 }
 .ocr-container { max-width: 800px; margin: 0 auto; }
@@ -954,19 +954,19 @@ onUnmounted(() => {
   margin-top: 1rem; background: rgba(139,92,246,0.1); padding: 1rem; border-radius: 8px;
 }
 .form-actions { display: flex; gap: 10px; margin-top: 10px; }
-.form-grid { display: grid; gap: 1rem; }
+.form-grid { display: grid; gap: var(--spacing-md); }
 .form-group label { display: block; margin-bottom: 4px; }
-.form-row { display: flex; gap: 1rem; }
+.form-row { display: flex; gap: var(--spacing-md); }
 .form-group.half { flex: 1; }
 .mini-map { height: 150px; margin-top: 5px; }
 .ocr-trigger-section { margin-bottom: 1.5rem; }
 .ocr-upload-btn {
   width: 100%; display: flex; align-items: center; justify-content: center;
-  gap: 1rem; background: rgba(139, 92, 246, 0.1);
+  gap: var(--spacing-md); background: rgba(139, 92, 246, 0.1);
   border: 2px dashed rgba(139, 92, 246, 0.4); border-radius: 12px;
-  padding: 1.5rem; cursor: pointer; transition: all 0.3s; text-align: left;
+  padding: 1.5rem; cursor: pointer; transition: var(--transition-normal); text-align: left;
 }
-.ocr-upload-btn:hover { background: rgba(139, 92, 246, 0.2); border-color: #8b5cf6; }
+.ocr-upload-btn:hover { background: rgba(139, 92, 246, 0.2); border-color: var(--color-purple); }
 .ocr-upload-btn .icon { font-size: 2rem; }
 .ocr-upload-btn .main-text { font-weight: bold; color: #e5e7eb; font-size: 1.1rem; }
 .ocr-upload-btn .sub-text { font-size: 0.9rem; color: #9ca3af; }
@@ -1004,7 +1004,7 @@ onUnmounted(() => {
 }
 .final-actions { margin-top: 2rem; }
 .btn-save {
-  width: 100%; padding: 14px; background: #22c55e; color: white;
+  width: 100%; padding: 14px; background: var(--color-green); color: white;
   border: none; border-radius: 10px; font-size: 1.2rem; font-weight: bold;
   cursor: pointer; box-shadow: 0 4px 15px rgba(34,197,94,0.4);
 }
@@ -1025,16 +1025,16 @@ onUnmounted(() => {
   display: flex; justify-content: space-between; align-items: center;
 }
 .ocr-workspace {
-  flex: 1; width: 100%; overflow: auto; padding: 2rem;
+  flex: 1; width: 100%; overflow: auto; padding: var(--spacing-lg);
   display: flex; justify-content: center; align-items: flex-start;
 }
 .img-container { position: relative; }
 .overlay-bg { width: 100%; height: 100%; display: block; }
 .ocr-box {
   position: absolute; border: 2px solid yellow; background: rgba(255,255,0,0.15);
-  cursor: pointer; transition: all 0.2s;
+  cursor: pointer; transition: var(--transition-fast);
 }
-.ocr-box.selected { border-color: #22c55e; background: rgba(34,197,94,0.3); }
+.ocr-box.selected { border-color: var(--color-green); background: rgba(34,197,94,0.3); }
 .tooltip {
   position: absolute; bottom: 100%; left: 0; background: black; color: white;
   font-size: 0.7rem; padding: 2px 4px; pointer-events: none;
@@ -1045,13 +1045,13 @@ onUnmounted(() => {
   border-top: 1px solid rgba(139, 92, 246, 0.3); display: flex;
   justify-content: space-between; align-items: center; backdrop-filter: blur(10px);
 }
-.ocr-footer-actions { display: flex; gap: 1rem; align-items: center; }
+.ocr-footer-actions { display: flex; gap: var(--spacing-md); align-items: center; }
 .selection-summary { color: #e5e7eb; font-size: 1rem; }
-.selection-summary strong { color: #22c55e; font-size: 1.1rem; }
+.selection-summary strong { color: var(--color-green); font-size: 1.1rem; }
 .btn-secondary-outline {
   background: transparent; border: 1px solid rgba(167, 139, 250, 0.3);
   color: #c4b5fd; padding: 10px 18px; border-radius: 10px; font-size: 0.95rem;
-  cursor: pointer; transition: all 0.3s ease;
+  cursor: pointer; transition: var(--transition-normal);
 }
 .btn-secondary-outline:hover {
   border-color: #a78bfa; background: rgba(139, 92, 246, 0.1); color: white;
@@ -1061,7 +1061,7 @@ onUnmounted(() => {
   background: var(--gradient-button); color: white;
   border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600;
   font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 8px;
-  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3); transition: var(--transition-normal);
 }
 .btn-import-glow:hover:not(:disabled) {
   transform: translateY(-2px); box-shadow: 0 8px 25px rgba(139, 92, 246, 0.5); filter: brightness(1.1);
@@ -1085,7 +1085,7 @@ onUnmounted(() => {
   background: transparent;
   color: #c4b5fd;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--transition-fast);
   font-size: 0.95rem;
   font-weight: 500;
 }
@@ -1097,8 +1097,8 @@ onUnmounted(() => {
 }
 
 .modal-content button.primary {
-  background: #22c55e;
-  border-color: #22c55e;
+  background: var(--color-green);
+  border-color: var(--color-green);
   color: white;
   font-weight: 600;
 }
@@ -1123,7 +1123,7 @@ onUnmounted(() => {
 .modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
+  gap: var(--spacing-md);
   margin-top: 1.5rem;
 }
 .modal-actions.space-between {
@@ -1135,7 +1135,7 @@ onUnmounted(() => {
   color: #c4b5fd;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--transition-fast);
   font-weight: 500;
 }
 
@@ -1150,7 +1150,7 @@ onUnmounted(() => {
   color: white;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--transition-fast);
   font-weight: 600;
   box-shadow: 0 2px 10px rgba(139, 92, 246, 0.2);
 }
@@ -1177,7 +1177,7 @@ button.small {
   border-width: 2px !important;
   background-color: rgba(239, 68, 68, 0.05);
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-  transition: all 0.2s ease;
+  transition: var(--transition-fast);
 }
 
 .form-group.has-error input:focus,
@@ -1209,19 +1209,9 @@ button.small {
   border-radius: 8px;
   padding: 10px 12px !important;
   box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
-  transition: all 0.2s ease;
+  transition: var(--transition-fast);
 }
 
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 .checkbox-group.has-error {
   border: 2px solid #ef4444;

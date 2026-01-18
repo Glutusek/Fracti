@@ -193,7 +193,7 @@ const activeTab = ref<'terms' | 'privacy'>('terms');
 <style scoped>
 .legal-wrapper {
   flex: 1;
-  padding: 2rem;
+  padding: var(--spacing-lg);
   position: relative;
   background: var(--gradient-page-dark);
   color: var(--text-primary);
@@ -216,7 +216,7 @@ const activeTab = ref<'terms' | 'privacy'>('terms');
   font-size: 2.5rem;
   font-weight: bold;
   margin-bottom: 1rem;
-  background: linear-gradient(135deg, #e5e7eb 0%, #9ca3af 100%);
+  background: var(--gradient-section-text);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -240,13 +240,13 @@ const activeTab = ref<'terms' | 'privacy'>('terms');
   background: rgba(15, 23, 42, 0.7);
   border: 1px solid rgba(139, 92, 246, 0.2);
   border-radius: 1rem;
-  padding: 2rem;
+  padding: var(--spacing-lg);
   backdrop-filter: blur(10px);
 }
 
 .tabs-buttons {
   display: flex;
-  gap: 1rem;
+  gap: var(--spacing-md);
   margin-bottom: 2rem;
   border-bottom: 1px solid rgba(139, 92, 246, 0.2);
 }
@@ -259,32 +259,23 @@ const activeTab = ref<'terms' | 'privacy'>('terms');
   cursor: pointer;
   font-size: 1rem;
   font-weight: 500;
-  transition: all 0.3s ease;
+  transition: var(--transition-normal);
   border-bottom: 2px solid transparent;
   position: relative;
   bottom: -1px;
 }
 
 .tab-button:hover {
-  color: #8b5cf6;
+  color: var(--color-purple);
 }
 
 .tab-button.active {
-  color: #8b5cf6;
-  border-bottom-color: #8b5cf6;
+  color: var(--color-purple);
+  border-bottom-color: var(--color-purple);
 }
 
 .tab-content {
   animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
 }
 
 .tab-content h2 {
@@ -299,7 +290,7 @@ const activeTab = ref<'terms' | 'privacy'>('terms');
   font-size: 1.25rem;
   margin-top: 1.5rem;
   margin-bottom: 0.75rem;
-  color: #8b5cf6;
+  color: var(--color-purple);
 }
 
 .tab-content p {
@@ -320,7 +311,7 @@ const activeTab = ref<'terms' | 'privacy'>('terms');
 }
 
 .tab-content strong {
-  color: #8b5cf6;
+  color: var(--color-purple);
 }
 
 /* Background Elements */
@@ -353,7 +344,7 @@ const activeTab = ref<'terms' | 'privacy'>('terms');
 .orb-2 {
   width: 400px;
   height: 400px;
-  background: linear-gradient(135deg, var(--color-indigo), #3b82f6);
+  background: var(--gradient-section-blue);
   bottom: -100px;
   left: -100px;
 }
@@ -374,7 +365,7 @@ const activeTab = ref<'terms' | 'privacy'>('terms');
   }
 
   .tab-button.active {
-    border-left-color: #8b5cf6;
+    border-left-color: var(--color-purple);
     border-bottom: none;
   }
 

@@ -1481,7 +1481,7 @@ onUnmounted(() => {
   border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: var(--transition-fast);
 }
 
 .back-btn:hover {
@@ -1505,7 +1505,7 @@ onUnmounted(() => {
 
 .total-cost {
   font-size: 1.1rem;
-  color: #9ca3af;
+  color: var(--text-secondary);
 }
 
 .total-cost .amount {
@@ -1526,7 +1526,7 @@ onUnmounted(() => {
 /* Left Column - 60% */
 .left-column {
   flex: 0 0 60%;
-  padding: 2rem;
+  padding: var(--spacing-lg);
   overflow-y: auto;
 }
 
@@ -1555,7 +1555,7 @@ onUnmounted(() => {
 .timeline {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--spacing-md);
 }
 
 .timeline-item {
@@ -1563,7 +1563,7 @@ onUnmounted(() => {
   border: 1px solid rgba(139, 92, 246, 0.2);
   border-radius: 12px;
   overflow: hidden;
-  transition: all 0.3s;
+  transition: var(--transition-normal);
 }
 
 .timeline-item:hover {
@@ -1581,7 +1581,7 @@ onUnmounted(() => {
   align-items: center;
   padding: 1.25rem;
   cursor: pointer;
-  gap: 1rem;
+  gap: var(--spacing-md);
 }
 
 .item-icon {
@@ -1608,9 +1608,9 @@ onUnmounted(() => {
 
 .item-meta {
   display: flex;
-  gap: 1rem;
+  gap: var(--spacing-md);
   font-size: 0.85rem;
-  color: #9ca3af;
+  color: var(--text-secondary);
 }
 
 .item-amount {
@@ -1623,12 +1623,12 @@ onUnmounted(() => {
 .expand-btn {
   background: rgba(139, 92, 246, 0.2);
   border: 1px solid rgba(139, 92, 246, 0.3);
-  color: #e5e7eb;
+  color: var(--text-primary);
   width: 32px;
   height: 32px;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: var(--transition-fast);
 }
 
 .expand-btn:hover {
@@ -1650,7 +1650,7 @@ onUnmounted(() => {
   background: rgba(139, 92, 246, 0.05);
   border: 1px solid rgba(139, 92, 246, 0.15);
   border-radius: 8px;
-  transition: all 0.2s;
+  transition: var(--transition-fast);
 }
 
 .product-item:hover {
@@ -1664,7 +1664,7 @@ onUnmounted(() => {
 
 .product-name {
   font-weight: 500;
-  color: #e5e7eb;
+  color: var(--text-primary);
   margin-bottom: 0.25rem;
 }
 
@@ -1702,17 +1702,17 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: var(--transition-fast);
   font-size: 0.9rem;
   border: 1px solid rgba(139, 92, 246, 0.3);
   background: rgba(139, 92, 246, 0.1);
-  color: #e5e7eb;
+  color: var(--text-primary);
 }
 
 .edit-icon-btn:hover {
-  background: #8b5cf6;
+  background: var(--color-purple);
   color: white;
-  border-color: #8b5cf6;
+  border-color: var(--color-purple);
   box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
 }
 
@@ -1721,7 +1721,7 @@ onUnmounted(() => {
   flex: 0 0 40%;
   background: rgba(0, 0, 0, 0.2);
   border-left: 1px solid rgba(139, 92, 246, 0.2);
-  padding: 2rem;
+  padding: var(--spacing-lg);
   overflow-y: auto;
 }
 
@@ -1739,7 +1739,7 @@ onUnmounted(() => {
   border: none;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: var(--transition-normal);
   text-align: left;
   font-size: 1rem;
 }
@@ -1791,19 +1791,19 @@ onUnmounted(() => {
 .users-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--spacing-md);
   margin-bottom: 1rem;
 }
 
 .user-card {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--spacing-md);
   padding: 1rem;
   background: rgba(139, 92, 246, 0.05);
   border: 1px solid rgba(139, 92, 246, 0.2);
   border-radius: 12px;
-  transition: all 0.2s;
+  transition: var(--transition-fast);
 }
 
 .user-card:hover {
@@ -1842,7 +1842,7 @@ onUnmounted(() => {
 }
 
 .user-balance .paid {
-  color: #9ca3af;
+  color: var(--text-secondary);
 }
 
 .user-balance .owes {
@@ -1850,7 +1850,7 @@ onUnmounted(() => {
 }
 
 .user-balance .positive {
-  color: #4ade80;
+  color: var(--color-green-light);
 }
 
 .user-balance .negative {
@@ -1880,7 +1880,7 @@ onUnmounted(() => {
 .debts-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--spacing-md);
 }
 
 .debt-item {
@@ -1892,7 +1892,7 @@ onUnmounted(() => {
   background: var(--gradient-overlay-dark);
   border: 1px solid rgba(139, 92, 246, 0.3);
   border-radius: 10px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: var(--transition-normal);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
@@ -1941,7 +1941,7 @@ onUnmounted(() => {
 .debt-name {
   font-weight: 600;
   font-size: 0.95rem;
-  color: #e5e7eb;
+  color: var(--text-primary);
   min-width: 80px;
 }
 
@@ -1963,13 +1963,13 @@ onUnmounted(() => {
 
 .arrow-icon {
   font-size: 1.2rem;
-  color: #9ca3af;
+  color: var(--text-secondary);
   font-weight: bold;
 }
 
 .action-label {
   font-size: 0.7rem;
-  color: #9ca3af;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 600;
@@ -1985,7 +1985,7 @@ onUnmounted(() => {
   border-radius: 10px;
   border: 2px solid rgba(245, 158, 11, 0.4);
   box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
-  transition: all 0.2s ease;
+  transition: var(--transition-fast);
   cursor: default;
   min-height: 50px;
 }
@@ -2005,7 +2005,7 @@ onUnmounted(() => {
 .empty-state {
   padding: 1rem;
   text-align: center;
-  color: #4ade80;
+  color: var(--color-green-light);
   font-weight: 600;
 }
 
@@ -2018,7 +2018,7 @@ onUnmounted(() => {
   border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
-  transition: all 0.2s;
+  transition: var(--transition-fast);
   margin-top: 1rem;
 }
 
@@ -2036,7 +2036,7 @@ onUnmounted(() => {
 .code-display {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--spacing-md);
   background: rgba(0, 0, 0, 0.3);
   padding: 1rem;
   border-radius: 8px;
@@ -2048,7 +2048,7 @@ onUnmounted(() => {
   flex: 1;
   font-size: 1.5rem;
   font-weight: 700;
-  color: #8b5cf6;
+  color: var(--color-purple);
   letter-spacing: 2px;
   font-family: monospace;
 }
@@ -2061,7 +2061,7 @@ onUnmounted(() => {
   border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: var(--transition-fast);
   white-space: nowrap;
 }
 
@@ -2111,7 +2111,7 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .header {
     padding: 1rem;
-    gap: 1rem;
+    gap: var(--spacing-md);
     flex-direction: column;
     align-items: flex-start;
   }
@@ -2535,7 +2535,7 @@ select {
 
 select option {
   background-color: #1e1b4b;
-  color: #e5e7eb;
+  color: var(--text-primary);
   padding: 10px;
 }
 .item-right-panel {
@@ -2553,18 +2553,19 @@ select option {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: var(--transition-fast);
   font-size: 1rem;
   border: 1px solid rgba(139, 92, 246, 0.3);
   background: rgba(139, 92, 246, 0.1);
-  color: #e5e7eb;
+  color: var(--text-primary);
+  transition: var(--transition-fast);
 }
 
 
 .action-icon-btn.edit:hover {
-  background: #8b5cf6; /* Fioletowy po najechaniu */
+  background: var(--color-purple); /* Fioletowy po najechaniu */
   color: white;
-  border-color: #8b5cf6;
+  border-color: var(--color-purple);
   box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
 }
 
@@ -2596,7 +2597,7 @@ select option {
 
 .form-row {
   display: flex;
-  gap: 1rem;
+  gap: var(--spacing-md);
 }
 
 .form-group.half {
@@ -2633,7 +2634,7 @@ select option {
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.9rem;
-  transition: all 0.2s;
+  transition: var(--transition-fast);
 }
 
 .add-item-btn:hover {
@@ -2667,13 +2668,13 @@ select option {
 }
 
 .r-item-name {
-  color: #e5e7eb;
+  color: var(--text-primary);
   font-weight: 500;
 }
 
 .r-item-meta {
   font-size: 0.85rem;
-  color: #9ca3af;
+  color: var(--text-secondary);
   margin-top: 2px;
 }
 
@@ -2692,7 +2693,7 @@ select option {
   align-items: center;
   justify-content: center;
   font-size: 0.9rem;
-  transition: all 0.2s;
+  transition: var(--transition-fast);
 }
 
 .icon-btn.edit {
@@ -2741,7 +2742,7 @@ select option {
   border-radius: 10px;
   padding: 15px 20px;
   margin-top: 1rem;
-  gap: 1rem;
+  gap: var(--spacing-md);
 }
 
 .calc-label {
@@ -2768,26 +2769,26 @@ select option {
   cursor: pointer;
   font-weight: 600;
   font-size: 0.9rem;
-  transition: all 0.2s;
+  transition: var(--transition-fast);
   white-space: nowrap;
 }
 
 .sync-btn:hover {
   background: var(--gradient-button);
   color: white;
-  border-color: #8b5cf6;
+  border-color: var(--color-purple);
   transform: scale(1.05);
   box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
 }
 
 .right-actions {
   display: flex;
-  gap: 1rem;
+  gap: var(--spacing-md);
 }
 
 .modal-content .modal-actions.space-between {
   display: flex;
-  gap: 1rem;
+  gap: var(--spacing-md);
   align-items: center;
 }
 .modal-content .modal-actions.space-between > .danger-btn,
@@ -2804,12 +2805,12 @@ select option {
 }
 .modal-content .modal-actions.space-between .right-actions {
   display: flex;
-  gap: 1rem;
+  gap: var(--spacing-md);
 }
 
 .modal-content .modal-actions.equal-buttons {
   display: flex;
-  gap: 1rem;
+  gap: var(--spacing-md);
 }
 .modal-content .modal-actions.equal-buttons > button {
   flex: 1 1 0;
@@ -2842,7 +2843,7 @@ user-actions-row {
   border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
-  transition: all 0.2s;
+  transition: var(--transition-fast);
   font-size: 0.9rem;
 }
 
@@ -2866,7 +2867,7 @@ user-actions-row {
   align-items: center;
   justify-content: center;
   font-size: 0.9rem;
-  transition: all 0.2s;
+  transition: var(--transition-fast);
   margin-left: 10px;
 }
 
@@ -2884,7 +2885,7 @@ user-actions-row {
   border-width: 2px !important;
   background-color: rgba(239, 68, 68, 0.05);
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-  transition: all 0.2s ease;
+  transition: var(--transition-fast);
 }
 
 .form-group.has-error input:focus,
@@ -2904,16 +2905,7 @@ user-actions-row {
   animation: slideDown 0.3s ease-out;
 }
 
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+
 
 .form-group.has-error label {
   color: #fca5a5;
@@ -2937,7 +2929,7 @@ user-actions-row {
   align-items: center;
   justify-content: center;
   font-size: 1.2rem;
-  transition: all 0.2s ease;
+  transition: var(--transition-fast);
   font-weight: bold;
   box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2);
   min-height: 50px;
@@ -2945,7 +2937,7 @@ user-actions-row {
 
 .settle-btn:hover {
   background: var(--gradient-success);
-  border-color: #22c55e;
+  border-color: var(--color-green);
   color: #ffffff;
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(34, 197, 94, 0.4);
@@ -2985,7 +2977,7 @@ user-actions-row {
   background: rgba(34, 197, 94, 0.05);
   border: 1px solid rgba(34, 197, 94, 0.15);
   border-radius: 8px;
-  transition: all 0.2s ease;
+  transition: var(--transition-fast);
 }
 
 .settled-debt-item > .settled-debt-date {
@@ -3069,7 +3061,7 @@ user-actions-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(99, 102, 241, 0.1) 100%);
+  background: var(--gradient-card-subtle);
   padding: 1rem;
   border-radius: 10px;
   border: 2px solid rgba(139, 92, 246, 0.3);
@@ -3089,10 +3081,11 @@ user-actions-row {
   align-items: center;
   justify-content: center;
   font-size: 1.2rem;
-  transition: all 0.2s ease;
+  transition: var(--transition-fast);
   font-weight: bold;
   box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
   min-height: 50px;
+  transition: var(--transition-fast);
 }
 
 .undo-settle-btn:hover {

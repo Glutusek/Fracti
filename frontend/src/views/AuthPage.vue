@@ -221,7 +221,7 @@ const handleSubmit = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
+  padding: var(--spacing-lg);
   position: relative;
   overflow: hidden;
 }
@@ -244,7 +244,7 @@ const handleSubmit = async () => {
 .orb-1 {
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
+  background: var(--gradient-radial-purple);
   top: -150px;
   right: -100px;
 }
@@ -252,7 +252,7 @@ const handleSubmit = async () => {
 .orb-2 {
   width: 350px;
   height: 350px;
-  background: radial-gradient(circle, #6366f1 0%, transparent 70%);
+  background: var(--gradient-radial-indigo);
   bottom: -100px;
   left: -100px;
   animation-delay: -7s;
@@ -325,7 +325,7 @@ const handleSubmit = async () => {
   border-radius: 12px;
   color: #e5e7eb;
   font-size: 1rem;
-  transition: all 0.2s;
+  transition: var(--transition-fast);
 }
 
 .form-group input:focus {
@@ -347,7 +347,7 @@ const handleSubmit = async () => {
   font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: var(--transition-normal);
   margin-top: 0.5rem;
 }
 
@@ -373,7 +373,7 @@ const handleSubmit = async () => {
   color: #8b5cf6;
   font-size: 0.95rem;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: var(--transition-fast);
 }
 
 .toggle-button:hover {
