@@ -13,10 +13,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   const login = async (credentials: { username: string; password: string }) => {
     try {
-      // ZMIANA: używamy authService zamiast api
       const response = await authService.login(credentials);
 
-      // Zakładam, że backend zwraca { access: "...", refresh: "..." }
       const { access, refresh } = response.data;
 
       accessToken.value = access;
