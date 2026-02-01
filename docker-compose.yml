@@ -37,7 +37,7 @@ services:
     env_file:
       - .env
     environment:
-      - DEBUG=1
+      - DJANGO_DEBUG=${DJANGO_DEBUG:-1}
       - DATABASE_URL=postgis://fracti_user:fracti_password@db:5432/fracti_db
       - CELERY_BROKER_URL=redis://redis:6379/0
     depends_on:
@@ -57,7 +57,7 @@ services:
     env_file:
       - .env
     environment:
-      - DEBUG=1
+      - DJANGO_DEBUG=${DJANGO_DEBUG:-1}
       - DATABASE_URL=postgis://fracti_user:fracti_password@db:5432/fracti_db
       - CELERY_BROKER_URL=redis://redis:6379/0
     depends_on:
