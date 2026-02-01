@@ -58,12 +58,10 @@ class ProductSerializer(serializers.ModelSerializer):
         if lat is not None and lon is not None:
             instance.location = Point(lon, lat)
         elif lat is None and lon is None and 'latitude' in self.initial_data and 'longitude' in self.initial_data:
-            # Jeśli przesłano jawnie null, wyczyść lokalizację
             instance.location = None
 
         instance = super().update(instance, validated_data)
 
-        # Aktualizujemy konsumentów jeśli zostali przekazani
         if consumers is not None:
             instance.consumers.set(consumers)
 
@@ -96,10 +94,8 @@ class ReceiptSerializer(serializers.ModelSerializer):
         lat = validated_data.pop('latitude', None)
         lon = validated_data.pop('longitude', None)
 
-        # Tworzymy instancję paragonu
         instance = super().create(validated_data)
 
-        # Ustawiamy lokalizację jeśli podano współrzędne
         if lat is not None and lon is not None:
             instance.location = Point(lon, lat)
             instance.save()
@@ -129,8 +125,6 @@ class SettlementSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'description', 'join_code', 'members','receipts', 'loose_products', 'debt_settlements', 'total_expenses', 'created_at', 'owner_id']
 
     def create(self, validated_data):
-        # join_code jest automatycznie generowane przez model (uuid.uuid4)
-        # nie musimy go tutaj nadpisywać
         return super().create(validated_data)
 
     def get_loose_products(self, obj):

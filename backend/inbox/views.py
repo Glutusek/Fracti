@@ -20,7 +20,6 @@ class ContactCreateView(APIView):
 
 
 class ContactListView(generics.ListAPIView):
-    """Authenticated endpoint to list contact messages (admin/users)."""
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = AdminContactMessageSerializer
 
@@ -29,7 +28,6 @@ class ContactListView(generics.ListAPIView):
 
 
 class ContactDetailView(APIView):
-    """Retrieve or update `read` status for a single message."""
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self, pk):
@@ -49,7 +47,6 @@ class ContactDetailView(APIView):
         obj = self.get_object(pk)
         if obj is None:
             return Response(status=status.HTTP_404_NOT_FOUND)
-        # Only allow updating the 'read' field via this endpoint
         read_val = request.data.get('read')
         if read_val is None:
             return Response({'detail': 'Provide `read` field.'}, status=status.HTTP_400_BAD_REQUEST)

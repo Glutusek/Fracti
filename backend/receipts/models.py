@@ -18,7 +18,6 @@ class CategoryChoices(models.TextChoices):
     OTHER = 'OTHER', _('Inne')
 
 
-# --- ABSTRAKCYJNA KLASA GEO ---
 class MapItem(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     location = models.PointField(_("Lokalizacja"), geography=True, srid=4326, null=True, blank=True)
@@ -32,10 +31,7 @@ def generate_join_code():
     chars = string.ascii_uppercase + string.digits
     return ''.join(random.choices(chars, k=6))
 
-# --- MODEL ROZLICZENIA (GRUPY) ---
 class Settlement(models.Model):
-
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(_("Nazwa rozliczenia"), max_length=255)
     description = models.TextField(_("Opis"), blank=True)
@@ -66,7 +62,6 @@ class Settlement(models.Model):
     def __str__(self):
         return f"{self.name} ({self.members.count()} os.)"
 
-    # Suma wydatków w grupie
     @property
     def total_expenses(self):
         receipts_total = sum(r.total_amount for r in self.receipts.all() if r.total_amount)
@@ -79,7 +74,6 @@ class Settlement(models.Model):
         verbose_name_plural = _("Rozliczenia")
 
 
-# --- MODEL PARAGONU (ZMODYFIKOWANY) ---
 class Receipt(MapItem):
     merchant_name = models.CharField(_("Nazwa sklepu"), max_length=255)
     description = models.TextField(_("Opis"), blank=True, null=True)
@@ -123,9 +117,7 @@ class Receipt(MapItem):
         return f"{self.merchant_name} - {self.total_amount} PLN"
 
 
-# --- MODEL PRODUKTU  ---
 class Product(MapItem):
-
     name = models.CharField(_("Nazwa produktu"), max_length=255)
     description = models.TextField(_("Opis"), blank=True, null=True)
     quantity = models.DecimalField(
@@ -137,8 +129,7 @@ class Product(MapItem):
     price = models.DecimalField(
         _("Cena"),
         max_digits=10,
-        decimal_places=2,
-        #validators=[MinValueValidator(Decimal('0.00'))]
+        decimal_places=2
     )
     receipt = models.ForeignKey(Receipt, verbose_name=_("Paragon"), on_delete=models.CASCADE, related_name='products', null=True, blank=True)
     settlement = models.ForeignKey(Settlement, on_delete=models.CASCADE, related_name='products', null=True, blank=True, verbose_name=_("Przypisane rozliczenie"))
@@ -155,7 +146,7 @@ class Product(MapItem):
 
     def __str__(self):
         return f"{self.name} ({self.quantity} x {self.price})"
-    
+
     class Meta:
         verbose_name = _("Produkt")
         verbose_name_plural = _("Produkty")
@@ -189,10 +180,10 @@ class DebtSettlement(models.Model):
         validators=[MinValueValidator(Decimal('0.01'))]
     )
     settled_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Data wykonania"))
-    
+
     def __str__(self):
         return f"{self.from_user} → {self.to_user}: {self.amount} PLN"
-    
+
     class Meta:
         verbose_name = _("Wykonane rozliczenie")
         verbose_name_plural = _("Wykonane rozliczenia")

@@ -308,7 +308,6 @@ import 'leaflet/dist/leaflet.css';
 const router = useRouter();
 const route = useRoute();
 
-// --- STATE ---
 const settlements = ref<Settlement[]>([]);
 const selectedSettlementId = ref<string | number | null>(null);
 const settlementMembers = ref<User[]>([]);
@@ -368,11 +367,9 @@ const categories = fractiService.getCategoriesOptionList();
 let mapInstance: L.Map | null = null;
 let markerInstance: L.Marker | null = null;
 
-// --- WATCHERS: Auto-clear errors when fields are corrected ---
 watch(
   () => receiptData.value.merchant_name,
   (newVal) => {
-    // Jeśli pole Sklep jest teraz wypełnione, usuń błąd
     if (newVal && newVal.trim() !== '' && formErrors.value.merchant_name) {
       formErrors.value.merchant_name = undefined;
     }
@@ -382,7 +379,6 @@ watch(
 watch(
   () => receiptData.value.purchaser,
   (newVal) => {
-    // Jeśli płatnik został wybrany, usuń błąd
     if (newVal !== null && newVal !== undefined && formErrors.value.purchaser) {
       formErrors.value.purchaser = undefined;
     }
@@ -392,7 +388,6 @@ watch(
 watch(
   () => receiptProducts.value,
   (newProducts) => {
-    // Sprawdź każdy produkt - jeśli ma konsumentów, usuń jego błąd
     if (formErrors.value.products) {
       newProducts.forEach((prod, idx) => {
         if (prod.consumers && prod.consumers.length > 0) {
@@ -407,19 +402,16 @@ watch(
 watch(
   () => productForm.value.consumers,
   (newConsumers) => {
-    // W modal produktu - jeśli wybrano konsumenta, usuń błąd
     if (newConsumers && newConsumers.length > 0 && productFormErrors.value.consumers) {
       productFormErrors.value.consumers = undefined;
     }
   }
 );
 
-// --- COMPUTED ---
 const canEditForm = computed(() => {
   return selectedSettlementId.value !== null && selectedSettlementId.value !== 'NEW_SETTLEMENT';
 });
 
-// --- LIFECYCLE ---
 onMounted(async () => {
   try {
     settlements.value = await fractiService.getSettlements();
@@ -439,13 +431,11 @@ onMounted(async () => {
   }
 });
 
-// --- HELPER METHODS ---
 const isInteger = (num: number | string) => {
   const n = parseFloat(String(num));
   return Number.isInteger(n);
 };
 
-// --- METHODS: Settlement ---
 const handleSettlementChange = async () => {
   if (selectedSettlementId.value === 'NEW_SETTLEMENT') {
     showNewSettlementForm.value = true;
@@ -477,7 +467,6 @@ const cancelNewSettlement = () => {
   showNewSettlementForm.value = false;
 };
 
-// --- METHODS: OCR Process ---
 const triggerFileInput = () => fileInput.value?.click();
 
 const handleFileSelect = (e: Event) => {
@@ -571,7 +560,6 @@ const pollResult = async (taskId: string) => {
   }, 10000);
 };
 
-// --- METHODS: Overlay Logic ---
 const getBoxStyle = (box: any) => {
   if (!ocrResult.value || !box) return { display: 'none' };
   const dim = ocrResult.value.image_dim;
@@ -613,7 +601,6 @@ const closeOcrOverlay = () => {
   showOcrOverlay.value = false;
 };
 
-// --- METHODS: Product Management (CRUD) ---
 const openProductModal = (idx: number | null) => {
   editingProductIndex.value = idx;
   if (idx !== null) {
@@ -633,7 +620,7 @@ const openProductModal = (idx: number | null) => {
     productForm.value = {
       name: '', price: '', quantity: 1, unitPrice: 0,
       category: Category.FOOD,
-      consumers: [] // Nie przypisuj automatycznie - użytkownik musi wybrać
+      consumers: []
     };
   }
   showProductModal.value = true;
@@ -708,7 +695,6 @@ const calculateTotal = () => {
 
 const getCategoryLabel = (cat: string) => CATEGORY_LABELS[cat as Category] || cat;
 
-// --- METHODS: Map & Submit ---
 const initMap = (elId: string) => {
   if (mapInstance) mapInstance.remove();
   const el = document.getElementById(elId);
@@ -752,12 +738,9 @@ const submitReceipt = async () => {
     }
   }
 
-  // Jeśli są błędy, zaznacz pola i przescrolluj do pierwszego
   if (hasErrors) {
     errorMessage.value = 'Uzupełnij wszystkie wymagane pola';
     setTimeout(() => errorMessage.value = '', 4000);
-    
-    // Przescrolluj do pierwszego błędu
     await nextTick();
     const firstErrorElement = document.querySelector('[data-validation-error]');
     if (firstErrorElement) {
@@ -811,7 +794,6 @@ const submitReceipt = async () => {
           safeSettlement = String(selectedSettlementId.value);
       }
 
-      // Payload do wysyłki
       const itemPayload = {
          name: prod.name,
          price: safePrice,
@@ -820,9 +802,6 @@ const submitReceipt = async () => {
          consumers: safeConsumers,
          settlement: safeSettlement
       };
-
-      // Debug: Zobacz w konsoli przeglądarki co dokładnie leci, jeśli znowu będzie błąd
-      console.log("Wysyłanie produktu:", itemPayload);
 
       await fractiService.addReceiptItem(receipt.id, itemPayload);
     }
@@ -838,7 +817,6 @@ const submitReceipt = async () => {
 
   } catch (e: any) {
     console.error("Błąd zapisu:", e);
-    // Wyświetl szczegóły błędu z backendu jeśli dostępne
     if (e.response && e.response.data) {
         console.error("Detale błędu:", e.response.data);
         errorMessage.value = `Błąd zapisu: ${JSON.stringify(e.response.data)}`;
@@ -884,7 +862,6 @@ const handleBeforeUnload = (e: BeforeUnloadEvent) => {
   }
 };
 
-// --- WATCHERS - Kontrola scrollu body'ego gdy modal jest otwarty ---
 const isAnyModalOpen = () => {
   return showCropperModal.value || showProductModal.value || showConfirmModal.value;
 };
@@ -912,7 +889,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload);
-  // Resetuj overflow przy opuszczaniu komponentu
   document.body.style.overflow = '';
   document.body.style.position = '';
   document.body.style.width = '';

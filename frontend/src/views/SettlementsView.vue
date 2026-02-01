@@ -181,12 +181,10 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
-// Importujemy Twój serwis API (ten z FractiApiService)
 import fractiService, { type Settlement, CATEGORY_LABELS } from '@/services/receipts.service';
 
 const router = useRouter();
 
-// --- STATE ---
 const settlements = ref<Settlement[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
@@ -202,10 +200,8 @@ const confirmMessage = ref('');
 const confirmSubMessage = ref('');
 const pendingDeleteAction = ref<(() => Promise<void>) | null>(null);
 
-// Przechowujemy ID rozwiniętych kafelków (Set jest szybszy niż Array)
 const expandedSet = ref<Set<string>>(new Set());
 
-// --- WATCHERS - Kontrola scrollu body'ego gdy modal jest otwarty ---
 const isAnyModalOpen = () => {
   return showCreateModal.value || showJoinModal.value || showEditModal.value || showConfirmModal.value;
 };
@@ -224,12 +220,9 @@ watch([showCreateModal, showJoinModal, showEditModal, showConfirmModal], () => {
   }
 });
 
-// --- ACTIONS ---
-
 const loadSettlements = async () => {
   try {
     loading.value = true;
-    // Używamy metody z Twojej klasy FractiApiService
     settlements.value = await fractiService.getSettlements();
   } catch (err: any) {
     console.error(err);
@@ -356,7 +349,6 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  // Resetuj overflow przy opuszczaniu komponentu
   document.body.style.overflow = '';
   document.body.style.position = '';
   document.body.style.width = '';
@@ -365,7 +357,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* KONTENER GŁÓWNY */
 .settlements-container {
   flex: 1;
   background: var(--gradient-page-dark);

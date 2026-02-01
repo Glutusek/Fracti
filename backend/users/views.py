@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from rest_framework import generics
 from rest_framework.permissions import AllowAny
 from django.contrib.auth.models import User
@@ -13,7 +12,6 @@ class RegisterView(generics.CreateAPIView):
 
 
 class MeView(generics.RetrieveUpdateAPIView):
-    """Return or update the authenticated user's profile."""
     permission_classes = (IsAuthenticated,)
     serializer_class = UserSerializer
 

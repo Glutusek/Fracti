@@ -130,10 +130,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { LMap, LTileLayer, LMarker, LPopup, LIcon } from '@vue-leaflet/vue-leaflet';
-// Usunąłem import latLngBounds, bo nie jest już potrzebny
 import 'leaflet/dist/leaflet.css';
 
-// Import serwisu
 import fractiService, {
   type Settlement,
   type CategoryType,
@@ -144,10 +142,8 @@ import fractiService, {
 const route = useRoute();
 const router = useRouter();
 
-// Pobieramy ID bezpiecznie
 const settlementId = (route.params.id || route.params.uuid) as string;
 
-// --- CONFIG MAPY ---
 const zoom = ref(6);
 const center = ref<[number, number]>([52.0, 19.0]);
 const map = ref<any>(null);
@@ -163,14 +159,12 @@ const onMapReady = (mapInstance: any) => {
 };
 const shadowUrl = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png';
 
-// --- STATE ---
 const currentSettlement = ref<Settlement | null>(null);
 const items = ref<any[]>([]);
 const selectedFilters = ref<Set<string>>(new Set());
 const loading = ref(true);
 const errorMessage = ref('');
 
-// --- FILTROWANIE ---
 const filterOptions = computed(() => [
   { label: 'Wszystkie', value: 'ALL' },
   ...Object.values(Category).map(cat => ({
@@ -202,7 +196,6 @@ const filteredItems = computed(() => {
   return items.value.filter(i => selectedFilters.value.has(i.category));
 });
 
-// --- IKONY ---
 const markerIcons: Record<string, string> = {
   [Category.FOOD]: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
   [Category.TRANSPORT]: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
@@ -215,7 +208,6 @@ const markerIcons: Record<string, string> = {
 
 const getIconUrl = (cat: string) => markerIcons[cat] || markerIcons.default;
 
-// --- PRZETWARZANIE ---
 const processBackendData = (data: Settlement) => {
   const mappedItems: any[] = [];
   if (data.receipts) {
@@ -254,37 +246,29 @@ const processBackendData = (data: Settlement) => {
   return mappedItems;
 };
 
-// --- AKCJE ---
 const goBack = () => router.push(`/settlements/`);
 const goDetails = () => router.push(`/settlements/${settlementId}`);
 
-// --- NOWA FUNKCJA: CENTROWANIE NA ŚREDNIEJ (PLAN C) ---
 const centerOnAveragePoint = () => {
   const leafletMap = mapNative.value || map.value?.leafletObject || map.value?.mapObject;
 
-  // 1. Sprawdzenie instancji mapy
   if (!leafletMap) return;
 
-  // 2. Pobranie i czyszczenie punktów
-  // Upewniamy się, że mamy tablicę liczb [lat, lng]
   const points = items.value
     .map(i => i.coords)
     .filter(c => Array.isArray(c) && c.length === 2 && !isNaN(Number(c[0])) && !isNaN(Number(c[1])))
     .map(c => [Number(c[0]), Number(c[1])]);
 
-  // 3. Brak punktów -> Wracamy na domyślną Polskę
   if (points.length === 0) {
      leafletMap.setView([52.0693, 19.4803], 6);
      return;
   }
 
-  // 4. Jeden punkt -> Idziemy prosto do niego
   if (points.length === 1) {
     leafletMap.flyTo(points[0], 14);
     return;
   }
 
-  // 5. OBLICZANIE ŚREDNIEJ (CENTROIDU)
   let sumLat = 0;
   let sumLng = 0;
 
@@ -296,17 +280,11 @@ const centerOnAveragePoint = () => {
   const avgLat = sumLat / points.length;
   const avgLng = sumLng / points.length;
 
-  // 6. OBLICZANIE ROZRZUTU (żeby dobrać zoom)
   const lats = points.map(p => p[0]);
   const lngs = points.map(p => p[1]);
   const maxDiffLat = Math.max(...lats) - Math.min(...lats);
   const maxDiffLng = Math.max(...lngs) - Math.min(...lngs);
 
-  // Prosta heurystyka zoomu:
-  // 1 stopień geograficzny to ok. 111 km.
-  // Jeśli różnica > 2 stopnie (ponad 200km) -> pokaż kraj (zoom 6)
-  // Jeśli różnica > 0.5 stopnia (ok 50km) -> pokaż region (zoom 9)
-  // W przeciwnym razie -> pokaż miasto (zoom 13)
   let targetZoom = 13;
 
   if (maxDiffLat > 2 || maxDiffLng > 2) {
@@ -315,8 +293,6 @@ const centerOnAveragePoint = () => {
     targetZoom = 9;
   }
 
-  // 7. Ustawienie widoku
-  console.log(`Centering map on average: [${avgLat}, ${avgLng}] with zoom ${targetZoom}`);
   leafletMap.setView([avgLat, avgLng], targetZoom);
 };
 
@@ -335,7 +311,6 @@ const flyToMarker = (coords: [number, number]) => {
   zoom.value = 16;
 };
 
-// --- FORMATOWANIE ---
 const formatMoney = (val: number | string) => Number(val).toFixed(2);
 const formatDate = (date: string) => date ? new Date(date).toLocaleDateString('pl-PL') : '-';
 const getCategoryLabel = (cat: CategoryType) => CATEGORY_LABELS[cat] || cat;
@@ -344,7 +319,6 @@ const getCategoryIconEmoji = (cat: CategoryType) => {
   return map[cat] || '📍';
 };
 
-// --- ON MOUNTED ---
 onMounted(async () => {
   if (!settlementId || settlementId === 'undefined') {
     loading.value = false;
@@ -371,7 +345,6 @@ onMounted(async () => {
       zoom.value = 16;
     } else {
       setTimeout(() => {
-         // Wywołujemy naszą bezpieczną funkcję
          centerOnAveragePoint();
       }, 100);
     }
