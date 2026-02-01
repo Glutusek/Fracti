@@ -68,15 +68,24 @@ i wygeneruj nowy klucz API
 
 **Uzupełnij plik `.env`** Otwórz plik `.env` i wklej swój klucz. Skonfiguruj zmienne dokładnie tak, jak poniżej:
 ```ini
+# 🔑 SECRET_KEY - Generuj lokalnie, nigdy nie commituj!
+# Wygeneruj nowy klucz komendą:
+# python -c "from django.core.management.utils import get_random_secret_key(); print(get_random_secret_key())"
+DJANGO_SECRET_KEY=your-generated-secret-key-here
+
+# Django Debug Mode (postaw na False w produkcji)
+DJANGO_DEBUG=False
+
 # 🔑 Wklej tutaj swój klucz z Google AI Studio (zaczyna się od "AIza...")
 # UWAGA: Mimo nazwy zmiennej, podajemy tu klucz GOOGLE!
 OPENAI_API_KEY=AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # 🌐 Te wartości zostaw bez zmian (wymagane do połączenia z Google):
-OPENAI_BASE_URL="[https://generativelanguage.googleapis.com/v1beta/openai/](https://generativelanguage.googleapis.com/v1beta/openai/)"
+OPENAI_BASE_URL="https://generativelanguage.googleapis.com/v1beta/openai/"
 OPENAI_MODEL=gemini-2.5-flash-lite
 ```
-> **Dlaczego `OPENAI_API_KEY`?** >> 
+
+> **Dlaczego `OPENAI_API_KEY`?** 
 > Aplikacja korzysta z biblioteki klienckiej zaprojektowanej dla OpenAI, ale przekierowuje zapytania do Google (`OPENAI_BASE_URL`). 
 > Dlatego **musisz** wkleić klucz Gemini w pole `OPENAI_API_KEY`. 
 > Nie zmieniaj nazw zmiennych, w przeciwnym razie aplikacja nie zadziała.
@@ -84,6 +93,7 @@ OPENAI_MODEL=gemini-2.5-flash-lite
 
  🛡️ Bezpieczeństwo
 Upewnij się, że plik `.env` znajduje się w Twoim `.gitignore`. Nigdy nie udostępniaj swojego klucza API publicznie!
+
 ### 3. Uruchomienie środowiska
 Budujemy obrazy i uruchamiamy kontenery:
 ```bash
