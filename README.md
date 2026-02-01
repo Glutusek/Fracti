@@ -70,7 +70,7 @@ i wygeneruj nowy klucz API
 ```ini
 # 🔑 SECRET_KEY - Generuj lokalnie, nigdy nie commituj!
 # Wygeneruj nowy klucz komendą:
-# python -c "from django.core.management.utils import get_random_secret_key(); print(get_random_secret_key())"
+# python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 DJANGO_SECRET_KEY=your-generated-secret-key-here
 
 # Django Debug Mode (postaw na False w produkcji)
