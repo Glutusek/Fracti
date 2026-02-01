@@ -39,6 +39,12 @@ class SettlementViewSet(viewsets.ModelViewSet):
                 {"error": "Kod dołączenia jest wymagany"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        
+        if len(code) != 6:
+            return Response(
+                {"error": "Kod musi mieć dokładnie 6 znaków"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
             settlement = Settlement.objects.get(join_code__iexact=code)
@@ -63,6 +69,9 @@ class SettlementViewSet(viewsets.ModelViewSet):
     def remove_member(self, request, pk=None):
         settlement = self.get_object()
         user_id_to_remove = request.data.get('user_id')
+        
+        if not user_id_to_remove:
+            return Response({"error": "user_id jest wymagane"}, status=status.HTTP_400_BAD_REQUEST)
 
         is_owner = settlement.owner == request.user
         is_self_removal = str(request.user.id) == str(user_id_to_remove)
@@ -92,6 +101,19 @@ class SettlementViewSet(viewsets.ModelViewSet):
                 {"error": "Wymagane pola: from_user, to_user, amount"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        
+        try:
+            amount = float(amount)
+            if amount <= 0 or amount > 1000000:
+                return Response(
+                    {"error": "Nieprawidłowa kwota (musi być > 0 i <= 1000000)"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except (ValueError, TypeError):
+            return Response(
+                {"error": "Nieprawidłowy format kwoty"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
             from_user = User.objects.get(id=from_user_id)
@@ -100,6 +122,18 @@ class SettlementViewSet(viewsets.ModelViewSet):
             return Response(
                 {"error": "Użytkownik nie istnieje"},
                 status=status.HTTP_404_NOT_FOUND
+            )
+        
+        if from_user not in settlement.members.all() or to_user not in settlement.members.all():
+            return Response(
+                {"error": "Użytkownicy muszą być członkami grupy"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if from_user == to_user:
+            return Response(
+                {"error": "Nie można rozliczyć długu z samą sobą"},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         debt_settlement = DebtSettlement.objects.create(
@@ -146,9 +180,18 @@ class ReceiptViewSet(viewsets.ModelViewSet):
 
 
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.all()
     serializer_class = ProductSerializer
     permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        user = self.request.user
+        return Product.objects.filter(
+            models.Q(purchaser=user) |
+            models.Q(settlement__members=user) |
+            models.Q(consumers=user) |
+            models.Q(receipt__purchaser=user) |
+            models.Q(receipt__settlement__members=user)
+        ).distinct()
 
 
 class ReceiptAnalyzeView(APIView):
@@ -158,6 +201,13 @@ class ReceiptAnalyzeView(APIView):
         file_obj = request.FILES.get('image')
         if not file_obj:
             return Response({"error": "Brak pliku obrazu"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if file_obj.size > 10 * 1024 * 1024:
+            return Response({"error": "Plik jest za duży (max 10MB)"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+        if file_obj.content_type not in allowed_types:
+            return Response({"error": "Nieprawidłowy format pliku"}, status=status.HTTP_400_BAD_REQUEST)
 
         file_name = f"temp_ocr/{file_obj.name}"
         path = default_storage.save(file_name, ContentFile(file_obj.read()))
@@ -175,6 +225,12 @@ class OCRResultView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, task_id):
+        if not task_id or len(task_id) > 100:
+            return Response(
+                {"error": "Nieprawidłowy task_id"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
         task_result = AsyncResult(task_id)
 
         if task_result.status == 'SUCCESS':
@@ -206,6 +262,12 @@ class AddGuestUserView(APIView):
         name = request.data.get('name')
         if not name:
             return Response({"error": "Nazwa jest wymagana"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if len(name) < 2 or len(name) > 50:
+            return Response({"error": "Nazwa musi mieć 2-50 znaków"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not name.replace(' ', '').replace('-', '').replace('_', '').isalnum():
+            return Response({"error": "Nazwa zawiera nieprawidłowe znaki"}, status=status.HTTP_400_BAD_REQUEST)
 
         unique_suffix = uuid.uuid4().hex[:8]
         dummy_username = f"guest_{unique_suffix}"

@@ -21,12 +21,28 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ['id', 'name', 'description', 'price', 'quantity','receipt', 'settlement', 'consumers', 'purchaser', 'latitude', 'longitude', 'created_at', 'category']
-
-    def get_latitude(self, obj):
-        return obj.location.y if obj.location else None
-
-    def get_longitude(self, obj):
-        return obj.location.x if obj.location else None
+    
+    def validate_latitude(self, value):
+        if value is not None and (value < -90 or value > 90):
+            raise serializers.ValidationError("Latitude musi być między -90 a 90")
+        return value
+    
+    def validate_longitude(self, value):
+        if value is not None and (value < -180 or value > 180):
+            raise serializers.ValidationError("Longitude musi być między -180 a 180")
+        return value
+    
+    def validate_price(self, value):
+        if abs(value) > 10000000:
+            raise serializers.ValidationError("Cena poza zakresem")
+        return value
+    
+    def validate_quantity(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Ilość musi być większa od 0")
+        if value > 10000:
+            raise serializers.ValidationError("Ilość jest zbyt wysoka")
+        return value
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -77,12 +93,26 @@ class ReceiptSerializer(serializers.ModelSerializer):
         model = Receipt
         fields = ['id', 'merchant_name', 'description', 'total_amount', 'purchase_date', 'image', 'latitude', 'longitude', 'products',
                   'created_at', 'settlement', 'purchaser', 'category']
-
-    def get_latitude(self, obj):
-        return obj.location.y if obj.location else None
-
-    def get_longitude(self, obj):
-        return obj.location.x if obj.location else None
+    
+    def validate_latitude(self, value):
+        if value is not None and (value < -90 or value > 90):
+            raise serializers.ValidationError("Latitude musi być między -90 a 90")
+        return value
+    
+    def validate_longitude(self, value):
+        if value is not None and (value < -180 or value > 180):
+            raise serializers.ValidationError("Longitude musi być między -180 a 180")
+        return value
+    
+    def validate_total_amount(self, value):
+        if value is not None and abs(value) > 1000000:
+            raise serializers.ValidationError("Kwota poza zakresem")
+        return value
+    
+    def validate_merchant_name(self, value):
+        if len(value) > 255:
+            raise serializers.ValidationError("Nazwa sklepu jest za długa")
+        return value
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

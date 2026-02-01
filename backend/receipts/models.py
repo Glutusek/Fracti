@@ -29,7 +29,10 @@ class MapItem(models.Model):
 
 def generate_join_code():
     chars = string.ascii_uppercase + string.digits
-    return ''.join(random.choices(chars, k=6))
+    code = ''.join(random.choices(chars, k=6))
+    while Settlement.objects.filter(join_code=code).exists():
+        code = ''.join(random.choices(chars, k=6))
+    return code
 
 class Settlement(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
