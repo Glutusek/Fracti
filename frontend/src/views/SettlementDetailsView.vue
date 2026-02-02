@@ -135,29 +135,35 @@
               <h3>💰 Rozliczenia</h3>
               <div class="debts-list">
                 <div v-for="(debt, index) in calculateNetDebts()" :key="index" class="debt-item">
-                  <div class="debt-from-user">
-                    <div class="user-avatar-small">{{ debt.fromName.charAt(0).toUpperCase() }}</div>
-                    <div class="debt-name">{{ debt.fromName }}</div>
+
+                  <div class="debt-row-top">
+                    <div class="debt-from-user">
+                      <div class="user-avatar-small">{{ debt.fromName.charAt(0).toUpperCase() }}</div>
+                      <div class="debt-name">{{ debt.fromName }}</div>
+                    </div>
+
+                    <div class="debt-center">
+                      <div class="arrow-icon">→</div>
+                      <div class="action-label">oddaje</div>
+                    </div>
+
+                    <div class="debt-to-user">
+                      <div class="debt-name">{{ debt.toName }}</div>
+                      <div class="user-avatar-small">{{ debt.toName.charAt(0).toUpperCase() }}</div>
+                    </div>
                   </div>
-                  
-                  <div class="debt-center">
-                    <div class="arrow-icon">→</div>
-                    <div class="action-label">oddaje</div>
+
+                  <div class="debt-row-bottom">
+                    <div class="debt-amount-box">
+                      <div class="debt-amount">{{ formatMoney(debt.amount) }}</div>
+                      <div class="debt-currency">zł</div>
+                    </div>
+
+                    <button class="settle-btn" @click="settleDebtTransaction(debt)" title="Potwierdź rozliczenie">
+                      ✓
+                    </button>
                   </div>
-                  
-                  <div class="debt-to-user">
-                    <div class="debt-name">{{ debt.toName }}</div>
-                    <div class="user-avatar-small">{{ debt.toName.charAt(0).toUpperCase() }}</div>
-                  </div>
-                  
-                  <div class="debt-amount-box">
-                    <div class="debt-amount">{{ formatMoney(debt.amount) }}</div>
-                    <div class="debt-currency">zł</div>
-                  </div>
-                  
-                  <button class="settle-btn" @click="settleDebtTransaction(debt)" title="Potwierdź rozliczenie">
-                    ✓
-                  </button>
+
                 </div>
               </div>
             </div>
@@ -1884,10 +1890,9 @@ onUnmounted(() => {
 }
 
 .debt-item {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  grid-template-rows: auto auto;
-  gap: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
   padding: 1rem;
   background: var(--gradient-overlay-dark);
   border: 1px solid rgba(139, 92, 246, 0.3);
@@ -1902,6 +1907,19 @@ onUnmounted(() => {
 
 .debt-item > .settle-btn {
   grid-column: 2 / 4;
+}
+
+.debt-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.debt-row-bottom {
+  display: flex;
+  gap: 10px;
+  width: 100%;
 }
 
 .debt-item:hover {
@@ -1976,12 +1994,14 @@ onUnmounted(() => {
 }
 
 .debt-amount-box {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   background: var(--gradient-warning);
-  padding: 1rem;
+  padding: 0.5rem;
   border-radius: 10px;
   border: 2px solid rgba(245, 158, 11, 0.4);
   box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
@@ -2430,15 +2450,23 @@ onUnmounted(() => {
   }
 
   .debt-item {
-    grid-template-columns: 1fr;
-    gap: 0.5rem;
-    padding: 0.6rem;
+   padding: 0.75rem;
+    gap: 0.75rem;
+  }
+
+  .debt-row-top {
+    font-size: 0.9rem;
   }
 
   .debt-from-user,
   .debt-to-user {
     width: 100%;
     gap: 0.5rem;
+  }
+
+  .debt-amount-box, .settle-btn {
+    min-height: 45px;
+    font-size: 1.1rem;
   }
 
   .user-avatar-small {
@@ -2919,6 +2947,8 @@ user-actions-row {
 }
 
 .settle-btn {
+  flex: 1;
+  min-width: 0;
   background: var(--gradient-success-light);
   border: 2px solid rgba(34, 197, 94, 0.5);
   color: #86efac;
@@ -2928,11 +2958,13 @@ user-actions-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
+  font-size: 1.5rem;
   transition: var(--transition-fast);
   font-weight: bold;
   box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2);
   min-height: 50px;
+  box-sizing: border-box;
+  margin: 0;
 }
 
 .settle-btn:hover {
