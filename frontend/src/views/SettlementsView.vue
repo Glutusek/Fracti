@@ -159,6 +159,19 @@
     </form>
   </div>
 </div>
+<div v-if="showErrorModal" class="modal-overlay z-max" @click="showErrorModal = false">
+  <div class="modal-content small alert-box error-theme" @click.stop>
+    <div class="alert-icon error-icon">❌</div>
+    <h2>Błąd</h2>
+    <p class="info-text center-text">{{ errorMessage }}</p>
+
+    <div class="modal-actions center-actions mt-4">
+      <button type="button" @click="showErrorModal = false" class="danger-btn full-width-btn">
+        Zamknij
+      </button>
+    </div>
+  </div>
+</div>
 
 <div v-if="showConfirmModal" class="modal-overlay z-max" @click="showConfirmModal = false">
   <div class="modal-content small alert-box" @click.stop>
@@ -176,6 +189,7 @@
     </div>
   </div>
 </div>
+
 </template>
 
 <script setup lang="ts">
@@ -199,14 +213,15 @@ const showConfirmModal = ref(false);
 const confirmMessage = ref('');
 const confirmSubMessage = ref('');
 const pendingDeleteAction = ref<(() => Promise<void>) | null>(null);
-
+const showErrorModal = ref(false);
+const errorMessage = ref('');
 const expandedSet = ref<Set<string>>(new Set());
 
 const isAnyModalOpen = () => {
-  return showCreateModal.value || showJoinModal.value || showEditModal.value || showConfirmModal.value;
+  return showCreateModal.value || showJoinModal.value || showEditModal.value || showConfirmModal.value || showErrorModal.value;
 };
 
-watch([showCreateModal, showJoinModal, showEditModal, showConfirmModal], () => {
+watch([showCreateModal, showJoinModal, showEditModal, showConfirmModal, showErrorModal], () => {
   if (isAnyModalOpen()) {
     document.body.style.overflow = 'hidden';
     document.body.style.position = 'fixed';
@@ -270,15 +285,29 @@ const createSettlement = async () => {
 
 const joinSettlement = async () => {
   try {
-    await fractiService.joinSettlement(joinCode.value);
-    await loadSettlements();
-    showJoinModal.value = false;
-    joinCode.value = '';
-  } catch (e) {
-    alert('Błąd dołączania do rozliczenia');
+    const response = await fractiService.joinSettlement(joinCode.value) as Settlement & { message?: string };
+    if (response && response.message) {
+      errorMessage.value = response.message;
+      showErrorModal.value = true;
+    } else {
+
+      await loadSettlements();
+      showJoinModal.value = false;
+      joinCode.value = '';
+    }
+
+  } catch (e: any) {
+    console.error('Błąd dołączania:', e);
+
+    if (e.response && e.response.data && e.response.data.error) {
+      errorMessage.value = e.response.data.error;
+    } else {
+      errorMessage.value = "Wystąpił nieoczekiwany błąd połączenia.";
+    }
+
+    showErrorModal.value = true;
   }
 };
-
 const openEditModal = (settlement: Settlement) => {
   editingSettlement.value = {
     id: settlement.id,
@@ -999,5 +1028,36 @@ onUnmounted(() => {
   input, textarea {
     font-size: 16px;
   }
+}
+.error-theme {
+  border-color: rgba(239, 68, 68, 0.5) !important; /* Czerwona ramka */
+  background: rgba(20, 0, 0, 0.95); /* Ciemne tło */
+}
+
+.error-icon {
+  color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.15) !important;
+  border: 2px solid rgba(239, 68, 68, 0.3) !important;
+}
+
+.center-actions {
+  justify-content: center;
+  width: 100%;
+}
+
+.full-width-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.alert-icon {
+  font-size: 2.5rem;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem auto;
 }
 </style>
