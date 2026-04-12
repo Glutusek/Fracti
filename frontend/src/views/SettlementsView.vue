@@ -26,8 +26,25 @@
     </div>
 
     <div v-else class="list-wrapper">
+      <div class="sort-controls">
+        <button 
+          @click="sortBy = 'date'" 
+          :class="{ active: sortBy === 'date' }"
+          class="sort-btn"
+        >
+          📅 Po dacie
+        </button>
+        <button 
+          @click="sortBy = 'name'" 
+          :class="{ active: sortBy === 'name' }"
+          class="sort-btn"
+        >
+          🔤 Po nazwie
+        </button>
+      </div>
+
       <div
-        v-for="settlement in settlements"
+        v-for="settlement in sortedSettlements"
         :key="settlement.id"
         class="settlement-card"
         :class="{ 'is-expanded': expandedSet.has(settlement.id) }"
@@ -193,13 +210,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, onUnmounted } from 'vue';
+import { ref, onMounted, watch, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import fractiService, { type Settlement, CATEGORY_LABELS } from '@/services/receipts.service';
 
 const router = useRouter();
 
 const settlements = ref<Settlement[]>([]);
+const sortBy = ref<'date' | 'name'>('date');
 const loading = ref(true);
 const error = ref<string | null>(null);
 const showCreateModal = ref(false);
@@ -217,6 +235,17 @@ const showErrorModal = ref(false);
 const errorMessage = ref('');
 const expandedSet = ref<Set<string>>(new Set());
 
+// --- COMPUTED ---
+const sortedSettlements = computed(() => {
+  const list = [...settlements.value];
+  if (sortBy.value === 'date') {
+    return list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  } else {
+    return list.sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+  }
+});
+
+// --- WATCHERS - Kontrola scrollu body'ego gdy modal jest otwarty ---
 const isAnyModalOpen = () => {
   return showCreateModal.value || showJoinModal.value || showEditModal.value || showConfirmModal.value || showErrorModal.value;
 };
@@ -474,6 +503,40 @@ onUnmounted(() => {
 .create-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 30px rgba(139, 92, 246, 0.5);
+}
+
+/* SORT CONTROLS */
+.sort-controls {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  justify-content: center;
+}
+
+.sort-btn {
+  padding: 10px 16px;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  color: #cbd5e1;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: var(--transition-fast);
+}
+
+.sort-btn.active {
+  background: var(--gradient-button);
+  border-color: rgba(139, 92, 246, 0.6);
+  color: white;
+}
+
+.sort-btn:hover {
+  border-color: rgba(139, 92, 246, 0.5);
+  background: rgba(139, 92, 246, 0.15);
+}
+
+.sort-btn.active:hover {
+  transform: translateY(-2px);
 }
 
 /* LOADING / ERROR STATE - nadpisania */
