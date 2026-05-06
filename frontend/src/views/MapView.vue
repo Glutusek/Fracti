@@ -1,41 +1,24 @@
 <template>
   <div class="map-layout">
     <div class="map-container">
-      <l-map
-        ref="map"
-        @ready="onMapReady"
-        v-model:zoom="zoom"
-        :center="center"
-        :use-global-leaflet="false"
-        :zoom-snap="0.25"
-      >
-        <l-tile-layer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          layer-type="base"
-          name="CartoDB Dark Matter"
-        />
+      <l-map ref="map" @ready="onMapReady" v-model:zoom="zoom" :center="center" :use-global-leaflet="false"
+        :zoom-snap="0.25">
+        <l-tile-layer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" layer-type="base"
+          name="CartoDB Dark Matter" />
 
-        <l-marker
-          v-for="item in filteredItems"
-          :key="item.uniqueId"
-          :lat-lng="item.coords"
-        >
-          <l-icon
-            :icon-url="getIconUrl(item.category)"
-            :shadow-url="shadowUrl"
-            :icon-size="[25, 41]"
-            :icon-anchor="[12, 41]"
-            :popup-anchor="[1, -34]"
-          />
+        <l-marker v-if="visualizationMode === 'markers'" v-for="item in filteredItems" :key="item.uniqueId"
+          :lat-lng="item.coords">
+          <l-icon :icon-url="getIconUrl(item.category)" :shadow-url="shadowUrl" :icon-size="[25, 41]"
+            :icon-anchor="[12, 41]" :popup-anchor="[1, -34]" />
 
           <l-popup>
             <div class="popup-content">
               <strong>{{ item.name }}</strong>
               <div v-if="item.description" class="popup-desc">
                 <strong>Opis:</strong>
-                <br/>
-                  {{ item.description }}
-           </div>
+                <br />
+                {{ item.description }}
+              </div>
               <div class="popup-meta">
                 <span>{{ formatDate(item.date) }}</span> •
                 <span class="cat-label">{{ getCategoryLabel(item.category) }}</span>
@@ -55,12 +38,15 @@
 
 
               <div v-else class="single-preview">
-                Kategoria: {{getCategoryLabel(item.category)}}
+                Kategoria: {{ getCategoryLabel(item.category) }}
                 <div class="total">Kwota: {{ formatMoney(item.amount) }} zł</div>
               </div>
             </div>
           </l-popup>
         </l-marker>
+
+        <HeatmapLayer v-if="visualizationMode === 'heatmap'" :heatmap-data="heatmapData" :max-weight="heatmapMaxWeight"
+          :show-legend="true" />
       </l-map>
     </div>
 
@@ -80,24 +66,21 @@
         <div v-else class="loading-text">Brak danych.</div>
 
         <div class="filters">
-          <button
-            v-for="cat in filterOptions"
-            :key="cat.value"
-            @click="toggleFilter(cat.value)"
-            :class="['filter-chip', { active: isFilterActive(cat.value) }]"
-          >
+          <button @click="toggleVisualizationMode" :class="['filter-chip', { active: visualizationMode === 'heatmap' }]"
+            title="Przełącz między znacznikami a mapą ciepła">
+            🔥 {{ visualizationMode === 'heatmap' ? 'Heatmapa' : 'Znaczniki' }}
+          </button>
+        </div>
+        <div class="filters">
+          <button v-for="cat in filterOptions" :key="cat.value" @click="toggleFilter(cat.value)"
+            :class="['filter-chip', { active: isFilterActive(cat.value) }]">
             {{ cat.label }}
           </button>
         </div>
       </div>
 
       <div class="items-list">
-        <div
-          v-for="item in filteredItems"
-          :key="item.uniqueId"
-          class="item-card"
-          @click="flyToMarker(item.coords)"
-        >
+        <div v-for="item in filteredItems" :key="item.uniqueId" class="item-card" @click="flyToMarker(item.coords)">
           <div class="card-top">
             <span class="item-icon">{{ getCategoryIconEmoji(item.category) }}</span>
             <div class="item-info">
@@ -127,10 +110,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { LMap, LTileLayer, LMarker, LPopup, LIcon } from '@vue-leaflet/vue-leaflet';
 import 'leaflet/dist/leaflet.css';
+import HeatmapLayer from '@/components/HeatmapLayer.vue';
 
 import fractiService, {
   type Settlement,
@@ -149,10 +133,98 @@ const center = ref<[number, number]>([52.0, 19.0]);
 const map = ref<any>(null);
 const mapNative = ref<any>(null);
 
+// Heatmap state
+const visualizationMode = ref<'markers' | 'heatmap'>('markers');
+const heatmapData = ref<any>(null);
+const heatmapMaxWeight = ref<number | undefined>(undefined);
+const heatmapLoading = ref(false);
+let heatmapAbortController: AbortController | null = null;
+
+// Debounce utility
+const debounce = (fn: Function, delay: number) => {
+  let timeout: ReturnType<typeof setTimeout>;
+  return (...args: any[]) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), delay);
+  };
+};
+
+// Fetch heatmap data
+const updateHeatmap = debounce(async () => {
+  if (visualizationMode.value !== 'heatmap' || !mapNative.value || !currentSettlement.value) return;
+
+  try {
+    // Cancel previous request if still in progress
+    if (heatmapAbortController) {
+      heatmapAbortController.abort();
+    }
+    heatmapAbortController = new AbortController();
+
+    const bounds = mapNative.value.getBounds();
+    const bbox: [number, number, number, number] = [
+      bounds.getWest(),
+      bounds.getSouth(),
+      bounds.getEast(),
+      bounds.getNorth(),
+    ];
+    
+    // Calculate cell size based on bbox width with min/max bounds
+    // Wider bbox = larger cells (for performance)
+    // Min: 0.001° (~111m) | Max: 5° (~550km)
+    const bboxWidth = bounds.getEast() - bounds.getWest();
+    let cellSize = bboxWidth / 100; // ~25 hexagons across viewport
+    cellSize = Math.max(0.001, Math.min(5, cellSize)); // Clamp to reasonable range
+    
+    heatmapLoading.value = true;
+
+    console.log('🔥 Heatmap request:', {
+      settlementId: currentSettlement.value.id,
+      bbox,
+      cellSize: cellSize.toFixed(6),
+      bboxWidth: bboxWidth.toFixed(4),
+      zoom: zoom.value,
+      filters: Array.from(selectedFilters.value),
+    });
+
+    const response = await fractiService.getHeatmapData(
+      currentSettlement.value.id,
+      bbox,
+      cellSize,
+      undefined,
+      undefined,
+      Array.from(selectedFilters.value),
+      undefined
+    );
+
+    console.log('🔥 Heatmap response:', response);
+
+    heatmapData.value = response.heatmap_points || [];
+    if (heatmapData.value && heatmapData.value.length > 0) {
+      heatmapMaxWeight.value = Math.max(...heatmapData.value.map((p: any) => p.weight || 0));
+    } else {
+      heatmapMaxWeight.value = undefined;
+    }
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      console.log('🔥 Previous heatmap request cancelled');
+      return;
+    }
+    console.error('Heatmap error:', err);
+    heatmapData.value = null;
+    heatmapMaxWeight.value = undefined;
+  } finally {
+    heatmapLoading.value = false;
+  }
+}, 500);
+
 const onMapReady = (mapInstance: any) => {
   try {
     mapNative.value = mapInstance;
     console.debug('Map ready, native map set');
+
+    // Add event listeners for heatmap updates
+    mapNative.value?.on('moveend', updateHeatmap);
+    mapNative.value?.on('zoomend', updateHeatmap);
   } catch (e) {
     console.debug('onMapReady error', e);
   }
@@ -183,6 +255,23 @@ const toggleFilter = (val: string) => {
     selectedFilters.value.delete(val);
   } else {
     selectedFilters.value.add(val);
+  }
+};
+
+// Watch for filter changes and update heatmap if in heatmap mode
+watch(
+  () => Array.from(selectedFilters.value).sort().join(','),
+  () => {
+    if (visualizationMode.value === 'heatmap') {
+      updateHeatmap();
+    }
+  }
+);
+
+const toggleVisualizationMode = () => {
+  visualizationMode.value = visualizationMode.value === 'markers' ? 'heatmap' : 'markers';
+  if (visualizationMode.value === 'heatmap') {
+    updateHeatmap();
   }
 };
 
@@ -260,8 +349,8 @@ const centerOnAveragePoint = () => {
     .map(c => [Number(c[0]), Number(c[1])]);
 
   if (points.length === 0) {
-     leafletMap.setView([52.0693, 19.4803], 6);
-     return;
+    leafletMap.setView([52.0693, 19.4803], 6);
+    return;
   }
 
   if (points.length === 1) {
@@ -345,7 +434,7 @@ onMounted(async () => {
       zoom.value = 16;
     } else {
       setTimeout(() => {
-         centerOnAveragePoint();
+        centerOnAveragePoint();
       }, 100);
     }
 
@@ -359,8 +448,17 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.map-layout { display: flex; flex: 1; overflow: hidden; }
-.map-container { flex: 1; position: relative; z-index: 1; }
+.map-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.map-container {
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
 
 .sidebar {
   width: 380px;
@@ -369,14 +467,17 @@ onMounted(async () => {
   border-left: 1px solid #374151;
   display: flex;
   flex-direction: column;
-  box-shadow: -2px 0 10px rgba(0,0,0,0.3);
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.3);
   z-index: 2;
+  max-height: 100vh;
+  overflow: hidden;
 }
 
 .sidebar-header {
   padding: 1.5rem;
   background: #111827;
   border-bottom: 1px solid #374151;
+  flex-shrink: 0;
 }
 
 .back-btn {
@@ -391,9 +492,16 @@ onMounted(async () => {
   transition: var(--transition-fast);
   margin-left: 4px;
 }
-.back-btn:hover { background: #374151; color: white; }
 
-.sidebar-header h2 { margin: 0 0 1rem 0; font-size: 1.25rem; }
+.back-btn:hover {
+  background: #374151;
+  color: white;
+}
+
+.sidebar-header h2 {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+}
 
 .filters {
   display: flex;
@@ -412,6 +520,7 @@ onMounted(async () => {
   cursor: pointer;
   white-space: nowrap;
 }
+
 .filter-chip.active {
   background: #8b5cf6;
   border-color: #8b5cf6;
@@ -425,7 +534,12 @@ onMounted(async () => {
   margin: 4px 0;
   line-height: 1.2;
 }
-.items-list { flex: 1; overflow-y: auto; padding: 1rem; }
+
+.items-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
 
 .item-card {
   background: #374151;
@@ -436,18 +550,46 @@ onMounted(async () => {
   transition: var(--transition-fast);
   border: 1px solid transparent;
 }
+
 .item-card:hover {
   background: #4b5563;
   transform: translateX(4px);
   border-color: #8b5cf6;
 }
 
-.card-top { display: flex; align-items: center; gap: 12px; }
-.item-icon { font-size: 1.5rem; }
-.item-info { flex: 1; overflow: hidden; }
-.item-title { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.item-meta { font-size: 0.75rem; color: #9ca3af; margin-top: 2px; }
-.item-amount { font-weight: 700; color: #a78bfa; }
+.card-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.item-icon {
+  font-size: 1.5rem;
+}
+
+.item-info {
+  flex: 1;
+  overflow: hidden;
+}
+
+.item-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-meta {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.item-amount {
+  font-weight: 700;
+  color: #a78bfa;
+}
 
 .card-products {
   margin-top: 10px;
@@ -462,18 +604,59 @@ onMounted(async () => {
   color: #d1d5db;
   margin-bottom: 4px;
 }
-.prod-name { color: #9ca3af; }
-.prod-price { font-weight: 500; }
 
-.empty-msg { text-align: center; color: #6b7280; margin-top: 2rem; font-style: italic; }
-.error-text { color: #ef4444; padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 8px; margin-bottom: 1rem; }
+.prod-name {
+  color: #9ca3af;
+}
+
+.prod-price {
+  font-weight: 500;
+}
+
+.empty-msg {
+  text-align: center;
+  color: #6b7280;
+  margin-top: 2rem;
+  font-style: italic;
+}
+
+.error-text {
+  color: #ef4444;
+  padding: 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
 
 /* POPUP STYLE */
-.popup-content { min-width: 180px; color: #1f2937; }
-.popup-meta { font-size: 0.8rem; color: #6b7280; margin-bottom: 5px; }
-.popup-divider { border: 0; border-top: 1px solid #e5e7eb; margin: 8px 0; }
-.products-preview ul { padding-left: 15px; margin: 5px 0; font-size: 0.85rem; }
-.total { text-align: right; font-weight: bold; margin-top: 8px; }
+.popup-content {
+  min-width: 180px;
+  color: #1f2937;
+}
+
+.popup-meta {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-bottom: 5px;
+}
+
+.popup-divider {
+  border: 0;
+  border-top: 1px solid #e5e7eb;
+  margin: 8px 0;
+}
+
+.products-preview ul {
+  padding-left: 15px;
+  margin: 5px 0;
+  font-size: 0.85rem;
+}
+
+.total {
+  text-align: right;
+  font-weight: bold;
+  margin-top: 8px;
+}
 
 /* Responsive */
 @media (max-width: 1024px) {

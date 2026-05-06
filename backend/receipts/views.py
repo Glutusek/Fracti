@@ -289,3 +289,77 @@ class AddGuestUserView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class HeatmapViewSet(viewsets.ViewSet):
+    """Heatmap visualization endpoint for settlement expense aggregation."""
+    permission_classes = [IsAuthenticated]
+    
+    def list(self, request, settlement_pk=None):
+        """Get heatmap data for a settlement."""
+        try:
+            # Get settlement and verify user has access
+            settlement = Settlement.objects.get(pk=settlement_pk, members=request.user)
+            print(f"[DEBUG] Heatmap request for settlement: {settlement.id} ({settlement.name})")
+        except Settlement.DoesNotExist:
+            return Response(
+                {"error": "Settlement not found or you don't have access"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Get query parameters
+        bbox_str = request.query_params.get('bbox')
+        if not bbox_str:
+            return Response(
+                {"error": "bbox parameter required (min_lon,min_lat,max_lon,max_lat)"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            bbox = tuple(map(float, bbox_str.split(',')))
+            if len(bbox) != 4:
+                raise ValueError
+        except (ValueError, AttributeError):
+            return Response(
+                {"error": "Invalid bbox format. Expected: min_lon,min_lat,max_lon,max_lat"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get optional parameters
+        grid_resolution = int(request.query_params.get('grid_resolution', 9))
+        cell_size_str = request.query_params.get('cell_size')
+        cell_size = float(cell_size_str) if cell_size_str else None
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        
+        categories = request.query_params.get('categories')
+        categories = categories.split(',') if categories else None
+        
+        user_ids_str = request.query_params.get('user_ids')
+        user_ids = [int(uid) for uid in user_ids_str.split(',')] if user_ids_str else None
+        
+        print(f"[DEBUG] Query params: bbox={bbox}, grid_resolution={grid_resolution}, cell_size={cell_size}, categories={categories}, user_ids={user_ids}")
+        
+        # Get heatmap data
+        from .heatmap_service import HeatmapAggregator
+        
+        aggregator = HeatmapAggregator(settlement)
+        heatmap_data = aggregator.get_heatmap_data(
+            bbox=bbox,
+            grid_resolution=grid_resolution,
+            date_from=date_from,
+            date_to=date_to,
+            categories=categories,
+            user_ids=user_ids,
+            cell_size=cell_size,
+        )
+        
+        print(f"[DEBUG] Heatmap data returned: {len(heatmap_data)} points")
+        
+        return Response({
+            "settlement_id": str(settlement.id),
+            "bbox": bbox,
+            "grid_resolution": grid_resolution,
+            "heatmap_points": heatmap_data,
+            "point_count": len(heatmap_data),
+        }, status=status.HTTP_200_OK)
