@@ -53,6 +53,7 @@
           :intensity-multiplier="heatmapIntensity"
           :base-opacity="heatmapOpacity"
         />
+        <RouteTrackerLayer v-if="showRoute" :items="filteredItems" />
       </l-map>
     </div>
 
@@ -76,7 +77,12 @@
             title="Przełącz między znacznikami a mapą ciepła">
             🔥 {{ visualizationMode === 'heatmap' ? 'Heatmapa' : 'Znaczniki' }}
           </button>
+           <button @click="showRoute = !showRoute" :class="['filter-chip', { active: showRoute }]"
+            title="Pokaż/ukryj chronologiczną trasę wydatków" style="border-color: #f43f5e; color: #f43f5e;">
+            🗺️ Trasa
+          </button>
         </div>
+
         <div v-if="visualizationMode === 'heatmap'" class="heatmap-controls fade-in">
   <div class="control-group">
     <label>Moc natężenia: {{ heatmapIntensity }}x</label>
@@ -86,7 +92,9 @@
     <label>Widoczność (Krycie): {{ Math.round(heatmapOpacity * 100) }}%</label>
     <input type="range" v-model.number="heatmapOpacity" min="0.1" max="1" step="0.05" />
   </div>
-</div>
+        
+
+        </div>
         <div class="filters">
           <button v-for="cat in filterOptions" :key="cat.value" @click="toggleFilter(cat.value)"
             :class="['filter-chip', { active: isFilterActive(cat.value) }]">
@@ -131,6 +139,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { LMap, LTileLayer, LMarker, LPopup, LIcon } from '@vue-leaflet/vue-leaflet';
 import 'leaflet/dist/leaflet.css';
 import HeatmapLayer from '@/components/HeatmapLayer.vue';
+import RouteTrackerLayer from '@/components/RouteTrackerLayer.vue';
 
 import fractiService, {
   type Settlement,
@@ -151,6 +160,7 @@ const mapNative = ref<any>(null);
 
 // Heatmap state
 const visualizationMode = ref<'markers' | 'heatmap'>('markers');
+const showRoute = ref(false);
 const heatmapData = ref<any>(null);
 const heatmapMaxWeight = ref<number | undefined>(undefined);
 const heatmapLoading = ref(false);
