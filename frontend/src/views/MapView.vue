@@ -45,8 +45,14 @@
           </l-popup>
         </l-marker>
 
-        <HeatmapLayer v-if="visualizationMode === 'heatmap'" :heatmap-data="heatmapData" :max-weight="heatmapMaxWeight"
-          :show-legend="true" />
+        <HeatmapLayer
+          v-if="visualizationMode === 'heatmap'"
+          :heatmap-data="heatmapData"
+          :max-weight="heatmapMaxWeight"
+          :show-legend="true"
+          :intensity-multiplier="heatmapIntensity"
+          :base-opacity="heatmapOpacity"
+        />
       </l-map>
     </div>
 
@@ -71,6 +77,16 @@
             🔥 {{ visualizationMode === 'heatmap' ? 'Heatmapa' : 'Znaczniki' }}
           </button>
         </div>
+        <div v-if="visualizationMode === 'heatmap'" class="heatmap-controls fade-in">
+  <div class="control-group">
+    <label>Moc natężenia: {{ heatmapIntensity }}x</label>
+    <input type="range" v-model.number="heatmapIntensity" min="0.1" max="5" step="0.1" />
+  </div>
+  <div class="control-group">
+    <label>Widoczność (Krycie): {{ Math.round(heatmapOpacity * 100) }}%</label>
+    <input type="range" v-model.number="heatmapOpacity" min="0.1" max="1" step="0.05" />
+  </div>
+</div>
         <div class="filters">
           <button v-for="cat in filterOptions" :key="cat.value" @click="toggleFilter(cat.value)"
             :class="['filter-chip', { active: isFilterActive(cat.value) }]">
@@ -139,7 +155,8 @@ const heatmapData = ref<any>(null);
 const heatmapMaxWeight = ref<number | undefined>(undefined);
 const heatmapLoading = ref(false);
 let heatmapAbortController: AbortController | null = null;
-
+const heatmapIntensity = ref(1.0);
+const heatmapOpacity = ref(0.7);
 // Debounce utility
 const debounce = (fn: Function, delay: number) => {
   let timeout: ReturnType<typeof setTimeout>;
@@ -800,5 +817,45 @@ onMounted(async () => {
   .item-amount {
     font-size: 0.9rem;
   }
+}
+.heatmap-controls {
+  background: rgba(139, 92, 246, 0.1);
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+}
+
+.control-group:last-child {
+  margin-bottom: 0;
+}
+
+.control-group label {
+  font-size: 0.8rem;
+  margin-bottom: 5px;
+  color: #e5e7eb;
+  font-weight: 600;
+}
+
+.control-group input[type="range"] {
+  width: 100%;
+  accent-color: #ef4444; /* Czerwony motyw heatmapy */
+  cursor: pointer;
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>
