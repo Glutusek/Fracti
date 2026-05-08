@@ -3,11 +3,27 @@ import { useRouter } from 'vue-router';
 
 const router = useRouter();
 const currentYerar = new Date().getFullYear();
+
+interface Props {
+  minimal?: boolean;
+}
+
+withDefaults(defineProps<Props>(), {
+  minimal: false,
+});
 </script>
 
 <template>
-   <div class="bg">
-     <footer class="footer" id="contact">
+  <div class="bg">
+    <!-- Minimal footer for map views -->
+    <footer v-if="minimal" class="footer minimal-footer">
+      <div class="container minimal-container">
+        <p>&copy; {{currentYerar}} Fracti</p>
+      </div>
+    </footer>
+
+    <!-- Full footer for other views -->
+    <footer v-else class="footer" id="contact">
       <div class="container">
         <div class="footer-content">
           <div class="footer-section">
@@ -53,11 +69,27 @@ const currentYerar = new Date().getFullYear();
   margin: 0 auto;
   padding: 0 2rem;
 }
+
+.minimal-container {
+  padding: 0.5rem 2rem !important;
+}
+
 .footer {
   background: rgba(0, 0, 0, 0.3);
   padding: 3rem 0 1rem;
   border-top: 1px solid rgba(139, 92, 246, 0.2);
+}
 
+.minimal-footer {
+  padding: 0;
+  border-top: 1px solid rgba(139, 92, 246, 0.15);
+}
+
+.minimal-footer p {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-align: center;
 }
 
 .footer-content {

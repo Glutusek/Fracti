@@ -1469,6 +1469,13 @@ onUnmounted(() => {
   color: var(--text-primary);
 }
 
+/* Content Split */
+.content-split {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
 /* Header */
 .header {
   background: rgba(0, 0, 0, 0.3);
@@ -1477,6 +1484,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 1.5rem;
+  flex-shrink: 0;
 }
 
 .back-btn {
@@ -1526,7 +1534,8 @@ onUnmounted(() => {
 /* Content Split */
 .content-split {
   display: flex;
-  min-height: calc(100vh - 120px);
+  flex: 1;
+  overflow: hidden;
 }
 
 /* Left Column - 60% */
@@ -1534,6 +1543,7 @@ onUnmounted(() => {
   flex: 0 0 60%;
   padding: var(--spacing-lg);
   overflow-y: auto;
+  min-height: 0;
 }
 
 .timeline-header {
@@ -1729,6 +1739,7 @@ onUnmounted(() => {
   border-left: 1px solid rgba(139, 92, 246, 0.2);
   padding: var(--spacing-lg);
   overflow-y: auto;
+  min-height: 0;
 }
 
 /* Action Panel */

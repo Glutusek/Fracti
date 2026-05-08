@@ -113,7 +113,7 @@ const colorLegend = computed(() => {
 .heatmap-container { position: relative; width: 100%; height: 100%; }
 .heatmap-empty { padding: 20px; text-align: center; color: #999; font-size: 14px; }
 .heatmap-legend {
-    position: absolute; bottom: 20px; right: 20px; background: rgba(17, 24, 39, 0.95);
+    position: absolute; top: 20px; right: 20px; background: rgba(17, 24, 39, 0.95);
     border: 1px solid rgba(139, 92, 246, 0.5); border-radius: 8px; padding: 12px;
     max-width: 200px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); z-index: 400; font-size: 12px;
     color: #e5e7eb;

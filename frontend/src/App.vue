@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { RouterView } from 'vue-router'
+import { RouterView, useRoute } from 'vue-router'
 import Navbar from "@/components/Navbar.vue";
 import Footer from "@/components/Footer.vue";
-import { onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted, computed } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import authService from '@/services/auth.service';
+
 const authStore = useAuthStore();
+const route = useRoute();
 let sessionCheckInterval: any = null;
 
 const checkSessionStatus = async () => {
@@ -17,13 +19,16 @@ const checkSessionStatus = async () => {
   }
 };
 
-onMounted(() => {
+// Detect if we're on map view for minimal footer
+const isMapView = computed(() => {
+  return route.path.startsWith('/map');
+});
 
+onMounted(() => {
   sessionCheckInterval = setInterval(checkSessionStatus, 60000);
 });
 
 onUnmounted(() => {
-  // Posprzątaj po sobie przy zamykaniu komponentu
   if (sessionCheckInterval) {
     clearInterval(sessionCheckInterval);
   }
@@ -35,7 +40,7 @@ onUnmounted(() => {
   <div id="app">
     <navbar />
     <RouterView />
-    <Footer />
+    <Footer :minimal="isMapView" />
   </div>
 </template>
 
