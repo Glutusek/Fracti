@@ -19,7 +19,7 @@ POLISH_CITIES = [
     {"name": "Poznań", "lat": 52.4064, "lng": 16.9252, "region": "Greater Poland"},
     {"name": "Łódź", "lat": 51.7658, "lng": 19.4560, "region": "Łódź"},
     {"name": "Sopot", "lat": 54.4516, "lng": 18.5607, "region": "Pomerania"},
-    {"name": "Gdynia", "lat": 54.4808, "lng": 18.6332, "region": "Pomerania"},
+    {"name": "Gdynia", "lat": 54.519637, "lng": 18.529816, "region": "Pomerania"},
     {"name": "Toruń", "lat": 53.6139, "lng": 18.5974, "region": "Kuyavia-Pomerania"},
     {"name": "Szczecin", "lat": 53.4285, "lng": 14.5528, "region": "West Pomerania"},
     {"name": "Katowice", "lat": 50.2645, "lng": 19.0238, "region": "Silesia"},
@@ -135,15 +135,11 @@ class Command(BaseCommand):
                 days_ago = random.randint(0, 30)
                 purchase_date = datetime.now() - timedelta(days=days_ago)
 
-                # Random amount
-                min_amount, max_amount = AMOUNTS.get(category_value, (10, 100))
-                total_amount = Decimal(str(round(random.uniform(min_amount, max_amount), 2)))
-
-                # Create receipt
+                # Create receipt with placeholder amount (will be updated after creating products)
                 receipt = Receipt.objects.create(
                     settlement=settlement,
                     merchant_name=merchant,
-                    total_amount=total_amount,
+                    total_amount=Decimal('0'),
                     purchase_date=purchase_date,
                     category=category_value,
                     purchaser=user,
@@ -151,23 +147,30 @@ class Command(BaseCommand):
                     description=f"Purchase in {city['name']} - {city['region']}",
                 )
 
-                # Create 1-3 products for the receipt
+                # Create 1-3 products and calculate total
                 num_products = random.randint(1, 3)
+                product_total = Decimal('0')
                 for j in range(num_products):
                     product_name = random.choice(PRODUCT_NAMES.get(category_value, ['Product']))
-                    product_amount = Decimal(str(round(random.uniform(5, 50), 2)))
+                    # Price ranges based on category
+                    min_price, max_price = AMOUNTS.get(category_value, (5, 50))
+                    product_price = Decimal(str(round(random.uniform(min_price / 3, max_price / 3), 2)))
 
                     Product.objects.create(
                         receipt=receipt,
                         settlement=settlement,
                         name=f"{product_name} #{j+1}",
-                        price=product_amount,
+                        price=product_price,
                         category=category_value,
                         purchaser=user,
                         location=receipt.location,
                     )
+                    product_total += product_price
                     total_products += 1
 
+                # Update receipt total to match sum of products
+                receipt.total_amount = product_total
+                receipt.save()
                 total_receipts += 1
 
             self.stdout.write(f'  ✓ {city["name"]:15} - {count_per_city} receipts')

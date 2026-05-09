@@ -6,10 +6,9 @@
         <l-tile-layer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" layer-type="base"
           name="CartoDB Dark Matter" />
 
-        <l-marker v-if="visualizationMode === 'markers'" v-for="item in filteredItems" :key="item.uniqueId"
-          :lat-lng="item.coords">
-          <l-icon :icon-url="getIconUrl(item.category)" :shadow-url="shadowUrl" :icon-size="[25, 41]"
-            :icon-anchor="[12, 41]" :popup-anchor="[1, -34]" />
+        <l-marker v-if="visualizationMode === 'markers'" v-for="(item, index) in filteredItems" :key="item.uniqueId"
+          :lat-lng="item.coords"
+          :icon="showRoute ? getMarkerWithBadgeIcon(item.category, index) : getMarkerIcon(item.category)">
 
           <l-popup>
             <div class="popup-content">
@@ -45,14 +44,8 @@
           </l-popup>
         </l-marker>
 
-        <HeatmapLayer
-          v-if="visualizationMode === 'heatmap'"
-          :heatmap-data="heatmapData"
-          :max-weight="heatmapMaxWeight"
-          :show-legend="true"
-          :intensity-multiplier="heatmapIntensity"
-          :base-opacity="heatmapOpacity"
-        />
+        <HeatmapLayer v-if="visualizationMode === 'heatmap'" :heatmap-data="heatmapData" :max-weight="heatmapMaxWeight"
+          :show-legend="true" :intensity-multiplier="heatmapIntensity" :base-opacity="heatmapOpacity" />
         <RouteTrackerLayer v-if="showRoute" :items="filteredItems" />
       </l-map>
     </div>
@@ -77,22 +70,22 @@
             title="Przełącz między znacznikami a mapą ciepła">
             🔥 {{ visualizationMode === 'heatmap' ? 'Heatmapa' : 'Znaczniki' }}
           </button>
-           <button @click="showRoute = !showRoute" :class="['filter-chip', { active: showRoute }]"
+          <button @click="showRoute = !showRoute" :class="['filter-chip', { active: showRoute }]"
             title="Pokaż/ukryj chronologiczną trasę wydatków" style="border-color: #f43f5e; color: #f43f5e;">
             🗺️ Trasa
           </button>
         </div>
 
         <div v-if="visualizationMode === 'heatmap'" class="heatmap-controls fade-in">
-  <div class="control-group">
-    <label>Moc natężenia: {{ heatmapIntensity }}x</label>
-    <input type="range" v-model.number="heatmapIntensity" min="0.1" max="5" step="0.1" />
-  </div>
-  <div class="control-group">
-    <label>Widoczność (Krycie): {{ Math.round(heatmapOpacity * 100) }}%</label>
-    <input type="range" v-model.number="heatmapOpacity" min="0.1" max="1" step="0.05" />
-  </div>
-        
+          <div class="control-group">
+            <label>Moc natężenia: {{ heatmapIntensity }}x</label>
+            <input type="range" v-model.number="heatmapIntensity" min="0.1" max="5" step="0.1" />
+          </div>
+          <div class="control-group">
+            <label>Widoczność (Krycie): {{ Math.round(heatmapOpacity * 100) }}%</label>
+            <input type="range" v-model.number="heatmapOpacity" min="0.1" max="1" step="0.05" />
+          </div>
+
 
         </div>
         <div class="filters">
@@ -104,9 +97,12 @@
       </div>
 
       <div class="items-list">
-        <div v-for="item in filteredItems" :key="item.uniqueId" class="item-card" @click="flyToMarker(item.coords)">
+        <div v-for="(item, index) in filteredItems" :key="item.uniqueId" class="item-card"
+          @click="flyToMarker(item.coords)">
           <div class="card-top">
             <span class="item-icon">{{ getCategoryIconEmoji(item.category) }}</span>
+            <span v-if="showRoute" class="route-badge"
+              :style="{ background: categoryColors[item.category] || categoryColors.OTHER }">{{ index + 1 }}</span>
             <div class="item-info">
               <div class="item-title">{{ item.name }}</div>
               <div class="item-meta">
@@ -136,7 +132,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { LMap, LTileLayer, LMarker, LPopup, LIcon } from '@vue-leaflet/vue-leaflet';
+import { LMap, LTileLayer, LMarker, LPopup } from '@vue-leaflet/vue-leaflet';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import HeatmapLayer from '@/components/HeatmapLayer.vue';
 import RouteTrackerLayer from '@/components/RouteTrackerLayer.vue';
@@ -194,14 +191,14 @@ const updateHeatmap = debounce(async () => {
       bounds.getEast(),
       bounds.getNorth(),
     ];
-    
+
     // Calculate cell size based on bbox width with min/max bounds
     // Wider bbox = larger cells (for performance)
     // Min: 0.001° (~111m) | Max: 5° (~550km)
     const bboxWidth = bounds.getEast() - bounds.getWest();
     let cellSize = bboxWidth / 100; // ~25 hexagons across viewport
     cellSize = Math.max(0.001, Math.min(5, cellSize)); // Clamp to reasonable range
-    
+
     heatmapLoading.value = true;
 
     console.log('🔥 Heatmap request:', {
@@ -308,8 +305,14 @@ const isFilterActive = (val: string) => {
 };
 
 const filteredItems = computed(() => {
-  if (selectedFilters.value.size === 0) return items.value;
-  return items.value.filter(i => selectedFilters.value.has(i.category));
+  let result = items.value;
+
+  if (selectedFilters.value.size > 0) {
+    result = items.value.filter(i => selectedFilters.value.has(i.category));
+  }
+
+  // Sort by date: oldest to newest (chronological order of journey)
+  return result.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 });
 
 const markerIcons: Record<string, string> = {
@@ -322,7 +325,59 @@ const markerIcons: Record<string, string> = {
   default: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png'
 };
 
+// Color mapping for category badges
+const categoryColors: Record<string, string> = {
+  [Category.FOOD]: '#22c55e',
+  [Category.TRANSPORT]: '#ef4444',
+  [Category.ACCOMMODATION]: '#3b82f6',
+  [Category.ENTERTAINMENT]: '#a855f7',
+  [Category.SHOPPING]: '#f97316',
+  [Category.SERVICES]: '#eab308',
+  OTHER: '#6b7280'
+};
+
 const getIconUrl = (cat: string) => markerIcons[cat] || markerIcons.default;
+
+const getMarkerIcon = (cat: string) => {
+  return L.icon({
+    iconUrl: getIconUrl(cat),
+    shadowUrl: shadowUrl,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34]
+  });
+};
+
+const getMarkerWithBadgeIcon = (cat: string, index: number) => {
+  const badgeColor = categoryColors[cat] || categoryColors.OTHER;
+  const size = 40;
+
+  const html = `
+    <div style="
+      width: ${size}px;
+      height: ${size}px;
+      background: ${badgeColor};
+      border: 2px solid white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      line-height: 1;
+    ">${index + 1}</div>
+  `;
+
+  return L.divIcon({
+    html,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size],
+    popupAnchor: [0, -size],
+    className: ''
+  }) as any;
+};
 
 const processBackendData = (data: Settlement) => {
   const mappedItems: any[] = [];
@@ -594,6 +649,23 @@ onMounted(async () => {
   font-size: 1.5rem;
 }
 
+.route-badge {
+  background: #f43f5e;
+  color: white;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+}
+
 .item-info {
   flex: 1;
   overflow: hidden;
@@ -828,6 +900,7 @@ onMounted(async () => {
     font-size: 0.9rem;
   }
 }
+
 .heatmap-controls {
   background: rgba(139, 92, 246, 0.1);
   padding: 12px;
@@ -856,7 +929,8 @@ onMounted(async () => {
 
 .control-group input[type="range"] {
   width: 100%;
-  accent-color: #ef4444; /* Czerwony motyw heatmapy */
+  accent-color: #ef4444;
+  /* Czerwony motyw heatmapy */
   cursor: pointer;
 }
 
@@ -865,7 +939,14 @@ onMounted(async () => {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-5px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>
