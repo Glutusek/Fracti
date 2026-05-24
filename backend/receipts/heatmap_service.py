@@ -2,13 +2,11 @@
 Heatmap aggregation service using PostGIS ST_HexagonGrid.
 Aggregates Receipt and Product financial data into hexagonal grid.
 """
-from django.contrib.gis.db.models import Q
-from django.db.models import Sum, F, DecimalField, Value, CharField
-from django.db.models.functions import Coalesce
-from django.contrib.gis.geos import Polygon, Point
-from decimal import Decimal
+from django.contrib.gis.geos import Polygon
+from django.core.cache import cache
 from datetime import datetime
 from typing import List, Dict, Tuple, Optional
+import hashlib
 
 from .models import Receipt, Product, Settlement
 
@@ -29,6 +27,7 @@ class HeatmapAggregator:
         user_ids: Optional[List[int]] = None,
         bbox_buffer_percent: float = 0.1,
         cell_size: Optional[float] = None,
+        show_empty_hexagons: bool = True,
     ) -> List[Dict]:
         """
         Aggregate Receipt and Product data into hexagonal grid.
@@ -55,6 +54,17 @@ class HeatmapAggregator:
                 }
             ]
         """
+        # Generate cache key from parameters
+        cache_key = self._generate_cache_key(bbox, grid_resolution, date_from, date_to, categories, user_ids, bbox_buffer_percent, cell_size)
+        
+        # Check cache first
+        cached_result = cache.get(cache_key)
+        if cached_result is not None:
+            print(f"[DEBUG] Cache HIT for heatmap: {cache_key}")
+            return cached_result
+        
+        print(f"[DEBUG] Cache MISS for heatmap: {cache_key}")
+        
         # Build bbox with buffer
         min_lon, min_lat, max_lon, max_lat = bbox
         lon_range = max_lon - min_lon
@@ -121,6 +131,15 @@ class HeatmapAggregator:
             categories=categories,
             user_ids=user_ids,
         )
+        
+        # Filter out empty hexagons if requested
+        if not show_empty_hexagons:
+            heatmap_points = [h for h in heatmap_points if h.get('weight', 0) > 0.01]
+            print(f"[DEBUG] Filtered to {len(heatmap_points)} hexagons with data (show_empty_hexagons=False)")
+        
+        # Cache results for 1 hour (3600 seconds)
+        cache.set(cache_key, heatmap_points, 3600)
+        print(f"[DEBUG] Cached heatmap results: {len(heatmap_points)} hexagons for 1 hour")
         
         return heatmap_points
     
@@ -249,7 +268,6 @@ class HeatmapAggregator:
                 SELECT hex_geom, total_weight, point_count, center FROM products_data
             ) combined_data
             GROUP BY hex_geom, center
-            HAVING SUM(total_weight) > 0
         )
         SELECT 
             MD5(CAST(ST_AsText(hex_geom) AS text)) as hex_id,
@@ -280,13 +298,27 @@ class HeatmapAggregator:
         for row in results:
             try:
                 geometry = json.loads(row['geometry'])
+                weight = float(row['total_weight']) if row['total_weight'] else 0.0
+                
+                # Get item details for non-empty hexagons
+                items = []
+                if weight > 0.01:
+                    items = self._get_hexagon_items(
+                        geometry, 
+                        date_from=date_from,
+                        date_to=date_to,
+                        categories=categories,
+                        user_ids=user_ids
+                    )
+                
                 heatmap_points.append({
                     'hexagon_id': row['hex_id'],
                     'geometry': geometry,
-                    'weight': float(row['total_weight']) if row['total_weight'] else 0.0,
+                    'weight': weight,
                     'center_lat': float(row['center_lat']),
                     'center_lng': float(row['center_lng']),
                     'point_count': int(row['total_count'] or 0),
+                    'items': items,  # Add item details
                 })
             except (json.JSONDecodeError, TypeError) as e:
                 print(f"Error processing heatmap point: {e}")
@@ -331,7 +363,6 @@ class HeatmapAggregator:
                 AND p.receipt_id IS NULL
                 AND p.location IS NOT NULL
             GROUP BY s.geom
-            HAVING SUM(COALESCE(r.total_amount, 0)) > 0 OR SUM(COALESCE(p.price, 0)) > 0
         )
         SELECT 
             MD5(CAST(ST_AsText(square_geom) AS text)) as grid_id,
@@ -364,16 +395,144 @@ class HeatmapAggregator:
         for row in results:
             try:
                 geometry = json.loads(row['geometry'])
+                weight = float(row['total_weight'])
+                
+                # Get item details for non-empty cells
+                items = []
+                if weight > 0.01:
+                    items = self._get_hexagon_items(geometry)
+                
                 heatmap_points.append({
                     'hexagon_id': row['grid_id'],
                     'geometry': geometry,
-                    'weight': float(row['total_weight']),
+                    'weight': weight,
                     'center_lat': float(row['center_lat']),
                     'center_lng': float(row['center_lng']),
                     'point_count': int(row['point_count']),
+                    'items': items,
                 })
             except (json.JSONDecodeError, TypeError) as e:
                 print(f"Error processing grid point: {e}")
                 continue
         
         return heatmap_points
+    
+    def _get_hexagon_items(
+        self,
+        geometry: dict,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+        categories: Optional[List[str]] = None,
+        user_ids: Optional[List[int]] = None,
+    ) -> List[Dict]:
+        """Get detailed items (receipts and products) within a hexagon."""
+        from django.db import connection
+        import json as json_lib
+        
+        # Convert GeoJSON polygon to WKT for PostGIS
+        coords = geometry.get('coordinates', [[]])[0]
+        if not coords:
+            return []
+        
+        # Build WKT polygon
+        coord_strs = [f"{lon} {lat}" for lon, lat in coords]
+        wkt_polygon = f"POLYGON(({','.join(coord_strs)}))"
+        
+        # Build query for receipts and products in this hexagon
+        sql = """
+        WITH hexagon AS (
+            SELECT ST_GeomFromText(%s, 4326) AS geom
+        ),
+        receipts_in_hex AS (
+            SELECT 
+                'receipt' AS type,
+                r.id,
+                r.merchant_name AS name,
+                r.total_amount AS amount,
+                r.category,
+                r.purchase_date AS date,
+                r.description
+            FROM receipts_receipt r, hexagon h
+            WHERE ST_Intersects(r.location::geometry, h.geom)
+                AND r.settlement_id = %s::uuid
+                AND r.location IS NOT NULL
+        ),
+        products_in_hex AS (
+            SELECT 
+                'product' AS type,
+                p.id,
+                p.name,
+                p.price AS amount,
+                p.category,
+                p.created_at AS date,
+                p.description
+            FROM receipts_product p, hexagon h
+            WHERE ST_Intersects(p.location::geometry, h.geom)
+                AND p.settlement_id = %s::uuid
+                AND p.receipt_id IS NULL
+                AND p.location IS NOT NULL
+        ),
+        combined AS (
+            SELECT * FROM receipts_in_hex
+            UNION ALL
+            SELECT * FROM products_in_hex
+        )
+        SELECT type, id, name, amount, category, date, description
+        FROM combined
+        ORDER BY date DESC
+        LIMIT 10
+        """
+        
+        params = [wkt_polygon, str(self.settlement.id), str(self.settlement.id)]
+        
+        items = []
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(sql, params)
+                columns = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                
+                for row in rows:
+                    item = dict(zip(columns, row))
+                    items.append({
+                        'type': item['type'],
+                        'id': str(item['id']),
+                        'name': item['name'],
+                        'amount': float(item['amount']) if item['amount'] else 0.0,
+                        'category': item['category'],
+                        'date': str(item['date']) if item['date'] else '',
+                        'description': item['description'],
+                    })
+        except Exception as e:
+            print(f"Error getting hexagon items: {e}")
+        
+        return items
+    
+    def _generate_cache_key(
+        self,
+        bbox: Tuple[float, float, float, float],
+        grid_resolution: int,
+        date_from: Optional[str],
+        date_to: Optional[str],
+        categories: Optional[List[str]],
+        user_ids: Optional[List[int]],
+        bbox_buffer_percent: float,
+        cell_size: Optional[float],
+    ) -> str:
+        """Generate cache key from heatmap parameters."""
+        # Create a deterministic string from all parameters
+        key_parts = [
+            str(self.settlement.id),
+            f"bbox_{bbox[0]}_{bbox[1]}_{bbox[2]}_{bbox[3]}",
+            f"res_{grid_resolution}",
+            f"date_{date_from}_{date_to}",
+            f"cats_{'_'.join(sorted(categories or []))}",
+            f"users_{'_'.join(map(str, sorted(user_ids or [])))}",
+            f"buf_{bbox_buffer_percent}",
+            f"cellsize_{cell_size}",
+        ]
+        
+        key_str = "|".join(key_parts)
+        # Hash to keep key length reasonable
+        cache_key = f"heatmap:{hashlib.md5(key_str.encode()).hexdigest()}"
+        return cache_key

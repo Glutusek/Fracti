@@ -269,10 +269,11 @@ class FractiApiService {
     dateTo?: string,
     categories?: string[],
     userIds?: number[],
+    showEmptyHexagons: boolean = true,
   ): Promise<any> {
     const params = new URLSearchParams();
     params.append("bbox", bbox.join(","));
-    
+
     if (cellSize) {
       params.append("cell_size", cellSize.toString());
     }
@@ -285,6 +286,8 @@ class FractiApiService {
     if (userIds && userIds.length > 0) {
       params.append("user_ids", userIds.join(","));
     }
+
+    params.append("show_empty_hexagons", showEmptyHexagons.toString());
 
     const response = await apiClient.get(
       `/settlements/${settlementId}/heatmap/?${params.toString()}`,

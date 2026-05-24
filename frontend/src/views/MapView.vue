@@ -85,8 +85,6 @@
             <label>Widoczność (Krycie): {{ Math.round(heatmapOpacity * 100) }}%</label>
             <input type="range" v-model.number="heatmapOpacity" min="0.1" max="1" step="0.05" />
           </div>
-
-
         </div>
         <div class="filters">
           <button v-for="cat in filterOptions" :key="cat.value" @click="toggleFilter(cat.value)"
@@ -217,7 +215,8 @@ const updateHeatmap = debounce(async () => {
       undefined,
       undefined,
       Array.from(selectedFilters.value),
-      undefined
+      undefined,
+      true // Always show full hexagon grid
     );
 
     console.log('🔥 Heatmap response:', response);

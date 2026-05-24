@@ -191,3 +191,47 @@ class DebtSettlement(models.Model):
         verbose_name = _("Wykonane rozliczenie")
         verbose_name_plural = _("Wykonane rozliczenia")
         ordering = ['-settled_at']
+
+
+# Cache invalidation signals
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+from django.core.cache import cache
+import hashlib
+
+
+def invalidate_settlement_heatmap_cache(settlement_id):
+    """Invalidate all heatmap caches for a settlement (simple approach: clear all heatmap cache)."""
+    # Clear all heatmap-related cache keys (simplified - in production could be more granular)
+    cache_keys = cache.keys('heatmap:*')
+    if cache_keys:
+        cache.delete_many(cache_keys)
+        print(f"[DEBUG] Invalidated {len(cache_keys)} heatmap cache entries for settlement {settlement_id}")
+
+
+@receiver(post_save, sender=Receipt)
+def invalidate_receipt_heatmap_cache(sender, instance, created, **kwargs):
+    """Invalidate heatmap cache when receipt is created or updated."""
+    if instance.settlement:
+        invalidate_settlement_heatmap_cache(instance.settlement.id)
+
+
+@receiver(post_delete, sender=Receipt)
+def invalidate_receipt_delete_cache(sender, instance, **kwargs):
+    """Invalidate heatmap cache when receipt is deleted."""
+    if instance.settlement:
+        invalidate_settlement_heatmap_cache(instance.settlement.id)
+
+
+@receiver(post_save, sender=Product)
+def invalidate_product_heatmap_cache(sender, instance, created, **kwargs):
+    """Invalidate heatmap cache when product is created or updated."""
+    if instance.settlement:
+        invalidate_settlement_heatmap_cache(instance.settlement.id)
+
+
+@receiver(post_delete, sender=Product)
+def invalidate_product_delete_cache(sender, instance, **kwargs):
+    """Invalidate heatmap cache when product is deleted."""
+    if instance.settlement:
+        invalidate_settlement_heatmap_cache(instance.settlement.id)

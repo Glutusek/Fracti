@@ -14,6 +14,7 @@ dj-database-url==2.3.0
 # --- Async & Tasks ---
 celery==5.4.0
 redis==5.2.0
+django-redis==5.4.0
 
 # --- Image Processing (OCR) ---
 opencv-python-headless==4.10.0.84

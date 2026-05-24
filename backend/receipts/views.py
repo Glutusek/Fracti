@@ -338,7 +338,10 @@ class HeatmapViewSet(viewsets.ViewSet):
         user_ids_str = request.query_params.get('user_ids')
         user_ids = [int(uid) for uid in user_ids_str.split(',')] if user_ids_str else None
         
-        print(f"[DEBUG] Query params: bbox={bbox}, grid_resolution={grid_resolution}, cell_size={cell_size}, categories={categories}, user_ids={user_ids}")
+        show_empty_hexagons_str = request.query_params.get('show_empty_hexagons', 'true').lower()
+        show_empty_hexagons = show_empty_hexagons_str in ('true', '1', 'yes')
+        
+        print(f"[DEBUG] Query params: bbox={bbox}, grid_resolution={grid_resolution}, cell_size={cell_size}, categories={categories}, user_ids={user_ids}, show_empty_hexagons={show_empty_hexagons}")
         
         # Get heatmap data
         from .heatmap_service import HeatmapAggregator
@@ -352,6 +355,7 @@ class HeatmapViewSet(viewsets.ViewSet):
             categories=categories,
             user_ids=user_ids,
             cell_size=cell_size,
+            show_empty_hexagons=show_empty_hexagons,
         )
         
         print(f"[DEBUG] Heatmap data returned: {len(heatmap_data)} points")
