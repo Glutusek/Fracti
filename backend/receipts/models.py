@@ -67,8 +67,8 @@ class Settlement(models.Model):
 
     @property
     def total_expenses(self):
-        receipts_total = sum(r.total_amount for r in self.receipts.all() if r.total_amount)
-        products_total = sum(p.price for p in self.products.filter(receipt__isnull=True))
+        receipts_total = sum(r.total_amount for r in self.receipts.all() if r.total_amount)  # type: ignore
+        products_total = sum(p.price for p in self.products.filter(receipt__isnull=True))  # type: ignore
 
         return receipts_total + products_total
     
@@ -127,7 +127,7 @@ class Product(MapItem):
         _("Ilość"),
         max_digits=10,
         decimal_places=3,
-        default=1
+        default=lambda: Decimal('1')
     )
     price = models.DecimalField(
         _("Cena"),
@@ -197,16 +197,32 @@ class DebtSettlement(models.Model):
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.core.cache import cache
-import hashlib
 
 
 def invalidate_settlement_heatmap_cache(settlement_id):
-    """Invalidate all heatmap caches for a settlement (simple approach: clear all heatmap cache)."""
-    # Clear all heatmap-related cache keys (simplified - in production could be more granular)
-    cache_keys = cache.keys('heatmap:*')
-    if cache_keys:
-        cache.delete_many(cache_keys)
-        print(f"[DEBUG] Invalidated {len(cache_keys)} heatmap cache entries for settlement {settlement_id}")
+    """Invalidate all heatmap caches for a settlement."""
+    # Try to clear heatmap cache using Redis pattern deletion if available
+    try:
+        from django.core.cache import caches
+        from redis import Redis
+        
+        cache_backend = caches['default']
+        # Check if it's a Django Redis cache backend
+        if hasattr(cache_backend, 'client'):
+            # django-redis backend - access underlying Redis client
+            client: Redis = cache_backend.client(write=True)  # type: ignore
+            # Use Redis SCAN to find and delete heatmap keys
+            keys = client.scan_iter(match='heatmap:*')
+            count = 0
+            for key in keys:
+                client.delete(key)
+                count += 1
+            if count > 0:
+                print(f"[DEBUG] Invalidated {count} heatmap cache entries for settlement {settlement_id}")
+        else:
+            print(f"[DEBUG] Cache backend doesn't support pattern deletion")
+    except Exception as e:
+        print(f"[DEBUG] Error invalidating cache: {e}")
 
 
 @receiver(post_save, sender=Receipt)

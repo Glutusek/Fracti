@@ -1,7 +1,6 @@
 import os
 import cv2
 import json
-import numpy as np
 from receipt_ocr.processors import ReceiptProcessor
 from receipt_ocr.providers import OpenAIProvider
 

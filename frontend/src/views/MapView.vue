@@ -335,11 +335,12 @@ const categoryColors: Record<string, string> = {
   OTHER: '#6b7280'
 };
 
-const getIconUrl = (cat: string) => markerIcons[cat] || markerIcons.default;
+const getIconUrl = (cat: string): string => markerIcons[cat] || markerIcons['OTHER'] || '';
 
 const getMarkerIcon = (cat: string) => {
+  const iconUrl = getIconUrl(cat);
   return L.icon({
-    iconUrl: getIconUrl(cat),
+    iconUrl: iconUrl,
     shadowUrl: shadowUrl,
     iconSize: [25, 41],
     iconAnchor: [12, 41],
@@ -443,15 +444,22 @@ const centerOnAveragePoint = () => {
   let sumLng = 0;
 
   points.forEach(p => {
-    sumLat += p[0];
-    sumLng += p[1];
+    if (p && p.length >= 2) {
+      sumLat += p[0] ?? 0;
+      sumLng += p[1] ?? 0;
+    }
   });
 
   const avgLat = sumLat / points.length;
   const avgLng = sumLng / points.length;
 
-  const lats = points.map(p => p[0]);
-  const lngs = points.map(p => p[1]);
+  const lats = points.filter(p => p && p[0] !== undefined).map(p => p[0]) as number[];
+  const lngs = points.filter(p => p && p[1] !== undefined).map(p => p[1]) as number[];
+  
+  if (lats.length === 0 || lngs.length === 0) {
+    return;
+  }
+  
   const maxDiffLat = Math.max(...lats) - Math.min(...lats);
   const maxDiffLng = Math.max(...lngs) - Math.min(...lngs);
 

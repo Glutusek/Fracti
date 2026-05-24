@@ -1,7 +1,6 @@
 # Generated migration for adding performance indexes
 
-from django.db import migrations, models
-from django.contrib.gis.db import models as gis_models
+from django.db import migrations
 
 
 class Migration(migrations.Migration):

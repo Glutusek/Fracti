@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from django.contrib.gis.geos import Point
-import uuid
 from .models import Receipt, Product, Settlement, DebtSettlement
 from django.contrib.auth import get_user_model
 User = get_user_model()

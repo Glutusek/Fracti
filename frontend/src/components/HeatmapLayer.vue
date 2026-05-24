@@ -68,6 +68,15 @@ interface HeatmapPoint {
     center_lat: number;
     center_lng: number;
     point_count: number;
+    items?: Array<{
+        type: 'receipt' | 'product';
+        id: string;
+        name: string;
+        amount: number;
+        category: string;
+        date: string;
+        description?: string;
+    }>;
 }
 
 interface Props {
@@ -107,7 +116,9 @@ const styledHeatmapData = computed(() => {
 
         let rawLatLngs: Array<[number, number]> = [];
         if (hexagon.geometry && hexagon.geometry.coordinates && hexagon.geometry.coordinates[0]) {
-            rawLatLngs = hexagon.geometry.coordinates[0].map(([lon, lat]) => [lat, lon]);
+             rawLatLngs = hexagon.geometry.coordinates[0]
+                .filter((coord): coord is [number, number] => Array.isArray(coord) && coord.length === 2)
+                .map(([lon, lat]) => [lat, lon]);
         }
 
         return {
@@ -122,11 +133,11 @@ const styledHeatmapData = computed(() => {
 
 // Split hexagons into empty and with data for optimized rendering
 const styledEmptyHexagons = computed(() => {
-    return styledHeatmapData.value.filter(h => h.weight === 0 || h.weight < 0.01);
+    return styledHeatmapData.value.filter(h => h && (h.weight === 0 || h.weight < 0.01));
 });
 
 const styledHexagonsWithData = computed(() => {
-    return styledHeatmapData.value.filter(h => h.weight > 0.01);
+    return styledHeatmapData.value.filter(h => h && h.weight > 0.01);
 });
 
 // Grid opacity based on baseOpacity slider
