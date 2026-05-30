@@ -1,5 +1,5 @@
 #!/bin/sh
-set -e
+set -eu
 
 if [ ! -f /data/poland-latest.osm.pbf ]; then
   echo "=== OSRM: brak pliku /data/poland-latest.osm.pbf — pobierz go na hosta ==="
