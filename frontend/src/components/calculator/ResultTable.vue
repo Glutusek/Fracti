@@ -22,23 +22,25 @@
         </thead>
         <tbody>
           <tr
-            v-for="debt in result.debts"
-            :key="debt.debtor"
-            :style="{ borderLeft: `4px solid ${debt.debtor_color || colorFor(debt.debtor)}` }"
+            v-for="s in shares"
+            :key="s.participantId"
+            :class="{ 'payer-row': s.isPayer }"
+            :style="{ borderLeft: `4px solid ${s.color}` }"
           >
-            <td class="p-name">{{ debt.debtor_name || nameFor(debt.debtor) }}</td>
-            <td>{{ debt.breakdown.fuel }} zł</td>
-            <td>{{ debt.breakdown.tolls }} zł</td>
-            <td>{{ debt.breakdown.other }} zł</td>
-            <td class="amount-col">{{ debt.amount }} zł</td>
-          </tr>
-          <tr v-if="payerRow" class="payer-row">
-            <td class="p-name">{{ payerRow.name }} (płatnik)</td>
-            <td colspan="3"></td>
-            <td class="amount-col payer-amount">Otrzymuje: {{ payerTotal }} zł</td>
+            <td class="p-name">
+              <span v-if="s.isPayer" class="driver-icon" title="Kierowca">🚗</span>
+              <span :class="{ 'driver-name': s.isPayer }">{{ s.name }}</span>
+            </td>
+            <td>{{ s.fuel }} zł</td>
+            <td>{{ s.tolls }} zł</td>
+            <td>{{ s.other }} zł</td>
+            <td class="amount-col">{{ s.total }} zł</td>
           </tr>
         </tbody>
       </table>
+      <div v-if="payerRow" class="payer-summary">
+        {{ payerRow.name }} otrzyma od pozostałych: <strong>{{ payerTotal }} zł</strong>
+      </div>
     </div>
   </div>
 </template>
@@ -50,13 +52,7 @@ import { useTripCalculatorStore } from '../../stores/tripCalculator'
 const store = useTripCalculatorStore()
 const result = computed(() => store.computeResult ?? store.livePreview)
 
-function colorFor(participantId: string): string {
-  return store.participants.find((p) => p.id === participantId)?.color ?? '#8b5cf6'
-}
-
-function nameFor(participantId: string): string {
-  return store.participants.find((p) => p.id === participantId)?.name ?? participantId
-}
+const shares = computed(() => result.value?.participant_shares ?? [])
 
 const payerRow = computed(() =>
   store.participants.find((p) => p.id === store.payerId),
@@ -130,5 +126,17 @@ td.p-name {
   color: #e2e8f0;
 }
 .payer-row { background: rgba(34,197,94,0.06); }
-.payer-amount { color: #4ade80; }
+.driver-icon { margin-right: 6px; font-size: 0.95rem; }
+.driver-name { font-weight: 700; color: #f0fdf4; }
+.payer-summary {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: rgba(34,197,94,0.08);
+  border: 1px solid rgba(34,197,94,0.3);
+  border-radius: 6px;
+  color: #4ade80;
+  font-size: 0.85rem;
+  text-align: center;
+}
+.payer-summary strong { font-size: 0.95rem; }
 </style>

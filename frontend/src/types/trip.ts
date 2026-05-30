@@ -61,12 +61,24 @@ export interface DebtResult {
   breakdown: { fuel: string; tolls: string; other: string }
 }
 
+export interface ParticipantShare {
+  participantId: string
+  name: string
+  color: string
+  isPayer: boolean
+  fuel: string
+  tolls: string
+  other: string
+  total: string
+}
+
 export interface ComputeResult {
   total_distance_km: string
   total_fuel_cost: string
   total_other_cost: string
   total_cost: string
   debts: DebtResult[]
+  participant_shares?: ParticipantShare[]
 }
 
 export interface NominatimResult {

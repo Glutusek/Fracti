@@ -29,6 +29,8 @@ export const useTripCalculatorStore = defineStore('tripCalculator', () => {
   const participants = ref<Participant[]>([])
   const legs = ref<Leg[]>([])
   const otherCosts = ref<OtherCost[]>([])
+  const tollsScope = ref<'ALL' | 'LEG'>('ALL')
+  const tollsLegId = ref<string | null>(null)
   const payerId = ref<string>('')
   const computeResult = ref<ComputeResult | null>(null)
   const isSaving = ref(false)
@@ -54,19 +56,29 @@ export const useTripCalculatorStore = defineStore('tripCalculator', () => {
   const livePreview = computed<ComputeResult | null>(() => {
     if (participants.value.length < 1 || legs.value.length < 1) return null
     const pids = participants.value.map((p) => p.id)
+    const effectiveTolls = tollsScope.value === 'ALL' ? tolls.value : 0
+    const otherCostsForCalc = otherCosts.value.map((oc) => ({
+      amount: oc.amount,
+      splitScope: oc.splitScope,
+      legId: oc.legId,
+      paidByParticipantId: oc.paidByParticipantId,
+    }))
+    if (tollsScope.value === 'LEG' && tolls.value > 0 && tollsLegId.value) {
+      otherCostsForCalc.push({
+        amount: tolls.value,
+        splitScope: 'LEG',
+        legId: tollsLegId.value,
+        paidByParticipantId: undefined,
+      })
+    }
     const shares = computeShares(
       legs.value,
       pids,
       legParticipantMap.value,
       globalConsumption.value,
       fuelPricePerL.value,
-      tolls.value,
-      otherCosts.value.map((oc) => ({
-        amount: oc.amount,
-        splitScope: oc.splitScope,
-        legId: oc.legId,
-        paidByParticipantId: oc.paidByParticipantId,
-      })),
+      effectiveTolls,
+      otherCostsForCalc,
     )
     const totalDist = legs.value.reduce((a, l) => a + l.distanceKm, 0)
     const totalFuel = legs.value.reduce((a, l) => {
@@ -97,12 +109,27 @@ export const useTripCalculatorStore = defineStore('tripCalculator', () => {
         }
       })
 
+    const participantShares = shares.map((s) => {
+      const p = participants.value.find((pp) => pp.id === s.participantId)
+      return {
+        participantId: s.participantId,
+        name: p?.name || s.participantId,
+        color: p?.color || '',
+        isPayer: s.participantId === payerId.value,
+        fuel: s.fuel.toFixed(2),
+        tolls: s.tolls.toFixed(2),
+        other: s.other.toFixed(2),
+        total: s.total.toFixed(2),
+      }
+    })
+
     return {
       total_distance_km: totalDist.toFixed(3),
       total_fuel_cost: totalFuel.toFixed(2),
       total_other_cost: totalOther.toFixed(2),
       total_cost: totalCost.toFixed(2),
       debts,
+      participant_shares: participantShares,
     }
   })
 
@@ -440,6 +467,8 @@ export const useTripCalculatorStore = defineStore('tripCalculator', () => {
       globalConsumption: globalConsumption.value,
       fuelPricePerL: fuelPricePerL.value,
       tolls: tolls.value,
+      tollsScope: tollsScope.value,
+      tollsLegId: tollsLegId.value,
       stops: stops.value,
       participants: participants.value,
       legs: legs.value,
@@ -459,6 +488,8 @@ export const useTripCalculatorStore = defineStore('tripCalculator', () => {
       globalConsumption.value = d.globalConsumption ?? 7
       fuelPricePerL.value = d.fuelPricePerL ?? 6.5
       tolls.value = d.tolls ?? 0
+      tollsScope.value = d.tollsScope ?? 'ALL'
+      tollsLegId.value = d.tollsLegId ?? null
       stops.value = d.stops ?? []
       participants.value = d.participants ?? []
       legs.value = d.legs ?? []
@@ -584,6 +615,8 @@ export const useTripCalculatorStore = defineStore('tripCalculator', () => {
     globalConsumption.value = 7
     fuelPricePerL.value = 6.5
     tolls.value = 0
+    tollsScope.value = 'ALL'
+    tollsLegId.value = null
     stops.value = []
     participants.value = []
     legs.value = []
@@ -600,6 +633,8 @@ export const useTripCalculatorStore = defineStore('tripCalculator', () => {
     globalConsumption,
     fuelPricePerL,
     tolls,
+    tollsScope,
+    tollsLegId,
     stops,
     participants,
     legs,

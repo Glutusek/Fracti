@@ -6,7 +6,7 @@
 
     <div class="input-grid">
       <div class="input-field">
-        <label>Spalanie (L/100km)</label>
+        <label>Średnie spalanie na całej trasie (L/100km)</label>
         <input
           type="number"
           :value="store.globalConsumption"
@@ -16,21 +16,12 @@
         />
       </div>
       <div class="input-field">
-        <label>Cena paliwa (zł/L)</label>
+        <label>Średnia cena paliwa (zł/L)</label>
         <input
           type="number"
           v-model.number="store.fuelPricePerL"
           min="0.01"
           step="0.01"
-        />
-      </div>
-      <div class="input-field">
-        <label>Opłaty drogowe (zł)</label>
-        <input
-          type="number"
-          v-model.number="store.tolls"
-          min="0"
-          step="0.5"
         />
       </div>
     </div>
@@ -200,6 +191,17 @@ function stopLabel(stopId: string): string {
 }
 .oc-leg { max-width: 160px; }
 .other-row { flex-wrap: wrap; }
+.tolls-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.tolls-amount { flex: 1; min-width: 80px; }
+.tolls-scope, .tolls-leg {
+  background: #1e2533;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #a0aec0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+.tolls-leg { max-width: 160px; }
 .remove-btn {
   background: transparent;
   border: none;
