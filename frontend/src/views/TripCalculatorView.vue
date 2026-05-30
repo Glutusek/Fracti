@@ -3,6 +3,26 @@
     <div class="trip-header">
       <h1>Kalkulator transportu</h1>
       <ModeToggle v-model="mode" />
+      <div class="trip-load">
+        <select
+          v-if="savedTrips.length"
+          :value="props.tripId ?? ''"
+          class="load-select"
+          @change="onTripChange"
+        >
+          <option value="">— Wybierz zapisaną podróż —</option>
+          <option v-for="t in savedTrips" :key="t.id" :value="t.id">
+            {{ t.name }} ({{ formatDate(t.created_at) }})
+          </option>
+        </select>
+        <button class="new-btn" @click="newTrip">+ Nowa</button>
+        <button
+          v-if="store.tripId"
+          class="del-btn"
+          title="Usuń aktualną podróż"
+          @click="deleteCurrent"
+        >🗑</button>
+      </div>
     </div>
 
     <div v-if="mode === 'simple'" class="simple-wrapper">
@@ -41,6 +61,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import ModeToggle from '../components/calculator/ModeToggle.vue'
 import SimpleCalculator from '../components/calculator/SimpleCalculator.vue'
 import RouteMap from '../components/calculator/RouteMap.vue'
@@ -51,17 +72,101 @@ import LegConsumptionTable from '../components/calculator/LegConsumptionTable.vu
 import ResultTable from '../components/calculator/ResultTable.vue'
 import SaveTripBar from '../components/calculator/SaveTripBar.vue'
 import { useTripCalculatorStore } from '../stores/tripCalculator'
+import { tripsService, type TripListItem } from '../services/trips.service'
 
-const props = defineProps<{ settlementId: string | null }>()
+const props = defineProps<{ settlementId: string | null; tripId?: string | null }>()
 const store = useTripCalculatorStore()
+const router = useRouter()
 const mode = ref<'simple' | 'advanced'>('simple')
+const savedTrips = ref<TripListItem[]>([])
 
-onMounted(() => {
+async function refreshList() {
+  try {
+    const res = await tripsService.list(props.settlementId ?? undefined)
+    savedTrips.value = res.data
+  } catch {
+    savedTrips.value = []
+  }
+}
+
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString('pl-PL', {
+      day: '2-digit',
+      month: '2-digit',
+    })
+  } catch {
+    return iso
+  }
+}
+
+async function onTripChange(e: Event) {
+  const id = (e.target as HTMLSelectElement).value
+  if (!id) return
+  router.push(props.settlementId
+    ? `/settlements/${props.settlementId}/trip-calculator/${id}`
+    : `/trip-calculator/${id}`)
+}
+
+function newTrip() {
+  store.reset()
+  store.clearDraft()
+  router.push(props.settlementId
+    ? `/settlements/${props.settlementId}/trip-calculator`
+    : '/trip-calculator')
+}
+
+async function deleteCurrent() {
+  if (!store.tripId) return
+  if (!confirm(`Usunąć podróż "${store.tripName}"?`)) return
+  try {
+    await tripsService.delete(store.tripId)
+    store.reset()
+    store.clearDraft()
+    await refreshList()
+    router.push(props.settlementId
+      ? `/settlements/${props.settlementId}/trip-calculator`
+      : '/trip-calculator')
+  } catch {
+    alert('Nie udało się usunąć podróży.')
+  }
+}
+
+onMounted(async () => {
   store.settlementId = props.settlementId
+  await refreshList()
+  if (props.tripId) {
+    try {
+      await store.loadTripById(props.tripId)
+      mode.value = 'advanced'
+      return
+    } catch {
+      store.reset()
+      store.settlementId = props.settlementId
+      return
+    }
+  }
   const restored = store.loadDraft(props.settlementId)
   if (!restored) {
     store.reset()
     store.settlementId = props.settlementId
+  }
+})
+
+watch(() => store.tripId, () => {
+  refreshList()
+})
+
+watch(() => props.tripId, async (id) => {
+  if (id) {
+    try {
+      await store.loadTripById(id)
+      mode.value = 'advanced'
+    } catch {
+      store.reset()
+    }
+  } else {
+    store.reset()
   }
 })
 
@@ -91,6 +196,43 @@ watch(() => props.settlementId, (id) => {
   color: #e2e8f0;
   margin: 0;
 }
+.trip-load {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.load-select {
+  background: #1e2533;
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #e2e8f0;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  max-width: 260px;
+}
+.load-select:focus { outline: none; border-color: #8b5cf6; }
+.new-btn {
+  background: rgba(139,92,246,0.15);
+  border: 1px solid rgba(139,92,246,0.35);
+  color: #8b5cf6;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.new-btn:hover { background: rgba(139,92,246,0.25); }
+.del-btn {
+  background: transparent;
+  border: 1px solid rgba(245,101,101,0.35);
+  color: #fc8181;
+  padding: 6px 9px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.del-btn:hover { background: rgba(245,101,101,0.15); }
 .simple-wrapper {
   display: flex;
   justify-content: center;

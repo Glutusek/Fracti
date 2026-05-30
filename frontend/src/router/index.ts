@@ -74,14 +74,28 @@ const router = createRouter({
       name: 'trip-calculator',
       component: TripCalculatorView,
       meta: { requiresAuth: true },
-      props: () => ({ settlementId: null }),
+      props: () => ({ settlementId: null, tripId: null }),
+    },
+    {
+      path: '/trip-calculator/:tripId',
+      name: 'trip-calculator-edit',
+      component: TripCalculatorView,
+      meta: { requiresAuth: true },
+      props: (r) => ({ settlementId: null, tripId: r.params.tripId as string }),
     },
     {
       path: '/settlements/:id/trip-calculator',
       name: 'settlement-trip-calculator',
       component: TripCalculatorView,
       meta: { requiresAuth: true },
-      props: (r) => ({ settlementId: r.params.id as string }),
+      props: (r) => ({ settlementId: r.params.id as string, tripId: null }),
+    },
+    {
+      path: '/settlements/:id/trip-calculator/:tripId',
+      name: 'settlement-trip-calculator-edit',
+      component: TripCalculatorView,
+      meta: { requiresAuth: true },
+      props: (r) => ({ settlementId: r.params.id as string, tripId: r.params.tripId as string }),
     }
   ]
 })

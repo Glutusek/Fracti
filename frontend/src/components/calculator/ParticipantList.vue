@@ -35,9 +35,13 @@
               <select
                 :value="p.boardStopId"
                 class="stop-select"
-                @change="p.boardStopId = ($event.target as HTMLSelectElement).value"
+                @change="onBoardChange(p, $event)"
               >
-                <option v-for="s in store.stops" :key="s.id" :value="s.id">
+                <option
+                  v-for="s in boardOptionsFor(p)"
+                  :key="s.id"
+                  :value="s.id"
+                >
                   {{ s.label || `Przystanek ${s.orderIndex + 1}` }}
                 </option>
               </select>
@@ -45,9 +49,13 @@
               <select
                 :value="p.alightStopId"
                 class="stop-select"
-                @change="p.alightStopId = ($event.target as HTMLSelectElement).value"
+                @change="onAlightChange(p, $event)"
               >
-                <option v-for="s in store.stops" :key="s.id" :value="s.id">
+                <option
+                  v-for="s in alightOptionsFor(p)"
+                  :key="s.id"
+                  :value="s.id"
+                >
                   {{ s.label || `Przystanek ${s.orderIndex + 1}` }}
                 </option>
               </select>
@@ -85,6 +93,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useTripCalculatorStore } from '../../stores/tripCalculator'
 import fractiService from '../../services/receipts.service'
+import type { Stop, Participant } from '../../types/trip'
 
 const props = defineProps<{ settlementId: string | null }>()
 const store = useTripCalculatorStore()
@@ -122,6 +131,42 @@ function addFromSettlement(e: Event) {
   const member = settlementMembers.value.find((m) => m.id === id)
   if (member) store.addParticipant(member.id, member.first_name || member.username)
   ;(e.target as HTMLSelectElement).value = ''
+}
+
+function stopIdx(stopId: string): number {
+  return store.stops.findIndex((s: Stop) => s.id === stopId)
+}
+
+function boardOptionsFor(p: Participant): Stop[] {
+  const alightIdx = stopIdx(p.alightStopId)
+  if (alightIdx < 0) return store.stops.slice(0, -1)
+  return store.stops.slice(0, alightIdx)
+}
+
+function alightOptionsFor(p: Participant): Stop[] {
+  const boardIdx = stopIdx(p.boardStopId)
+  if (boardIdx < 0) return store.stops.slice(1)
+  return store.stops.slice(boardIdx + 1)
+}
+
+function onBoardChange(p: Participant, e: Event) {
+  const newId = (e.target as HTMLSelectElement).value
+  p.boardStopId = newId
+  const newBoardIdx = stopIdx(newId)
+  const alightIdx = stopIdx(p.alightStopId)
+  if (alightIdx <= newBoardIdx) {
+    p.alightStopId = store.stops[newBoardIdx + 1]?.id ?? store.stops[store.stops.length - 1]?.id ?? ''
+  }
+}
+
+function onAlightChange(p: Participant, e: Event) {
+  const newId = (e.target as HTMLSelectElement).value
+  p.alightStopId = newId
+  const newAlightIdx = stopIdx(newId)
+  const boardIdx = stopIdx(p.boardStopId)
+  if (boardIdx >= newAlightIdx) {
+    p.boardStopId = store.stops[newAlightIdx - 1]?.id ?? store.stops[0]?.id ?? ''
+  }
 }
 
 async function addGuest() {

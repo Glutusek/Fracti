@@ -15,6 +15,7 @@
     </l-map>
     <div v-if="isRouting" class="routing-overlay">
       <div class="routing-spinner"></div>
+      <div class="routing-label">Wyznaczanie trasy...</div>
     </div>
     <div v-if="routingError" class="routing-error-toast">
       Nie udało się wyznaczyć trasy. Spróbuj ponownie.
@@ -474,9 +475,19 @@ onBeforeUnmount(() => {
   inset: 0;
   background: rgba(0,0,0,0.4);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 12px;
   z-index: 500;
+}
+.routing-label {
+  color: #e2e8f0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: rgba(15,20,32,0.85);
+  padding: 6px 14px;
+  border-radius: 6px;
 }
 .routing-spinner {
   width: 40px;

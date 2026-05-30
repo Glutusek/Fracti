@@ -60,7 +60,7 @@
           class="oc-scope"
           @change="onScopeChange(oc, $event)"
         >
-          <option value="ALL">Wszyscy</option>
+          <option value="ALL">Cała trasa</option>
           <option value="LEG">Odcinek</option>
         </select>
         <select

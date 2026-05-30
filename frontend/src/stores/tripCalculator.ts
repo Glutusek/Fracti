@@ -158,6 +158,7 @@ export const useTripCalculatorStore = defineStore('tripCalculator', () => {
   }
 
   function addStop(lat: number, lng: number, label = 'Punkt') {
+    const prevLastId = stops.value[stops.value.length - 1]?.id
     const stop: Stop = {
       id: genId(),
       lat,
@@ -166,6 +167,13 @@ export const useTripCalculatorStore = defineStore('tripCalculator', () => {
       orderIndex: stops.value.length,
     }
     stops.value.push(stop)
+    if (prevLastId) {
+      for (const p of participants.value) {
+        if (p.alightStopId === prevLastId) {
+          p.alightStopId = stop.id
+        }
+      }
+    }
     _syncLegs()
   }
 
@@ -467,6 +475,109 @@ export const useTripCalculatorStore = defineStore('tripCalculator', () => {
     localStorage.removeItem(key)
   }
 
+  async function loadTripById(id: string) {
+    const res = await tripsService.get(id)
+    const t = res.data
+    reset()
+    tripId.value = t.id
+    tripName.value = t.name
+    settlementId.value = t.settlement
+    globalConsumption.value = parseFloat(t.global_consumption_l_per_100km)
+    fuelPricePerL.value = parseFloat(t.fuel_price_per_liter)
+    tolls.value = parseFloat(t.total_tolls)
+
+    const stopIdMap: Record<string, string> = {}
+    stops.value = t.stops
+      .sort((a: any, b: any) => a.order - b.order)
+      .map((s: any, i: number) => {
+        const localId = genId()
+        stopIdMap[s.id] = localId
+        return {
+          id: localId,
+          lat: s.latitude,
+          lng: s.longitude,
+          label: s.name || 'Punkt',
+          orderIndex: i,
+        }
+      })
+
+    const participantIdMap: Record<string, string> = {}
+    participants.value = t.participants.map((p: any) => {
+      const localId = genId()
+      participantIdMap[p.id] = localId
+      return {
+        id: localId,
+        userId: p.user ?? null,
+        name: p.display_name || p.guest_label || '',
+        isPayer: t.payer === p.id,
+        boardStopId: stops.value[0]?.id ?? '',
+        alightStopId: stops.value[stops.value.length - 1]?.id ?? '',
+        color: p.color || nextColor([]),
+      }
+    })
+    if (t.payer && participantIdMap[t.payer]) {
+      payerId.value = participantIdMap[t.payer]!
+    } else if (participants.value.length) {
+      payerId.value = participants.value[0]!.id
+    }
+
+    legs.value = t.legs
+      .sort((a: any, b: any) => a.order - b.order)
+      .map((lg: any) => ({
+        id: genId(),
+        fromStopId: stopIdMap[lg.from_stop] ?? '',
+        toStopId: stopIdMap[lg.to_stop] ?? '',
+        distanceKm: parseFloat(lg.distance_km),
+        durationSec: lg.duration_seconds,
+        consumptionLper100: lg.consumption_override
+          ? parseFloat(lg.consumption_l_per_100km)
+          : null,
+        override: lg.consumption_override,
+      }))
+
+    for (const p of t.participants) {
+      const localPid = participantIdMap[p.id]
+      if (!localPid) continue
+      const part = participants.value.find((pp) => pp.id === localPid)
+      if (!part) continue
+      let firstLegIdx = -1
+      let lastLegIdx = -1
+      t.legs.forEach((lg: any, i: number) => {
+        if (lg.participants?.some((lp: any) => lp.id === p.id)) {
+          if (firstLegIdx === -1) firstLegIdx = i
+          lastLegIdx = i
+        }
+      })
+      if (firstLegIdx >= 0) {
+        const sortedLegs = [...t.legs].sort((a: any, b: any) => a.order - b.order)
+        const fromStop = sortedLegs[firstLegIdx]?.from_stop
+        const toStop = sortedLegs[lastLegIdx]?.to_stop
+        if (fromStop && stopIdMap[fromStop]) part.boardStopId = stopIdMap[fromStop]
+        if (toStop && stopIdMap[toStop]) part.alightStopId = stopIdMap[toStop]
+      }
+    }
+
+    otherCosts.value = t.other_costs.map((oc: any) => ({
+      id: genId(),
+      label: oc.label,
+      amount: parseFloat(oc.amount),
+      splitScope: oc.split_scope,
+      legId: undefined,
+    }))
+  }
+
+  function hasDraft(sId?: string | null): boolean {
+    if (sId !== undefined) {
+      const key = `trip-calc-draft-${sId ?? 'standalone'}`
+      return !!localStorage.getItem(key)
+    }
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i)
+      if (k && k.startsWith('trip-calc-draft-')) return true
+    }
+    return false
+  }
+
   function reset() {
     tripId.value = null
     tripName.value = 'Nowa podróż'
@@ -523,6 +634,8 @@ export const useTripCalculatorStore = defineStore('tripCalculator', () => {
     initFromSettlement,
     loadDraft,
     clearDraft,
+    loadTripById,
+    hasDraft,
     reset,
   }
 })
