@@ -127,7 +127,7 @@ class Product(MapItem):
         _("Ilość"),
         max_digits=10,
         decimal_places=3,
-        default=lambda: Decimal('1')
+        default=Decimal('1')
     )
     price = models.DecimalField(
         _("Cena"),

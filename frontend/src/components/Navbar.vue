@@ -29,6 +29,7 @@
         </template>
         <template v-else>
           <router-link to="/settlements" class="nav-link" @click="closeMobileMenu">Rozliczenia</router-link>
+          <router-link to="/trip-calculator" class="nav-link" @click="closeMobileMenu">Kalkulator transportu</router-link>
           <router-link to="/ocr-upload" class="nav-link" @click="closeMobileMenu">Zeskanuj paragon!</router-link>
           <router-link to="/about" class="nav-link" @click="closeMobileMenu">O nas</router-link>
           <router-link to="/contact" class="nav-link" @click="closeMobileMenu">Kontakt</router-link>

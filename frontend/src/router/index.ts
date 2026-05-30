@@ -8,6 +8,7 @@ import OCRUploadView from '../views/OCRUploadView.vue'
 import AboutUsView from '../views/AboutUsView.vue'
 import ContactView from '../views/ContactView.vue'
 import LegalView from '../views/LegalView.vue'
+import TripCalculatorView from '../views/TripCalculatorView.vue'
 import {useAuthStore} from "@/stores/auth.ts";
 
 const router = createRouter({
@@ -67,6 +68,20 @@ const router = createRouter({
       name: 'map-settlement',
       component: MapView,
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/trip-calculator',
+      name: 'trip-calculator',
+      component: TripCalculatorView,
+      meta: { requiresAuth: true },
+      props: () => ({ settlementId: null }),
+    },
+    {
+      path: '/settlements/:id/trip-calculator',
+      name: 'settlement-trip-calculator',
+      component: TripCalculatorView,
+      meta: { requiresAuth: true },
+      props: (r) => ({ settlementId: r.params.id as string }),
     }
   ]
 })

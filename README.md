@@ -16,6 +16,7 @@ Projekt realizowany w architekturze mikroserwisowej (Monorepo):
   - **Preprocessing:** Obsługiwany automatycznie przez receipt-ocr
 - **Frontend:** Vue.js 3.5 (Composition API) + Vue Router + Vite + TypeScript.
 - **Mapy:** Leaflet + OpenStreetMap (Tiles) + Nominatim (Geocoding).
+- **Routing:** OSRM (Open Source Routing Machine) - lokalna instancja w Dockerze, dane Geofabrik dla Polski.
 - **Infrastruktura:** Docker Compose V2.
 
 ## 🌟 Kluczowe Funkcjonalności
@@ -31,6 +32,14 @@ Projekt realizowany w architekturze mikroserwisowej (Monorepo):
   - Potwierdzanie rozliczeń z możliwością wycofania
   - Przegląd wykonanych rozliczeń z datą i czasem
 - **Wizualizacja Mapowa:** Śledzenie lokalizacji zakupów na interaktywnej mapie GIS z możliwością filtrowania po rozliczeniach.
+- **Kalkulator Transportu:** Sprawiedliwe rozliczanie kosztów wspólnej podróży.
+  - Tryb prosty (4 sub-tryby: koszt, dystans, spalanie, paliwo) - bezstanowy
+  - Tryb zaawansowany - real road routing przez lokalny OSRM, edytowalne waypointy, klik/drag do dodania przystanków
+  - Per-leg consumption override z automatycznym rebalansem
+  - Driver-pays model: pasażerowie zwracają kierowcy proporcjonalnie do faktycznie przejechanego dystansu
+  - Tolls (proporcjonalnie do dystansu) + inne koszty (split ALL/LEG)
+  - Live preview wyników bez konieczności zapisu
+  - Transfer wyniku do Settlement jako Receipt + Products
 - **Bezpieczeństwo:** Pełna autoryzacja JWT, chroniąca prywatność danych i dostęp do grup.
 
 ## 📊 Model Danych
@@ -42,6 +51,8 @@ Projekt realizowany w architekturze mikroserwisowej (Monorepo):
 - **Product:** Produkt (z paragonu lub dodany ręcznie) z przypisanymi konsumentami
 - **DebtSettlement:** Zapis potwierdzonego rozliczenia między dwoma użytkownikami
 - **User:** Użytkownik systemu (z JWT)
+- **Trip:** Podróż w kalkulatorze transportu (opcjonalnie powiązana z Settlement)
+- **TripStop / TripLeg / TripParticipant / TripOtherCost / TripDebt:** Składniki Trip - przystanki (PointField), odcinki, uczestnicy z board/alight stop, inne koszty, wyniki rozliczenia
 
 ### Relacje:
 
@@ -100,7 +111,30 @@ OPENAI_MODEL=gemini-2.5-flash-lite
 🛡️ Bezpieczeństwo
 Upewnij się, że plik `.env` znajduje się w Twoim `.gitignore`. Nigdy nie udostępniaj swojego klucza API publicznie!
 
-### 3. Uruchomienie środowiska
+### 3. Pobranie danych routingowych OSRM
+
+Kalkulator transportu używa **lokalnej instancji OSRM** do wyznaczania tras po prawdziwych drogach. Wymaga pobrania danych OSM dla Polski (~1.5 GB, jednorazowo).
+
+**Windows (PowerShell):**
+
+```powershell
+.\setup-osrm.ps1
+```
+
+Skrypt utworzy folder `C:\osrm-data\` i pobierze plik `poland-latest.osm.pbf` z Geofabrik. Po pobraniu OSRM przy pierwszym uruchomieniu wykona preprocessing (extract + partition + customize, ~20-40 min). Wynik cache'owany w `C:\osrm-data\`, kolejne starty są natychmiastowe.
+
+**Linux/macOS (alternatywnie):**
+
+```bash
+mkdir -p /var/osrm-data
+curl -L -o /var/osrm-data/poland-latest.osm.pbf https://download.geofabrik.de/europe/poland-latest.osm.pbf
+```
+
+Następnie zmień w `docker-compose.yml` wolumen z `C:/osrm-data:/data` na `/var/osrm-data:/data`.
+
+> **Uwaga:** Każdy deweloper musi to zrobić raz — pliki są za duże dla repo. Po pierwszym preprocessingu kontener OSRM startuje od razu i nasłuchuje na porcie 5000.
+
+### 4. Uruchomienie środowiska
 
 Budujemy obrazy i uruchamiamy kontenery:
 
@@ -108,7 +142,9 @@ Budujemy obrazy i uruchamiamy kontenery:
 docker compose up --build
 ```
 
-### 4. Inicjalizacja bazy danych i kont
+OSRM startuje równolegle. Pierwsze uruchomienie wymaga ~20-40 min na preprocessing danych OSM (widać postęp w `docker logs -f fracti_osrm`). Reszta stacku (backend, frontend, db, redis, celery) wystartuje od razu — kalkulator transportu będzie zwracał błąd routingu dopóki OSRM nie skończy preprocessingu.
+
+### 5. Inicjalizacja bazy danych i kont
 
 Po uruchomieniu kontenerów (gdy zobaczysz logi startowe Django), wykonaj migracje oraz utwórz administratora:
 
@@ -123,7 +159,7 @@ docker compose exec backend python manage.py migrate
 docker compose exec backend python manage.py createsuperuser
 ```
 
-### 4.5 Zaseedowanie bazy danych (opcjonalnie)
+### 5.5 Zaseedowanie bazy danych (opcjonalnie)
 
 Aby przetestować aplikację z przykładowymi danymi, możesz zasiać bazę testowymi paragoniami rozmieszczonymi w polskich miastach:
 
@@ -151,11 +187,12 @@ docker compose exec backend python manage.py seed_heatmap --count 10 --settlemen
 
 Możesz teraz zalogować się na `test_user` i przetestować heatmapę!
 
-### 5. Dostęp do aplikacji
+### 6. Dostęp do aplikacji
 
 - **Frontend:** [http://localhost:5173](http://localhost:5173)
 - **Backend API:** [http://localhost:8000/api/](http://localhost:8000/api/)
 - **Panel Admina:** [http://localhost:8000/admin/](http://localhost:8000/admin/)
+- **OSRM Routing API:** [http://localhost:5000/](http://localhost:5000/)
 
 ## 🛠 Workflow deweloperski
 
@@ -181,6 +218,28 @@ docker compose exec backend python manage.py showmigrations
 # Reset bazy danych (uwaga: usuwa dane!)
 docker compose down -v
 docker compose up
+```
+
+### Logi OSRM
+
+```bash
+docker logs -f fracti_osrm
+```
+
+Wyglądający na zdrowy OSRM:
+```
+[info] starting up engines, v5.26.0
+[info] Listening on: 0.0.0.0:5000
+[info] running and waiting for requests
+```
+
+### Reset preprocessingu OSRM
+
+Jeśli chcesz odświeżyć dane drogowe (Geofabrik aktualizuje co tydzień), usuń pliki `.osrm*` z `C:\osrm-data\` (zostaw `poland-latest.osm.pbf` lub pobierz nowy) i zrestartuj kontener:
+
+```powershell
+Remove-Item C:\osrm-data\poland-latest.osrm*
+docker compose restart osrm
 ```
 
 ## Autorzy

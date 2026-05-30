@@ -64,6 +64,17 @@ services:
       - backend
       - redis
 
+  osrm:
+    image: osrm/osrm-backend:latest
+    container_name: fracti_osrm
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - C:/osrm-data:/data
+      - ./osrm-entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+
   frontend:
     build:
       context: ./frontend
