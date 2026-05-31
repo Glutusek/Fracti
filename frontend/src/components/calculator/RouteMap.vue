@@ -32,6 +32,9 @@ import { reverseGeocode } from '../../services/nominatim.service'
 
 const OSRM_URL = 'http://localhost:5000/route/v1/driving'
 
+// Cursor within this many px of a stop marker suppresses the route-split ghost.
+const STOP_HIT_RADIUS_SQ = 22 ** 2
+
 const store = useTripCalculatorStore()
 const mapNative = ref<L.Map | null>(null)
 const isRouting = ref(false)
@@ -147,6 +150,19 @@ function nearestOnRoute(
   }
 }
 
+// True if the cursor is close (in screen px) to an existing stop marker, so the
+// route-split ghost should yield and let the stop's own drag handler take over.
+function nearStopPx(target: L.LatLng): boolean {
+  if (!mapNative.value) return false
+  const tp = mapNative.value.latLngToContainerPoint(target)
+  for (const stop of store.stops) {
+    const sp = mapNative.value.latLngToContainerPoint(L.latLng(stop.lat, stop.lng))
+    const dSq = (sp.x - tp.x) ** 2 + (sp.y - tp.y) ** 2
+    if (dSq < STOP_HIT_RADIUS_SQ) return true
+  }
+  return false
+}
+
 function legFromSegment(segIdx: number): number {
   for (let i = 0; i < legBreaks.length - 1; i++) {
     const next = legBreaks[i + 1] ?? Infinity
@@ -179,7 +195,7 @@ function makeStopIcon(
     className: '',
     html: `<div class="stop-pin"><div class="stop-number">${idx + 1}</div>${stripHtml}</div>`,
     iconSize: [36, 56],
-    iconAnchor: [18, 56],
+    iconAnchor: [18, 14],
   })
 }
 
@@ -210,12 +226,17 @@ function rebuildStopMarkers() {
       const m = L.marker(latlng, { icon, draggable: true, autoPan: false })
       m.on('dragstart', () => {
         mapNative.value?.dragging.disable()
+        store.beginStopMove(stop.id)
       })
-      m.on('dragend', () => {
+      m.on('dragend', async () => {
         mapNative.value?.dragging.enable()
         const pos = m.getLatLng()
         store.updateStopLatLng(stop.id, pos.lat, pos.lng)
         updateRoutingWaypoints({ fit: false })
+        try {
+          const label = await reverseGeocode(pos.lat, pos.lng)
+          store.updateStopLabel(stop.id, label)
+        } catch {}
       })
       stopMarkerLayer.addLayer(m)
       stopMarkers.set(stop.id, m)
@@ -344,7 +365,7 @@ function onMapReady(map: L.Map) {
         return
       }
       const near = nearestOnRoute(ev.latlng)
-      if (near) {
+      if (near && !nearStopPx(ev.latlng)) {
         ensureGhost(near.point)
         currentHoverLeg = legFromSegment(near.segIdx)
       } else {
@@ -392,7 +413,7 @@ watch(
 )
 
 watch(
-  () => store.stops.map((s) => s.id).join('|'),
+  () => store.stops.map((s) => `${s.id}:${s.lat},${s.lng}`).join('|'),
   () => {
     rebuildStopMarkers()
     updateRoutingWaypoints({ fit: false })

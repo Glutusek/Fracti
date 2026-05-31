@@ -9,6 +9,8 @@ const PALETTE = [
   '#ef4444', '#8b5cf6', '#14b8a6', '#f97316', '#84cc16',
 ]
 
+export const MAX_UNDO = 5
+
 function genId() {
   return crypto.randomUUID()
 }
@@ -239,6 +241,38 @@ export const useTripCalculatorStore = defineStore('tripCalculator', () => {
   function updateStopLatLng(stopId: string, lat: number, lng: number) {
     const s = stops.value.find((s) => s.id === stopId)
     if (s) { s.lat = lat; s.lng = lng }
+  }
+
+  // Push current pos/label onto undo stack, capped at MAX_UNDO entries.
+  function _pushHistory(s: Stop) {
+    if (!s.history) s.history = []
+    s.history.push({ lat: s.lat, lng: s.lng, label: s.label })
+    if (s.history.length > MAX_UNDO) s.history.shift()
+  }
+
+  // Snapshot current pos/label before a move so it can be undone.
+  function beginStopMove(stopId: string) {
+    const s = stops.value.find((s) => s.id === stopId)
+    if (s) _pushHistory(s)
+  }
+
+  function undoStopMove(stopId: string) {
+    const s = stops.value.find((s) => s.id === stopId)
+    if (!s || !s.history?.length) return
+    const snap = s.history.pop()!
+    s.lat = snap.lat
+    s.lng = snap.lng
+    s.label = snap.label
+  }
+
+  // Replace a stop's location wholesale (e.g. picked from search). Undoable.
+  function replaceStopLocation(stopId: string, lat: number, lng: number, label: string) {
+    const s = stops.value.find((s) => s.id === stopId)
+    if (!s) return
+    _pushHistory(s)
+    s.lat = lat
+    s.lng = lng
+    s.label = label
   }
 
   function updateStopLabel(stopId: string, label: string) {
@@ -654,6 +688,9 @@ export const useTripCalculatorStore = defineStore('tripCalculator', () => {
     removeStop,
     updateStopLatLng,
     updateStopLabel,
+    beginStopMove,
+    undoStopMove,
+    replaceStopLocation,
     reorderStops,
     setGlobalConsumption,
     setLegConsumption,

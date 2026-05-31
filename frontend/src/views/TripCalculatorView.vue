@@ -202,13 +202,22 @@ watch(() => props.settlementId, (id) => {
   gap: 6px;
   margin-left: auto;
 }
+.load-select,
+.new-btn,
+.del-btn {
+  height: 34px;
+  box-sizing: border-box;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
 .load-select {
   background: #1e2533;
   border: 1px solid rgba(255,255,255,0.12);
   color: #e2e8f0;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 0.85rem;
+  padding: 0 10px;
   max-width: 260px;
 }
 .load-select:focus { outline: none; border-color: #8b5cf6; }
@@ -216,9 +225,7 @@ watch(() => props.settlementId, (id) => {
   background: rgba(139,92,246,0.15);
   border: 1px solid rgba(139,92,246,0.35);
   color: #8b5cf6;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 0.8rem;
+  padding: 0 12px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -227,9 +234,7 @@ watch(() => props.settlementId, (id) => {
   background: transparent;
   border: 1px solid rgba(245,101,101,0.35);
   color: #fc8181;
-  padding: 6px 9px;
-  border-radius: 6px;
-  font-size: 0.85rem;
+  padding: 0 9px;
   cursor: pointer;
 }
 .del-btn:hover { background: rgba(245,101,101,0.15); }

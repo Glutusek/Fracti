@@ -1,3 +1,9 @@
+export interface StopSnapshot {
+  lat: number
+  lng: number
+  label: string
+}
+
 export interface Stop {
   id: string
   lat: number
@@ -5,6 +11,7 @@ export interface Stop {
   label: string
   orderIndex: number
   arrivalEta?: number
+  history?: StopSnapshot[]
 }
 
 export interface Participant {
