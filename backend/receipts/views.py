@@ -1,4 +1,5 @@
 import os
+import json
 import uuid
 from django.db import models
 from django.shortcuts import get_object_or_404
@@ -289,6 +290,54 @@ class AddGuestUserView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ConvexHullView(APIView):
+    """Zasięg terytorialny: poligon (convex hull) oplatający wszystkie
+    lokalizacje paragonów i luźnych produktów w danym rozliczeniu."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, settlement_pk=None):
+        from django.contrib.gis.geos import MultiPoint
+
+        try:
+            settlement = Settlement.objects.get(pk=settlement_pk, members=request.user)
+        except Settlement.DoesNotExist:
+            return Response(
+                {"error": "Settlement not found or you don't have access"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        points = []
+        for loc in Receipt.objects.filter(
+            settlement=settlement, location__isnull=False
+        ).values_list('location', flat=True):
+            if loc:
+                points.append(loc)
+        for loc in Product.objects.filter(
+            settlement=settlement, receipt__isnull=True, location__isnull=False
+        ).values_list('location', flat=True):
+            if loc:
+                points.append(loc)
+
+        point_count = len(points)
+        if point_count < 3:
+            return Response({
+                "settlement_id": str(settlement.id),
+                "point_count": point_count,
+                "geometry": None,
+                "detail": "Za mało lokalizacji do wyznaczenia obszaru (min. 3).",
+            }, status=status.HTTP_200_OK)
+
+        multipoint = MultiPoint(points, srid=4326)
+        hull = multipoint.convex_hull
+
+        return Response({
+            "settlement_id": str(settlement.id),
+            "point_count": point_count,
+            "geometry": json.loads(hull.geojson),
+            "area_type": hull.geom_type,
+        }, status=status.HTTP_200_OK)
 
 
 class HeatmapViewSet(viewsets.ViewSet):

@@ -294,6 +294,19 @@ class FractiApiService {
     );
     return response.data;
   }
+
+  async getConvexHull(settlementId: string): Promise<{
+    settlement_id: string;
+    point_count: number;
+    geometry: { type: string; coordinates: number[][][] } | null;
+    area_type?: string;
+    detail?: string;
+  }> {
+    const response = await apiClient.get(
+      `/settlements/${settlementId}/convex-hull/`,
+    );
+    return response.data;
+  }
 }
 
 export default new FractiApiService();

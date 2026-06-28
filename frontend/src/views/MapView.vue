@@ -47,6 +47,9 @@
         <HeatmapLayer v-if="visualizationMode === 'heatmap'" :heatmap-data="heatmapData" :max-weight="heatmapMaxWeight"
           :show-legend="true" :intensity-multiplier="heatmapIntensity" :base-opacity="heatmapOpacity" />
         <RouteTrackerLayer v-if="showRoute" :items="filteredItems" />
+
+        <l-polygon v-if="showHull && hullLatLngs.length" :lat-lngs="hullLatLngs" :color="'#22d3ee'"
+          :fill-color="'#22d3ee'" :fill-opacity="0.12" :weight="2" />
       </l-map>
     </div>
 
@@ -74,6 +77,15 @@
             title="Pokaż/ukryj chronologiczną trasę wydatków" style="border-color: #f43f5e; color: #f43f5e;">
             🗺️ Trasa
           </button>
+          <button @click="toggleHull" :class="['filter-chip', { active: showHull }]"
+            title="Pokaż/ukryj zasięg terytorialny (obszar wydatków)"
+            style="border-color: #22d3ee; color: #22d3ee;">
+            🗺️ Zasięg
+          </button>
+        </div>
+        <div v-if="showHull && hullPointCount !== null" class="hull-info fade-in">
+          <span v-if="hullLatLngs.length">Obszar wyznaczony z {{ hullPointCount }} lokalizacji.</span>
+          <span v-else>{{ hullDetail || 'Za mało lokalizacji do wyznaczenia obszaru.' }}</span>
         </div>
 
         <div v-if="visualizationMode === 'heatmap'" class="heatmap-controls fade-in">
@@ -130,7 +142,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { LMap, LTileLayer, LMarker, LPopup } from '@vue-leaflet/vue-leaflet';
+import { LMap, LTileLayer, LMarker, LPopup, LPolygon } from '@vue-leaflet/vue-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import HeatmapLayer from '@/components/HeatmapLayer.vue';
@@ -156,6 +168,38 @@ const mapNative = ref<any>(null);
 // Heatmap state
 const visualizationMode = ref<'markers' | 'heatmap'>('markers');
 const showRoute = ref(false);
+
+const showHull = ref(false);
+const hullLatLngs = ref<[number, number][]>([]);
+const hullPointCount = ref<number | null>(null);
+const hullDetail = ref<string>('');
+
+const fetchConvexHull = async () => {
+  if (!currentSettlement.value) return;
+  try {
+    const res = await fractiService.getConvexHull(currentSettlement.value.id);
+    hullPointCount.value = res.point_count;
+    hullDetail.value = res.detail || '';
+    if (res.geometry && res.geometry.type === 'Polygon') {
+      // GeoJSON: [lng, lat] -> Leaflet: [lat, lng]
+      hullLatLngs.value = res.geometry.coordinates[0].map(
+        ([lng, lat]) => [lat, lng] as [number, number]
+      );
+    } else {
+      hullLatLngs.value = [];
+    }
+  } catch (err) {
+    console.error('Convex hull error:', err);
+    hullLatLngs.value = [];
+  }
+};
+
+const toggleHull = () => {
+  showHull.value = !showHull.value;
+  if (showHull.value && hullPointCount.value === null) {
+    fetchConvexHull();
+  }
+};
 const heatmapData = ref<any>(null);
 const heatmapMaxWeight = ref<number | undefined>(undefined);
 const heatmapLoading = ref(false);
@@ -906,6 +950,16 @@ onMounted(async () => {
   .item-amount {
     font-size: 0.9rem;
   }
+}
+
+.hull-info {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(34, 211, 238, 0.1);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  color: #a5f3fc;
+  font-size: 0.8rem;
 }
 
 .heatmap-controls {
